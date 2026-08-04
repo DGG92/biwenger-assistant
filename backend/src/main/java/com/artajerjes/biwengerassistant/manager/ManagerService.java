@@ -11,6 +11,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerStanding;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
+import com.artajerjes.biwengerassistant.manager.dto.ManagerResponse;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 
 @Service
@@ -114,5 +115,36 @@ public class ManagerService {
 
     private String normalizeRole(String role) {
         return role == null ? "" : role;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManagerResponse> findAll(Long leagueId) {
+        if (!leagueRepository.existsById(leagueId)) {
+            throw new LeagueNotFoundException(leagueId);
+        }
+
+        return managerRepository.findAllByLeague_Id(leagueId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private ManagerResponse toResponse(Manager manager) {
+        return new ManagerResponse(
+                manager.getId(),
+                manager.getBiwengerManagerId(),
+                manager.getName(),
+                manager.getIcon(),
+                manager.getPoints(),
+                manager.getTeamSize(),
+                manager.getTeamValue(),
+                manager.getTeamValueInc(),
+                manager.getPosition(),
+                manager.getRole(),
+                manager.isLeagueAdministrator(),
+                manager.getCash(),
+                manager.getLeague().getId(),
+                manager.getCreatedAt()
+        );
     }
 }
