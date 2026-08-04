@@ -1,17 +1,21 @@
 package com.artajerjes.biwengerassistant.exception;
 
-import com.artajerjes.biwengerassistant.league.LeagueAlreadyExistsException;
-import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import com.artajerjes.biwengerassistant.league.LeagueAlreadyExistsException;
+import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
+import com.artajerjes.biwengerassistant.player.PlayerAlreadyExistsException;
+import com.artajerjes.biwengerassistant.player.PlayerNotFoundException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -80,4 +84,43 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(apiError);
     }
+
+    @ExceptionHandler(PlayerNotFoundException.class)
+    public ResponseEntity<ApiError> handlePlayerNotFound(
+        PlayerNotFoundException exception,
+        HttpServletRequest request
+    ) {
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(apiError);
+
+    }
+
+    @ExceptionHandler(PlayerAlreadyExistsException.class)
+        public ResponseEntity<ApiError> handlePlayerAlreadyExists(
+                PlayerAlreadyExistsException exception,
+                HttpServletRequest request
+        ) {
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(apiError);
+        }
 }
