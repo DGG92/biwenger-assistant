@@ -74,6 +74,13 @@ public class LeagueService {
         return toResponse(league);
     }
 
+    public void delete(Long id) {
+        League league = leagueRepository.findById(id)
+            .orElseThrow(() -> new LeagueNotFoundException(id));
+
+        leagueRepository.delete(league);
+    }
+
     private LeagueResponse toResponse(League league) {
         return new LeagueResponse(
                 league.getId(),
