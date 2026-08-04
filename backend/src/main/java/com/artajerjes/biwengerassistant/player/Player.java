@@ -42,9 +42,9 @@ public class Player {
     private Long id;
 
     @Column(
-            name = "biwenger_player_id",
-            nullable = false,
-            length = 255
+        name = "biwenger_player_id",
+        nullable = false,
+        length = 255
     )
     private String biwengerPlayerId;
 
