@@ -3,9 +3,11 @@ package com.artajerjes.biwengerassistant.league;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.artajerjes.biwengerassistant.league.dto.CreateLeagueRequest;
 import com.artajerjes.biwengerassistant.league.dto.LeagueResponse;
+import com.artajerjes.biwengerassistant.league.dto.UpdateLeagueRequest;
 
 @Service
 public class LeagueService {
@@ -17,22 +19,22 @@ public class LeagueService {
     }
 
     public LeagueResponse create(CreateLeagueRequest request) {
-    if (
-        request.biwengerLeagueId() != null
-        && leagueRepository.existsByBiwengerLeagueId(request.biwengerLeagueId())
-    ) {
-        throw new LeagueAlreadyExistsException(request.biwengerLeagueId());
+        if (
+            request.biwengerLeagueId() != null
+            && leagueRepository.existsByBiwengerLeagueId(request.biwengerLeagueId())
+        ) {
+            throw new LeagueAlreadyExistsException(request.biwengerLeagueId());
+        }
+
+        League league = new League(
+                request.name(),
+                request.biwengerLeagueId()
+        );
+
+        League savedLeague = leagueRepository.save(league);
+
+        return toResponse(savedLeague);
     }
-
-    League league = new League(
-            request.name(),
-            request.biwengerLeagueId()
-    );
-
-    League savedLeague = leagueRepository.save(league);
-
-    return toResponse(savedLeague);
-}
 
     public List<LeagueResponse> findAll() {
         return leagueRepository.findAll()
@@ -42,10 +44,35 @@ public class LeagueService {
     }
 
     public LeagueResponse findById(Long id) {
-    return leagueRepository.findById(id)
-            .map(this::toResponse)
+        return leagueRepository.findById(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new LeagueNotFoundException(id));
+    }
+
+    @Transactional
+    public LeagueResponse update(Long id, UpdateLeagueRequest request) {
+        League league = leagueRepository.findById(id)
             .orElseThrow(() -> new LeagueNotFoundException(id));
-}
+
+        if (
+            request.biwengerLeagueId() != null
+            && leagueRepository.existsByBiwengerLeagueIdAndIdNot(
+                request.biwengerLeagueId(),
+                id
+            )
+        ) {
+            throw new LeagueAlreadyExistsException(
+                request.biwengerLeagueId()
+            );
+        }
+
+        league.update(
+            request.name(),
+            request.biwengerLeagueId()
+        );
+
+        return toResponse(league);
+    }
 
     private LeagueResponse toResponse(League league) {
         return new LeagueResponse(

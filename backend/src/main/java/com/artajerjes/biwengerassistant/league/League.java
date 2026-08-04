@@ -51,4 +51,9 @@ public class League {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public void update(String name, String biwengerLeagueId) {
+        this.name = name;
+        this.biwengerLeagueId = biwengerLeagueId;
+    }
 }
