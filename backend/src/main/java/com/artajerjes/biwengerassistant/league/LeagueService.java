@@ -41,6 +41,12 @@ public class LeagueService {
                 .toList();
     }
 
+    public LeagueResponse findById(Long id) {
+    return leagueRepository.findById(id)
+            .map(this::toResponse)
+            .orElseThrow(() -> new LeagueNotFoundException(id));
+}
+
     private LeagueResponse toResponse(League league) {
         return new LeagueResponse(
                 league.getId(),

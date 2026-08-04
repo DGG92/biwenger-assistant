@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.exception;
 
 import com.artajerjes.biwengerassistant.league.LeagueAlreadyExistsException;
+import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,25 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
+                .body(apiError);
+    }
+
+    @ExceptionHandler(LeagueNotFoundException.class)
+    public ResponseEntity<ApiError> handleLeagueNotFound(
+            LeagueNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
                 .body(apiError);
     }
 }
