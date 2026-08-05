@@ -8,6 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
+import com.artajerjes.biwengerassistant.manager.Manager;
+import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
+import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
@@ -17,13 +20,16 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
     private final LeagueRepository leagueRepository;
+    private final ManagerRepository managerRepository;
 
     public PlayerService(
             PlayerRepository playerRepository,
-            LeagueRepository leagueRepository
+            LeagueRepository leagueRepository,
+            ManagerRepository managerRepository
     ) {
         this.playerRepository = playerRepository;
         this.leagueRepository = leagueRepository;
+        this.managerRepository = managerRepository;
     }
 
     @Transactional
@@ -67,9 +73,9 @@ public class PlayerService {
         ensureLeagueExists(leagueId);
 
         return playerRepository.findAllByLeague_Id(leagueId)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -104,6 +110,11 @@ public class PlayerService {
             );
         }
 
+        Manager owner = resolveOwner(
+                request.ownerId(),
+                leagueId
+        );
+
         player.update(
                 request.biwengerPlayerId(),
                 request.name(),
@@ -117,7 +128,7 @@ public class PlayerService {
                 request.valueFluctuation(),
                 request.blockedClause(),
                 request.clauseValue(),
-                request.ownerName(),
+                owner,
                 request.signedAt()
         );
 
@@ -156,7 +167,27 @@ public class PlayerService {
         }
     }
 
+    private Manager resolveOwner(
+            Long ownerId,
+            Long leagueId
+    ) {
+        if (ownerId == null) {
+            return null;
+        }
+
+        return managerRepository
+                .findByIdAndLeague_Id(ownerId, leagueId)
+                .orElseThrow(
+                        () -> new ManagerNotFoundException(
+                                ownerId,
+                                leagueId
+                        )
+                );
+    }
+
     private PlayerResponse toResponse(Player player) {
+        Manager owner = player.getOwner();
+
         return new PlayerResponse(
                 player.getId(),
                 player.getBiwengerPlayerId(),
@@ -171,7 +202,8 @@ public class PlayerService {
                 player.getValueFluctuation(),
                 player.isBlockedClause(),
                 player.getClauseValue(),
-                player.getOwnerName(),
+                owner == null ? null : owner.getId(),
+                owner == null ? null : owner.getName(),
                 player.isFreePlayer(),
                 player.getSignedAt(),
                 player.getLeague().getId(),

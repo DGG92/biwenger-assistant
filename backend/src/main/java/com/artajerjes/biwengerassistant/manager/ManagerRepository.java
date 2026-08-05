@@ -18,4 +18,9 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
             Long biwengerManagerId,
             Long leagueId
     );
+
+    Optional<Manager> findByIdAndLeague_Id(
+        Long managerId,
+        Long leagueId
+);
 }

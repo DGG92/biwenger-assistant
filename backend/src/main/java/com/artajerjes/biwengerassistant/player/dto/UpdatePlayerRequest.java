@@ -61,11 +61,7 @@ public record UpdatePlayerRequest(
         @PositiveOrZero(message = "Clause value cannot be negative")
         Long clauseValue,
 
-        @Size(
-                max = 100,
-                message = "Owner name cannot exceed 100 characters"
-        )
-        String ownerName,
+        Long ownerId,
 
         LocalDateTime signedAt
 ) {

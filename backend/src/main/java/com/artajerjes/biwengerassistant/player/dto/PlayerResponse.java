@@ -19,6 +19,7 @@ public record PlayerResponse(
         Long valueFluctuation,
         Boolean blockedClause,
         Long clauseValue,
+        Long ownerId,
         String ownerName,
         Boolean freePlayer,
         LocalDateTime signedAt,

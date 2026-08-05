@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.artajerjes.biwengerassistant.league.League;
+import com.artajerjes.biwengerassistant.manager.Manager;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -88,8 +89,9 @@ public class Player {
     @Column(name = "clause_value")
     private Long clauseValue;
 
-    @Column(name = "owner_name", length = 100)
-    private String ownerName;
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private Manager owner;
 
     @Column(name = "signed_at")
     private LocalDateTime signedAt;
@@ -126,7 +128,7 @@ public class Player {
         this.valueFluctuation = 0L;
         this.blockedClause = false;
         this.clauseValue = null;
-        this.ownerName = null;
+        this.owner = null;
         this.signedAt = null;
     }
 
@@ -143,7 +145,7 @@ public class Player {
             Long valueFluctuation,
             Boolean blockedClause,
             Long clauseValue,
-            String ownerName,
+            Manager owner,
             LocalDateTime signedAt
     ) {
         this.biwengerPlayerId = biwengerPlayerId;
@@ -158,7 +160,7 @@ public class Player {
         this.valueFluctuation = valueFluctuation;
         this.blockedClause = blockedClause;
         this.clauseValue = clauseValue;
-        this.ownerName = ownerName;
+        this.owner = owner;
         this.signedAt = signedAt;
     }
 
@@ -221,12 +223,12 @@ public class Player {
         return clauseValue;
     }
 
-    public String getOwnerName() {
-        return ownerName;
+    public Manager getOwner() {
+        return owner;
     }
 
     public boolean isFreePlayer() {
-        return ownerName == null;
+        return owner == null;
     }
 
     public LocalDateTime getSignedAt() {

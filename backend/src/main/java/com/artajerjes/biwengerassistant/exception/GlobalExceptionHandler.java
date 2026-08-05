@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.artajerjes.biwengerassistant.league.LeagueAlreadyExistsException;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
+import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.player.PlayerAlreadyExistsException;
 import com.artajerjes.biwengerassistant.player.PlayerNotFoundException;
 
@@ -103,9 +104,9 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(apiError);
 
-    }
+        }
 
-    @ExceptionHandler(PlayerAlreadyExistsException.class)
+        @ExceptionHandler(PlayerAlreadyExistsException.class)
         public ResponseEntity<ApiError> handlePlayerAlreadyExists(
                 PlayerAlreadyExistsException exception,
                 HttpServletRequest request
@@ -123,4 +124,25 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(apiError);
         }
+
+        @ExceptionHandler(ManagerNotFoundException.class)
+        public ResponseEntity<ApiError> handleManagerNotFound(
+                ManagerNotFoundException exception,
+                HttpServletRequest request
+        ) {
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(apiError);
+        }
+
+
 }
