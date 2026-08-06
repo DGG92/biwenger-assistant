@@ -5,11 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreateLeagueRequest(
 
-        @NotBlank(message = "League name is required")
-        @Size(max = 100, message = "League name cannot exceed 100 characters")
-        String name,
+        @NotBlank(message = "League name is required") @Size(max = 100, message = "League name cannot exceed 100 characters") String name,
 
-        @Size(max = 255, message = "Biwenger league ID cannot exceed 255 characters")
-        String biwengerLeagueId
-) {
+        @Size(max = 255, message = "Biwenger league ID cannot exceed 255 characters") String biwengerLeagueId) {
 }

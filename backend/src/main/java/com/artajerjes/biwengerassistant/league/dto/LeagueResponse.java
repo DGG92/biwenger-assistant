@@ -6,6 +6,5 @@ public record LeagueResponse(
         Long id,
         String name,
         String biwengerLeagueId,
-        LocalDateTime createdAt
-) {
+        LocalDateTime createdAt) {
 }

@@ -55,8 +55,7 @@ public record UpdatePlayerRequest(
         @NotNull(message = "Value fluctuation is required")
         Long valueFluctuation,
 
-        @NotNull(message = "Blocked clause status is required")
-        Boolean blockedClause,
+        LocalDateTime clauseLockedUntil,
 
         @PositiveOrZero(message = "Clause value cannot be negative")
         Long clauseValue,

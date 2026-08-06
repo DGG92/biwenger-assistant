@@ -16,18 +16,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "managers",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_manager_biwenger_id_league",
-                        columnNames = {
-                                "biwenger_manager_id",
-                                "league_id"
-                        }
-                )
-        }
-)
+@Table(name = "managers", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_manager_biwenger_id_league", columnNames = {
+                "biwenger_manager_id",
+                "league_id"
+        })
+})
 public class Manager {
 
     @Id
@@ -84,8 +78,7 @@ public class Manager {
             Long teamValueInc,
             Integer position,
             String role,
-            League league
-    ) {
+            League league) {
         this.biwengerManagerId = biwengerManagerId;
         this.name = name;
         this.icon = icon;
@@ -107,8 +100,7 @@ public class Manager {
             Long teamValue,
             Long teamValueInc,
             Integer position,
-            String role
-    ) {
+            String role) {
         this.name = name;
         this.icon = icon;
         this.points = points;

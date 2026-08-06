@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
@@ -32,701 +33,632 @@ import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
 @ExtendWith(MockitoExtension.class)
 class PlayerServiceTest {
 
-    private static final Long LEAGUE_ID = 1L;
-    private static final Long PLAYER_ID = 10L;
-    private static final Long MANAGER_ID = 2L;
+        private static final Long LEAGUE_ID = 1L;
+        private static final Long PLAYER_ID = 10L;
+        private static final Long MANAGER_ID = 2L;
 
-    @Mock
-    private PlayerRepository playerRepository;
+        private static final LocalDateTime FUTURE_LOCK_DATE = LocalDateTime.of(2099, 1, 1, 0, 0);
 
-    @Mock
-    private LeagueRepository leagueRepository;
+        @Mock
+        private PlayerRepository playerRepository;
 
-    @Mock
-    private ManagerRepository managerRepository;
+        @Mock
+        private LeagueRepository leagueRepository;
 
-    @InjectMocks
-    private PlayerService playerService;
+        @Mock
+        private ManagerRepository managerRepository;
 
-    @Test
-    void createShouldSaveAndReturnPlayer() {
-        League league = createLeague();
+        @InjectMocks
+        private PlayerService playerService;
 
-        CreatePlayerRequest request = new CreatePlayerRequest(
-                "player-001",
-                "Jugador de prueba",
-                List.of(
-                        PlayerPosition.DF,
-                        PlayerPosition.MC
-                ),
-                "Equipo de prueba",
-                1_500_000L
-        );
+        @Test
+        void createShouldSaveAndReturnPlayer() {
+                League league = createLeague();
 
-        when(leagueRepository.findById(LEAGUE_ID))
-                .thenReturn(Optional.of(league));
-
-        when(
-                playerRepository.existsByBiwengerPlayerIdAndLeague_Id(
-                        "player-001",
-                        LEAGUE_ID
-                )
-        ).thenReturn(false);
-
-        when(playerRepository.save(any(Player.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        PlayerResponse response = playerService.create(
-                LEAGUE_ID,
-                request
-        );
-
-        assertEquals(
-                "player-001",
-                response.biwengerPlayerId()
-        );
-
-        assertEquals(
-                "Jugador de prueba",
-                response.name()
-        );
-
-        assertEquals(
-                List.of(
-                        PlayerPosition.DF,
-                        PlayerPosition.MC
-                ),
-                response.positions()
-        );
-
-        assertEquals(
-                "Equipo de prueba",
-                response.teamName()
-        );
-
-        assertEquals(
-                1_500_000L,
-                response.marketValue()
-        );
-
-        assertEquals(0, response.points());
-        assertTrue(response.freePlayer());
-        assertFalse(response.injured());
-        assertFalse(response.captain());
-        assertFalse(response.ram());
-
-        assertEquals(null, response.ownerId());
-        assertEquals(null, response.ownerName());
-
-        verify(playerRepository)
-                .save(any(Player.class));
-    }
-
-    @Test
-    void createShouldThrowWhenLeagueDoesNotExist() {
-        CreatePlayerRequest request = new CreatePlayerRequest(
-                "player-001",
-                "Jugador",
-                List.of(PlayerPosition.DF),
-                null,
-                1_000_000L
-        );
-
-        when(leagueRepository.findById(LEAGUE_ID))
-                .thenReturn(Optional.empty());
-
-        assertThrows(
-                LeagueNotFoundException.class,
-                () -> playerService.create(
-                        LEAGUE_ID,
-                        request
-                )
-        );
-
-        verify(playerRepository, never())
-                .save(any(Player.class));
-    }
-
-    @Test
-    void createShouldThrowWhenPlayerAlreadyExistsInLeague() {
-        League league = createLeague();
-
-        CreatePlayerRequest request = new CreatePlayerRequest(
-                "player-001",
-                "Jugador duplicado",
-                List.of(PlayerPosition.MC),
-                "Equipo",
-                1_000_000L
-        );
-
-        when(leagueRepository.findById(LEAGUE_ID))
-                .thenReturn(Optional.of(league));
-
-        when(
-                playerRepository.existsByBiwengerPlayerIdAndLeague_Id(
-                        "player-001",
-                        LEAGUE_ID
-                )
-        ).thenReturn(true);
-
-        assertThrows(
-                PlayerAlreadyExistsException.class,
-                () -> playerService.create(
-                        LEAGUE_ID,
-                        request
-                )
-        );
-
-        verify(playerRepository, never())
-                .save(any(Player.class));
-    }
-
-    @Test
-    void findAllShouldReturnPlayersFromLeague() {
-        League league = createLeague();
-
-        Player firstPlayer = new Player(
-                "player-001",
-                "Primer jugador",
-                List.of(PlayerPosition.DF),
-                "Equipo uno",
-                1_000_000L,
-                league
-        );
-
-        Player secondPlayer = new Player(
-                "player-002",
-                "Segundo jugador",
-                List.of(
-                        PlayerPosition.MC,
-                        PlayerPosition.DF
-                ),
-                "Equipo dos",
-                2_000_000L,
-                league
-        );
-
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(
-                        List.of(
-                                firstPlayer,
-                                secondPlayer
-                        )
-                );
-
-        List<PlayerResponse> result =
-                playerService.findAll(LEAGUE_ID);
-
-        assertEquals(2, result.size());
-
-        assertEquals(
-                "Primer jugador",
-                result.get(0).name()
-        );
-
-        assertEquals(
-                "Segundo jugador",
-                result.get(1).name()
-        );
-
-        assertEquals(
-                List.of(
-                        PlayerPosition.MC,
-                        PlayerPosition.DF
-                ),
-                result.get(1).positions()
-        );
-    }
-
-    @Test
-    void findAllShouldThrowWhenLeagueDoesNotExist() {
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(false);
-
-        assertThrows(
-                LeagueNotFoundException.class,
-                () -> playerService.findAll(LEAGUE_ID)
-        );
-
-        verify(playerRepository, never())
-                .findAllByLeague_Id(LEAGUE_ID);
-    }
-
-    @Test
-    void findByIdShouldReturnPlayerWhenItExists() {
-        Player player = createPlayer();
-
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
-
-        PlayerResponse response = playerService.findById(
-                LEAGUE_ID,
-                PLAYER_ID
-        );
-
-        assertEquals(
-                "player-001",
-                response.biwengerPlayerId()
-        );
-
-        assertEquals(
-                "Jugador de prueba",
-                response.name()
-        );
-
-        assertEquals(
-                List.of(PlayerPosition.DF),
-                response.positions()
-        );
-
-        assertTrue(response.freePlayer());
-        assertEquals(null, response.ownerId());
-        assertEquals(null, response.ownerName());
-    }
-
-    @Test
-    void findByIdShouldThrowWhenPlayerDoesNotExist() {
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.empty());
-
-        assertThrows(
-                PlayerNotFoundException.class,
-                () -> playerService.findById(
-                        LEAGUE_ID,
-                        PLAYER_ID
-                )
-        );
-    }
-
-    @Test
-    void updateShouldModifyAndReturnPlayerWithOwner() {
-        Player player = createPlayer();
-        Manager manager = createManager();
-
-        UpdatePlayerRequest request = new UpdatePlayerRequest(
-                "player-001",
-                "Jugador actualizado",
-                List.of(
-                        PlayerPosition.MC,
-                        PlayerPosition.DF
-                ),
-                42,
-                "Equipo actualizado",
-                1_750_000L,
-                false,
-                true,
-                false,
-                250_000L,
-                true,
-                3_000_000L,
-                MANAGER_ID,
-                LocalDateTime.of(
-                        2026,
-                        8,
-                        4,
-                        21,
-                        10
-                )
-        );
-
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
-
-        when(
-                playerRepository
-                        .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                CreatePlayerRequest request = new CreatePlayerRequest(
                                 "player-001",
+                                "Jugador de prueba",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                "Equipo de prueba",
+                                1_500_000L);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(
+                                playerRepository.existsByBiwengerPlayerIdAndLeague_Id(
+                                                "player-001",
+                                                LEAGUE_ID))
+                                .thenReturn(false);
+
+                when(playerRepository.save(any(Player.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                PlayerResponse response = playerService.create(
                                 LEAGUE_ID,
-                                PLAYER_ID
-                        )
-        ).thenReturn(false);
+                                request);
 
-        when(
-                managerRepository.findByIdAndLeague_Id(
-                        MANAGER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(manager));
-
-        PlayerResponse response = playerService.update(
-                LEAGUE_ID,
-                PLAYER_ID,
-                request
-        );
-
-        assertEquals(
-                "Jugador actualizado",
-                response.name()
-        );
-
-        assertEquals(
-                List.of(
-                        PlayerPosition.MC,
-                        PlayerPosition.DF
-                ),
-                response.positions()
-        );
-
-        assertEquals(42, response.points());
-
-        assertEquals(
-                1_750_000L,
-                response.marketValue()
-        );
-
-        assertTrue(response.captain());
-        assertTrue(response.blockedClause());
-
-        assertEquals(
-                3_000_000L,
-                response.clauseValue()
-        );
-
-        assertEquals(
-                MANAGER_ID,
-                response.ownerId()
-        );
-
-        assertEquals(
-                "SIRG",
-                response.ownerName()
-        );
-
-        assertFalse(response.freePlayer());
-
-        verify(playerRepository, never())
-                .save(any(Player.class));
-    }
-
-    @Test
-    void updateShouldAllowRemovingOwner() {
-        Player player = createPlayer();
-        Manager manager = createManager();
-
-        player.update(
-                player.getBiwengerPlayerId(),
-                player.getName(),
-                player.getPositions(),
-                player.getPoints(),
-                player.getTeamName(),
-                player.getMarketValue(),
-                player.isInjured(),
-                player.isCaptain(),
-                player.isRam(),
-                player.getValueFluctuation(),
-                player.isBlockedClause(),
-                player.getClauseValue(),
-                manager,
-                player.getSignedAt()
-        );
-
-        UpdatePlayerRequest request = new UpdatePlayerRequest(
-                "player-001",
-                "Jugador libre",
-                List.of(PlayerPosition.DF),
-                10,
-                "Equipo de prueba",
-                1_400_000L,
-                false,
-                false,
-                false,
-                -100_000L,
-                false,
-                null,
-                null,
-                null
-        );
-
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
-
-        when(
-                playerRepository
-                        .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                assertEquals(
                                 "player-001",
-                                LEAGUE_ID,
-                                PLAYER_ID
-                        )
-        ).thenReturn(false);
+                                response.biwengerPlayerId());
 
-        PlayerResponse response = playerService.update(
-                LEAGUE_ID,
-                PLAYER_ID,
-                request
-        );
+                assertEquals(
+                                "Jugador de prueba",
+                                response.name());
 
-        assertTrue(response.freePlayer());
-        assertEquals(null, response.ownerId());
-        assertEquals(null, response.ownerName());
+                assertEquals(
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                response.positions());
 
-        verify(
-                managerRepository,
-                never()
-        ).findByIdAndLeague_Id(
-                any(Long.class),
-                any(Long.class)
-        );
-    }
+                assertEquals(
+                                "Equipo de prueba",
+                                response.teamName());
 
-    @Test
-    void updateShouldThrowWhenManagerDoesNotExistInLeague() {
-        Player player = createPlayer();
+                assertEquals(
+                                1_500_000L,
+                                response.marketValue());
 
-        UpdatePlayerRequest request = new UpdatePlayerRequest(
-                "player-001",
-                "Jugador actualizado",
-                List.of(PlayerPosition.DL),
-                20,
-                "Equipo",
-                2_000_000L,
-                false,
-                false,
-                false,
-                100_000L,
-                false,
-                null,
-                MANAGER_ID,
-                null
-        );
+                assertEquals(0, response.points());
+                assertTrue(response.freePlayer());
+                assertFalse(response.injured());
+                assertFalse(response.captain());
+                assertFalse(response.ram());
+                assertFalse(response.blockedClause());
 
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
+                assertNull(response.clauseLockedUntil());
+                assertNull(response.ownerId());
+                assertNull(response.ownerName());
 
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
+                verify(playerRepository)
+                                .save(any(Player.class));
+        }
 
-        when(
-                playerRepository
-                        .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+        @Test
+        void createShouldThrowWhenLeagueDoesNotExist() {
+                CreatePlayerRequest request = new CreatePlayerRequest(
                                 "player-001",
-                                LEAGUE_ID,
-                                PLAYER_ID
-                        )
-        ).thenReturn(false);
+                                "Jugador",
+                                List.of(PlayerPosition.DF),
+                                null,
+                                1_000_000L);
 
-        when(
-                managerRepository.findByIdAndLeague_Id(
-                        MANAGER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.empty());
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.empty());
 
-        assertThrows(
-                ManagerNotFoundException.class,
-                () -> playerService.update(
-                        LEAGUE_ID,
-                        PLAYER_ID,
-                        request
-                )
-        );
+                assertThrows(
+                                LeagueNotFoundException.class,
+                                () -> playerService.create(
+                                                LEAGUE_ID,
+                                                request));
 
-        assertTrue(player.isFreePlayer());
-    }
+                verify(playerRepository, never())
+                                .save(any(Player.class));
+        }
 
-    @Test
-    void updateShouldThrowWhenAnotherPlayerHasBiwengerId() {
-        Player player = createPlayer();
+        @Test
+        void createShouldThrowWhenPlayerAlreadyExistsInLeague() {
+                League league = createLeague();
 
-        UpdatePlayerRequest request = new UpdatePlayerRequest(
-                "player-002",
-                "Jugador actualizado",
-                List.of(PlayerPosition.DL),
-                20,
-                "Equipo",
-                2_000_000L,
-                false,
-                false,
-                false,
-                100_000L,
-                false,
-                null,
-                null,
-                null
-        );
+                CreatePlayerRequest request = new CreatePlayerRequest(
+                                "player-001",
+                                "Jugador duplicado",
+                                List.of(PlayerPosition.MC),
+                                "Equipo",
+                                1_000_000L);
 
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
 
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
+                when(
+                                playerRepository.existsByBiwengerPlayerIdAndLeague_Id(
+                                                "player-001",
+                                                LEAGUE_ID))
+                                .thenReturn(true);
 
-        when(
-                playerRepository
-                        .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                assertThrows(
+                                PlayerAlreadyExistsException.class,
+                                () -> playerService.create(
+                                                LEAGUE_ID,
+                                                request));
+
+                verify(playerRepository, never())
+                                .save(any(Player.class));
+        }
+
+        @Test
+        void findAllShouldReturnPlayersFromLeague() {
+                League league = createLeague();
+
+                Player firstPlayer = new Player(
+                                "player-001",
+                                "Primer jugador",
+                                List.of(PlayerPosition.DF),
+                                "Equipo uno",
+                                1_000_000L,
+                                league);
+
+                Player secondPlayer = new Player(
                                 "player-002",
+                                "Segundo jugador",
+                                List.of(
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DF),
+                                "Equipo dos",
+                                2_000_000L,
+                                league);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                firstPlayer,
+                                                                secondPlayer));
+
+                List<PlayerResponse> result = playerService.findAll(LEAGUE_ID);
+
+                assertEquals(2, result.size());
+
+                assertEquals(
+                                "Primer jugador",
+                                result.get(0).name());
+
+                assertEquals(
+                                "Segundo jugador",
+                                result.get(1).name());
+
+                assertEquals(
+                                List.of(
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DF),
+                                result.get(1).positions());
+        }
+
+        @Test
+        void findAllShouldThrowWhenLeagueDoesNotExist() {
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(false);
+
+                assertThrows(
+                                LeagueNotFoundException.class,
+                                () -> playerService.findAll(LEAGUE_ID));
+
+                verify(playerRepository, never())
+                                .findAllByLeague_Id(LEAGUE_ID);
+        }
+
+        @Test
+        void findByIdShouldReturnPlayerWhenItExists() {
+                Player player = createPlayer();
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
+
+                PlayerResponse response = playerService.findById(
                                 LEAGUE_ID,
-                                PLAYER_ID
-                        )
-        ).thenReturn(true);
+                                PLAYER_ID);
 
-        assertThrows(
-                PlayerAlreadyExistsException.class,
-                () -> playerService.update(
-                        LEAGUE_ID,
-                        PLAYER_ID,
-                        request
-                )
-        );
+                assertEquals(
+                                "player-001",
+                                response.biwengerPlayerId());
 
-        assertEquals(
-                "Jugador de prueba",
-                player.getName()
-        );
+                assertEquals(
+                                "Jugador de prueba",
+                                response.name());
 
-        assertEquals(
-                "player-001",
-                player.getBiwengerPlayerId()
-        );
+                assertEquals(
+                                List.of(PlayerPosition.DF),
+                                response.positions());
 
-        verify(
-                managerRepository,
-                never()
-        ).findByIdAndLeague_Id(
-                any(Long.class),
-                any(Long.class)
-        );
-    }
+                assertTrue(response.freePlayer());
+                assertFalse(response.blockedClause());
 
-    @Test
-    void deleteShouldDeleteExistingPlayer() {
-        Player player = createPlayer();
+                assertNull(response.clauseLockedUntil());
+                assertNull(response.ownerId());
+                assertNull(response.ownerName());
+        }
 
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
+        @Test
+        void findByIdShouldThrowWhenPlayerDoesNotExist() {
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
 
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.of(player));
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
 
-        playerService.delete(
-                LEAGUE_ID,
-                PLAYER_ID
-        );
+                assertThrows(
+                                PlayerNotFoundException.class,
+                                () -> playerService.findById(
+                                                LEAGUE_ID,
+                                                PLAYER_ID));
+        }
 
-        verify(playerRepository)
-                .delete(player);
-    }
+        @Test
+        void updateShouldModifyAndReturnPlayerWithOwner() {
+                Player player = createPlayer();
+                Manager manager = createManager();
 
-    @Test
-    void deleteShouldThrowWhenPlayerDoesNotExist() {
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
+                UpdatePlayerRequest request = new UpdatePlayerRequest(
+                                "player-001",
+                                "Jugador actualizado",
+                                List.of(
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DF),
+                                42,
+                                "Equipo actualizado",
+                                1_750_000L,
+                                false,
+                                true,
+                                false,
+                                250_000L,
+                                FUTURE_LOCK_DATE,
+                                3_000_000L,
+                                MANAGER_ID,
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                4,
+                                                21,
+                                                10));
 
-        when(
-                playerRepository.findByIdAndLeague_Id(
-                        PLAYER_ID,
-                        LEAGUE_ID
-                )
-        ).thenReturn(Optional.empty());
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
 
-        assertThrows(
-                PlayerNotFoundException.class,
-                () -> playerService.delete(
-                        LEAGUE_ID,
-                        PLAYER_ID
-                )
-        );
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
 
-        verify(playerRepository, never())
-                .delete(any(Player.class));
-    }
+                when(
+                                playerRepository
+                                                .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                                                                "player-001",
+                                                                LEAGUE_ID,
+                                                                PLAYER_ID))
+                                .thenReturn(false);
 
-    private League createLeague() {
-        League league = new League(
-                "Liga de prueba",
-                "league-001"
-        );
+                when(
+                                managerRepository.findByIdAndLeague_Id(
+                                                MANAGER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
 
-        ReflectionTestUtils.setField(
-                league,
-                "id",
-                LEAGUE_ID
-        );
+                PlayerResponse response = playerService.update(
+                                LEAGUE_ID,
+                                PLAYER_ID,
+                                request);
 
-        return league;
-    }
+                assertEquals(
+                                "Jugador actualizado",
+                                response.name());
 
-    private Player createPlayer() {
-        Player player = new Player(
-                "player-001",
-                "Jugador de prueba",
-                List.of(PlayerPosition.DF),
-                "Equipo de prueba",
-                1_500_000L,
-                createLeague()
-        );
+                assertEquals(
+                                List.of(
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DF),
+                                response.positions());
 
-        ReflectionTestUtils.setField(
-                player,
-                "id",
-                PLAYER_ID
-        );
+                assertEquals(42, response.points());
 
-        return player;
-    }
+                assertEquals(
+                                1_750_000L,
+                                response.marketValue());
 
-    private Manager createManager() {
-        Manager manager = new Manager(
-                11_470_376L,
-                "SIRG",
-                "i/u/11470376.png",
-                0,
-                13,
-                54_100_000L,
-                720_000L,
-                2,
-                "manager",
-                createLeague()
-        );
+                assertTrue(response.captain());
+                assertTrue(response.blockedClause());
 
-        ReflectionTestUtils.setField(
-                manager,
-                "id",
-                MANAGER_ID
-        );
+                assertEquals(
+                                FUTURE_LOCK_DATE,
+                                response.clauseLockedUntil());
 
-        return manager;
-    }
+                assertEquals(
+                                3_000_000L,
+                                response.clauseValue());
+
+                assertEquals(
+                                MANAGER_ID,
+                                response.ownerId());
+
+                assertEquals(
+                                "SIRG",
+                                response.ownerName());
+
+                assertFalse(response.freePlayer());
+
+                verify(playerRepository, never())
+                                .save(any(Player.class));
+        }
+
+        @Test
+        void updateShouldAllowRemovingOwner() {
+                Player player = createPlayer();
+                Manager manager = createManager();
+
+                player.update(
+                                player.getBiwengerPlayerId(),
+                                player.getName(),
+                                player.getPositions(),
+                                player.getPoints(),
+                                player.getTeamName(),
+                                player.getMarketValue(),
+                                player.isInjured(),
+                                player.isCaptain(),
+                                player.isRam(),
+                                player.getValueFluctuation(),
+                                player.getClauseLockedUntil(),
+                                player.getClauseValue(),
+                                manager,
+                                player.getSignedAt());
+
+                UpdatePlayerRequest request = new UpdatePlayerRequest(
+                                "player-001",
+                                "Jugador libre",
+                                List.of(PlayerPosition.DF),
+                                10,
+                                "Equipo de prueba",
+                                1_400_000L,
+                                false,
+                                false,
+                                false,
+                                -100_000L,
+                                null,
+                                null,
+                                null,
+                                null);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
+
+                when(
+                                playerRepository
+                                                .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                                                                "player-001",
+                                                                LEAGUE_ID,
+                                                                PLAYER_ID))
+                                .thenReturn(false);
+
+                PlayerResponse response = playerService.update(
+                                LEAGUE_ID,
+                                PLAYER_ID,
+                                request);
+
+                assertTrue(response.freePlayer());
+                assertFalse(response.blockedClause());
+
+                assertNull(response.clauseLockedUntil());
+                assertNull(response.ownerId());
+                assertNull(response.ownerName());
+
+                verify(
+                                managerRepository,
+                                never()).findByIdAndLeague_Id(
+                                                any(Long.class),
+                                                any(Long.class));
+        }
+
+        @Test
+        void updateShouldThrowWhenManagerDoesNotExistInLeague() {
+                Player player = createPlayer();
+
+                UpdatePlayerRequest request = new UpdatePlayerRequest(
+                                "player-001",
+                                "Jugador actualizado",
+                                List.of(PlayerPosition.DL),
+                                20,
+                                "Equipo",
+                                2_000_000L,
+                                false,
+                                false,
+                                false,
+                                100_000L,
+                                null,
+                                null,
+                                MANAGER_ID,
+                                null);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
+
+                when(
+                                playerRepository
+                                                .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                                                                "player-001",
+                                                                LEAGUE_ID,
+                                                                PLAYER_ID))
+                                .thenReturn(false);
+
+                when(
+                                managerRepository.findByIdAndLeague_Id(
+                                                MANAGER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(
+                                ManagerNotFoundException.class,
+                                () -> playerService.update(
+                                                LEAGUE_ID,
+                                                PLAYER_ID,
+                                                request));
+
+                assertTrue(player.isFreePlayer());
+        }
+
+        @Test
+        void updateShouldThrowWhenAnotherPlayerHasBiwengerId() {
+                Player player = createPlayer();
+
+                UpdatePlayerRequest request = new UpdatePlayerRequest(
+                                "player-002",
+                                "Jugador actualizado",
+                                List.of(PlayerPosition.DL),
+                                20,
+                                "Equipo",
+                                2_000_000L,
+                                false,
+                                false,
+                                false,
+                                100_000L,
+                                null,
+                                null,
+                                null,
+                                null);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
+
+                when(
+                                playerRepository
+                                                .existsByBiwengerPlayerIdAndLeague_IdAndIdNot(
+                                                                "player-002",
+                                                                LEAGUE_ID,
+                                                                PLAYER_ID))
+                                .thenReturn(true);
+
+                assertThrows(
+                                PlayerAlreadyExistsException.class,
+                                () -> playerService.update(
+                                                LEAGUE_ID,
+                                                PLAYER_ID,
+                                                request));
+
+                assertEquals(
+                                "Jugador de prueba",
+                                player.getName());
+
+                assertEquals(
+                                "player-001",
+                                player.getBiwengerPlayerId());
+
+                verify(
+                                managerRepository,
+                                never()).findByIdAndLeague_Id(
+                                                any(Long.class),
+                                                any(Long.class));
+        }
+
+        @Test
+        void deleteShouldDeleteExistingPlayer() {
+                Player player = createPlayer();
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(player));
+
+                playerService.delete(
+                                LEAGUE_ID,
+                                PLAYER_ID);
+
+                verify(playerRepository)
+                                .delete(player);
+        }
+
+        @Test
+        void deleteShouldThrowWhenPlayerDoesNotExist() {
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(
+                                playerRepository.findByIdAndLeague_Id(
+                                                PLAYER_ID,
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(
+                                PlayerNotFoundException.class,
+                                () -> playerService.delete(
+                                                LEAGUE_ID,
+                                                PLAYER_ID));
+
+                verify(playerRepository, never())
+                                .delete(any(Player.class));
+        }
+
+        private League createLeague() {
+                League league = new League(
+                                "Liga de prueba",
+                                "league-001");
+
+                ReflectionTestUtils.setField(
+                                league,
+                                "id",
+                                LEAGUE_ID);
+
+                return league;
+        }
+
+        private Player createPlayer() {
+                Player player = new Player(
+                                "player-001",
+                                "Jugador de prueba",
+                                List.of(PlayerPosition.DF),
+                                "Equipo de prueba",
+                                1_500_000L,
+                                createLeague());
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "id",
+                                PLAYER_ID);
+
+                return player;
+        }
+
+        private Manager createManager() {
+                Manager manager = new Manager(
+                                11_470_376L,
+                                "SIRG",
+                                "i/u/11470376.png",
+                                0,
+                                13,
+                                54_100_000L,
+                                720_000L,
+                                2,
+                                "manager",
+                                createLeague());
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "id",
+                                MANAGER_ID);
+
+                return manager;
+        }
 }

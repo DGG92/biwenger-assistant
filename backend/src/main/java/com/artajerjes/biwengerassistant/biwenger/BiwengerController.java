@@ -1,11 +1,12 @@
 package com.artajerjes.biwengerassistant.biwenger;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.TestApiResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
-
 
 @RestController
 @RequestMapping("/api/biwenger")
@@ -24,5 +25,10 @@ public class BiwengerController {
     @GetMapping("/league")
     public BiwengerLeagueApiResponse getLeague() {
         return biwengerClient.getLeague();
+    }
+
+    @GetMapping("/competition")
+    public BiwengerCompetitionResponse getCompetitionData() {
+        return biwengerClient.getCompetitionData();
     }
 }

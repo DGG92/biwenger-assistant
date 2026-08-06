@@ -24,4 +24,8 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
             Long playerId,
             Long leagueId
     );
+    Optional<Player> findByBiwengerPlayerIdAndLeague_Id(
+        String biwengerPlayerId,
+        Long leagueId
+    );
 }

@@ -19,17 +19,14 @@ public class LeagueService {
     }
 
     public LeagueResponse create(CreateLeagueRequest request) {
-        if (
-            request.biwengerLeagueId() != null
-            && leagueRepository.existsByBiwengerLeagueId(request.biwengerLeagueId())
-        ) {
+        if (request.biwengerLeagueId() != null
+                && leagueRepository.existsByBiwengerLeagueId(request.biwengerLeagueId())) {
             throw new LeagueAlreadyExistsException(request.biwengerLeagueId());
         }
 
         League league = new League(
                 request.name(),
-                request.biwengerLeagueId()
-        );
+                request.biwengerLeagueId());
 
         League savedLeague = leagueRepository.save(league);
 
@@ -52,31 +49,26 @@ public class LeagueService {
     @Transactional
     public LeagueResponse update(Long id, UpdateLeagueRequest request) {
         League league = leagueRepository.findById(id)
-            .orElseThrow(() -> new LeagueNotFoundException(id));
+                .orElseThrow(() -> new LeagueNotFoundException(id));
 
-        if (
-            request.biwengerLeagueId() != null
-            && leagueRepository.existsByBiwengerLeagueIdAndIdNot(
-                request.biwengerLeagueId(),
-                id
-            )
-        ) {
+        if (request.biwengerLeagueId() != null
+                && leagueRepository.existsByBiwengerLeagueIdAndIdNot(
+                        request.biwengerLeagueId(),
+                        id)) {
             throw new LeagueAlreadyExistsException(
-                request.biwengerLeagueId()
-            );
+                    request.biwengerLeagueId());
         }
 
         league.update(
-            request.name(),
-            request.biwengerLeagueId()
-        );
+                request.name(),
+                request.biwengerLeagueId());
 
         return toResponse(league);
     }
 
     public void delete(Long id) {
         League league = leagueRepository.findById(id)
-            .orElseThrow(() -> new LeagueNotFoundException(id));
+                .orElseThrow(() -> new LeagueNotFoundException(id));
 
         leagueRepository.delete(league);
     }
@@ -86,7 +78,6 @@ public class LeagueService {
                 league.getId(),
                 league.getName(),
                 league.getBiwengerLeagueId(),
-                league.getCreatedAt()
-        );
+                league.getCreatedAt());
     }
 }

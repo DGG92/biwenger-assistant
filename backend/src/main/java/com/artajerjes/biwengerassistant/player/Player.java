@@ -83,11 +83,11 @@ public class Player {
     @Column(name = "value_fluctuation", nullable = false)
     private Long valueFluctuation;
 
-    @Column(name = "blocked_clause", nullable = false)
-    private boolean blockedClause;
-
     @Column(name = "clause_value")
     private Long clauseValue;
+
+    @Column(name = "clause_locked_until")
+    private LocalDateTime clauseLockedUntil;
 
     @ManyToOne
     @JoinColumn(name = "owner_id")
@@ -126,27 +126,27 @@ public class Player {
         this.captain = false;
         this.ram = false;
         this.valueFluctuation = 0L;
-        this.blockedClause = false;
         this.clauseValue = null;
         this.owner = null;
         this.signedAt = null;
+        this.clauseLockedUntil = null;
     }
 
     public void update(
-            String biwengerPlayerId,
-            String name,
-            List<PlayerPosition> positions,
-            Integer points,
-            String teamName,
-            Long marketValue,
-            Boolean injured,
-            Boolean captain,
-            Boolean ram,
-            Long valueFluctuation,
-            Boolean blockedClause,
-            Long clauseValue,
-            Manager owner,
-            LocalDateTime signedAt
+        String biwengerPlayerId,
+        String name,
+        List<PlayerPosition> positions,
+        Integer points,
+        String teamName,
+        Long marketValue,
+        Boolean injured,
+        Boolean captain,
+        Boolean ram,
+        Long valueFluctuation,
+        LocalDateTime clauseLockedUntil,
+        Long clauseValue,
+        Manager owner,
+        LocalDateTime signedAt
     ) {
         this.biwengerPlayerId = biwengerPlayerId;
         this.name = name;
@@ -158,10 +158,28 @@ public class Player {
         this.captain = captain;
         this.ram = ram;
         this.valueFluctuation = valueFluctuation;
-        this.blockedClause = blockedClause;
+        this.clauseLockedUntil = clauseLockedUntil;
         this.clauseValue = clauseValue;
         this.owner = owner;
         this.signedAt = signedAt;
+    }
+
+    public void updateCompetitionData(
+        String name,
+        List<PlayerPosition> positions,
+        Integer points,
+        String teamName,
+        Long marketValue,
+        boolean injured,
+        Long valueFluctuation
+    ) {
+        this.name = name;
+        this.positions = new ArrayList<>(positions);
+        this.points = points;
+        this.teamName = teamName;
+        this.marketValue = marketValue;
+        this.injured = injured;
+        this.valueFluctuation = valueFluctuation;
     }
 
     @PrePersist
@@ -215,12 +233,17 @@ public class Player {
         return valueFluctuation;
     }
 
-    public boolean isBlockedClause() {
-        return blockedClause;
+    public LocalDateTime getClauseLockedUntil() {
+        return clauseLockedUntil;
     }
 
     public Long getClauseValue() {
         return clauseValue;
+    }
+
+    public boolean isBlockedClause() {
+    return clauseLockedUntil != null
+        && clauseLockedUntil.isAfter(LocalDateTime.now());
     }
 
     public Manager getOwner() {

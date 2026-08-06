@@ -23,15 +23,13 @@ public class ManagerController {
 
     @PostMapping("/sync")
     public ManagerSyncResponse sync(
-            @PathVariable Long leagueId
-    ) {
+            @PathVariable Long leagueId) {
         return managerService.sync(leagueId);
     }
 
     @GetMapping
     public List<ManagerResponse> findAll(
-            @PathVariable Long leagueId
-    ) {
+            @PathVariable Long leagueId) {
         return managerService.findAll(leagueId);
     }
 }

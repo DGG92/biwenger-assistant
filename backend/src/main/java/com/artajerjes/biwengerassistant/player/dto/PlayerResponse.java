@@ -18,6 +18,7 @@ public record PlayerResponse(
         Boolean ram,
         Long valueFluctuation,
         Boolean blockedClause,
+        LocalDateTime clauseLockedUntil,
         Long clauseValue,
         Long ownerId,
         String ownerName,
