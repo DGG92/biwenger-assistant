@@ -56,7 +56,7 @@ public class BiwengerClient {
                 this.score = score;
         }
 
-        public BiwengerCompetitionResponse getCompetitionData() {
+        public BiwengerCompetitionResponse getCompetition() {
                 byte[] responseBody = cdnRestClient
                                 .get()
                                 .uri(uriBuilder -> uriBuilder

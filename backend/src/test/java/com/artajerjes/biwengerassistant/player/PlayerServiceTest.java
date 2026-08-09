@@ -2,6 +2,7 @@ package com.artajerjes.biwengerassistant.player;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,17 +10,27 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import static org.mockito.ArgumentMatchers.any;
+
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionData;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -28,6 +39,7 @@ import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
+import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +59,9 @@ class PlayerServiceTest {
 
         @Mock
         private ManagerRepository managerRepository;
+
+        @Mock
+        private BiwengerClient biwengerClient;
 
         @InjectMocks
         private PlayerService playerService;
@@ -567,6 +582,370 @@ class PlayerServiceTest {
                                 never()).findByIdAndLeague_Id(
                                                 any(Long.class),
                                                 any(Long.class));
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldCreateNewPlayers() {
+                League league = createLeague();
+
+                BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
+                                17731L,
+                                "Catena",
+                                "catena",
+                                93L,
+                                2,
+                                List.of(3),
+                                3_630_000L,
+                                45_000_000L,
+                                24,
+                                "ok",
+                                120_000L,
+                                87,
+                                "icon.png",
+                                "hero.png");
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of(
+                                "17731",
+                                externalPlayer);
+
+                Map<String, BiwengerCompetitionTeam> teams = Map.of(
+                                "93",
+                                new BiwengerCompetitionTeam(
+                                                93L,
+                                                "Osasuna",
+                                                "osasuna",
+                                                "icon.png"));
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                teams);
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                when(playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                "17731",
+                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                when(playerRepository.save(any(Player.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                PlayerSyncResponse result = playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                assertEquals(1, result.total());
+                assertEquals(1, result.created());
+                assertEquals(0, result.updated());
+                assertEquals(0, result.skipped());
+
+                verify(playerRepository).save(any(Player.class));
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldUpdateExistingPlayer() {
+                League league = createLeague();
+
+                Player existingPlayer = new Player(
+                                "17731",
+                                "Nombre antiguo",
+                                List.of(PlayerPosition.DF),
+                                "Equipo antiguo",
+                                1_000_000L,
+                                league);
+
+                BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
+                                17731L,
+                                "Catena",
+                                "catena",
+                                93L,
+                                2,
+                                List.of(3),
+                                3_630_000L,
+                                45_000_000L,
+                                24,
+                                "ok",
+                                120_000L,
+                                87,
+                                "icon.png",
+                                "hero.png");
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of(
+                                "17731",
+                                externalPlayer);
+
+                Map<String, BiwengerCompetitionTeam> teams = Map.of(
+                                "93",
+                                new BiwengerCompetitionTeam(
+                                                93L,
+                                                "Osasuna",
+                                                "osasuna",
+                                                "icon.png"));
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                teams);
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                when(
+                                playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                                "17731",
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.of(existingPlayer));
+
+                PlayerSyncResponse result = playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                assertEquals(1, result.total());
+                assertEquals(0, result.created());
+                assertEquals(1, result.updated());
+                assertEquals(0, result.skipped());
+
+                assertEquals("Catena", existingPlayer.getName());
+
+                assertEquals(
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                existingPlayer.getPositions());
+
+                assertEquals("Osasuna", existingPlayer.getTeamName());
+                assertEquals(3_630_000L, existingPlayer.getMarketValue());
+                assertEquals(120_000L, existingPlayer.getValueFluctuation());
+                assertEquals(87, existingPlayer.getPoints());
+                assertFalse(existingPlayer.isInjured());
+
+                verify(playerRepository, never())
+                                .save(any(Player.class));
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldSkipInvalidPlayer() {
+                League league = createLeague();
+
+                BiwengerCompetitionPlayer invalidPlayer = new BiwengerCompetitionPlayer(
+                                null,
+                                "Jugador inválido",
+                                "jugador-invalido",
+                                93L,
+                                2,
+                                null,
+                                1_000_000L,
+                                null,
+                                null,
+                                "ok",
+                                0L,
+                                0,
+                                null,
+                                null);
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of(
+                                "invalid",
+                                invalidPlayer);
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                Map.of());
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                PlayerSyncResponse result = playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                assertEquals(1, result.total());
+                assertEquals(0, result.created());
+                assertEquals(0, result.updated());
+                assertEquals(1, result.skipped());
+
+                verify(playerRepository, never())
+                                .save(any(Player.class));
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldMapMultiplePositionsWithoutDuplicates() {
+                League league = createLeague();
+
+                BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
+                                99999L,
+                                "Jugador polivalente",
+                                "jugador-polivalente",
+                                2L,
+                                2,
+                                List.of(3, 4, 2),
+                                5_000_000L,
+                                null,
+                                10,
+                                "ok",
+                                50_000L,
+                                100,
+                                null,
+                                null);
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of(
+                                "99999",
+                                externalPlayer);
+
+                Map<String, BiwengerCompetitionTeam> teams = Map.of(
+                                "2",
+                                new BiwengerCompetitionTeam(
+                                                2L,
+                                                "Atlético de Madrid",
+                                                "atletico-madrid",
+                                                "icon.png"));
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                teams);
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                when(
+                                playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                                "99999",
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                when(playerRepository.save(any(Player.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                ArgumentCaptor<Player> playerCaptor = ArgumentCaptor.forClass(Player.class);
+
+                verify(playerRepository)
+                                .save(playerCaptor.capture());
+
+                Player savedPlayer = playerCaptor.getValue();
+
+                assertEquals(
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DL),
+                                savedPlayer.getPositions());
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldMarkNonOkStatusAsInjured() {
+                League league = createLeague();
+
+                BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
+                                88888L,
+                                "Jugador lesionado",
+                                "jugador-lesionado",
+                                93L,
+                                4,
+                                null,
+                                7_000_000L,
+                                null,
+                                9,
+                                "injured",
+                                -50_000L,
+                                25,
+                                null,
+                                null);
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of(
+                                "88888",
+                                externalPlayer);
+
+                Map<String, BiwengerCompetitionTeam> teams = Map.of(
+                                "93",
+                                new BiwengerCompetitionTeam(
+                                                93L,
+                                                "Osasuna",
+                                                "osasuna",
+                                                "icon.png"));
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                teams);
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                when(
+                                playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                                "88888",
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                when(playerRepository.save(any(Player.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                ArgumentCaptor<Player> playerCaptor = ArgumentCaptor.forClass(Player.class);
+
+                verify(playerRepository)
+                                .save(playerCaptor.capture());
+
+                Player savedPlayer = playerCaptor.getValue();
+
+                assertTrue(savedPlayer.isInjured());
+                assertEquals(PlayerPosition.DL, savedPlayer.getPositions().get(0));
+                assertEquals(-50_000L, savedPlayer.getValueFluctuation());
         }
 
         @Test

@@ -29,6 +29,6 @@ public class BiwengerController {
 
     @GetMapping("/competition")
     public BiwengerCompetitionResponse getCompetitionData() {
-        return biwengerClient.getCompetitionData();
+        return biwengerClient.getCompetition();
     }
 }

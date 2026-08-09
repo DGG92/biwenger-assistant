@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -245,7 +246,7 @@ public class PlayerService {
                                 .orElseThrow(
                                                 () -> new LeagueNotFoundException(leagueId));
 
-                BiwengerCompetitionResponse response = biwengerClient.getCompetitionData();
+                BiwengerCompetitionResponse response = biwengerClient.getCompetition();
 
                 if (response == null
                                 || response.data() == null
@@ -273,9 +274,9 @@ public class PlayerService {
                                         externalPlayer.position(),
                                         externalPlayer.altPositions());
 
-                        String teamName = externalPlayer.teamID() == null
-                                        ? null
-                                        : externalPlayer.teamID().toString();
+                        String teamName = resolveTeamName(
+                                        response,
+                                        externalPlayer.teamId());
 
                         boolean injured = isInjured(
                                         externalPlayer.status());
@@ -333,5 +334,19 @@ public class PlayerService {
                                 created,
                                 updated,
                                 skipped);
+        }
+
+        private String resolveTeamName(
+                        BiwengerCompetitionResponse response,
+                        Long teamId) {
+                if (teamId == null) {
+                        return null;
+                }
+
+                BiwengerCompetitionTeam team = response.data().teams().get(teamId.toString());
+
+                return team == null
+                                ? null
+                                : team.name();
         }
 }
