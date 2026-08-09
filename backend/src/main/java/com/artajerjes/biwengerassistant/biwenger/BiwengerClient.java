@@ -7,6 +7,7 @@ import org.springframework.web.client.RestClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.TestApiResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.market.BiwengerMarketResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 
 import tools.jackson.databind.ObjectMapper;
@@ -186,6 +187,36 @@ public class BiwengerClient {
                 } catch (Exception exception) {
                         throw new IllegalStateException(
                                         "Could not deserialize Biwenger current user response",
+                                        exception);
+                }
+        }
+
+        public BiwengerMarketResponse getMarket() {
+                byte[] responseBody = restClient
+                                .get()
+                                .uri("/api/v2/market")
+                                .headers(headers -> {
+                                        headers.setBearerAuth(token);
+                                        headers.set("x-league", leagueId);
+                                        headers.set("x-user", userId);
+                                        headers.set("x-version", version);
+                                        headers.set("x-lang", language);
+                                })
+                                .retrieve()
+                                .body(byte[].class);
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty market response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerMarketResponse.class);
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger market response",
                                         exception);
                 }
         }
