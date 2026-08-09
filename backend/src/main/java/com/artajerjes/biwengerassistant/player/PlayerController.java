@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
@@ -85,5 +86,11 @@ public class PlayerController {
         public PlayerOwnershipSyncResponse syncPlayerOwnership(
                         @PathVariable Long leagueId) {
                 return playerService.syncPlayerOwnership(leagueId);
+        }
+
+        @PostMapping("/sync-lineup")
+        public PlayerLineupSyncResponse syncCurrentLineup(
+                        @PathVariable Long leagueId) {
+                return playerService.syncCurrentLineup(leagueId);
         }
 }

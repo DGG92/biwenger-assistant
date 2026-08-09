@@ -32,7 +32,9 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupPlayerRef;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
@@ -43,6 +45,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
@@ -987,6 +990,7 @@ class PlayerServiceTest {
                 BiwengerUserData userData = new BiwengerUserData(
                                 manager.getBiwengerManagerId(),
                                 manager.getName(),
+                                null,
                                 List.of(externalPlayer));
 
                 BiwengerUserResponse userResponse = new BiwengerUserResponse(
@@ -1060,6 +1064,7 @@ class PlayerServiceTest {
                 BiwengerUserData userData = new BiwengerUserData(
                                 manager.getBiwengerManagerId(),
                                 manager.getName(),
+                                null,
                                 List.of());
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1111,6 +1116,7 @@ class PlayerServiceTest {
                 BiwengerUserData userData = new BiwengerUserData(
                                 manager.getBiwengerManagerId(),
                                 manager.getName(),
+                                null,
                                 List.of(unknownPlayer));
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1207,6 +1213,7 @@ class PlayerServiceTest {
                 BiwengerUserData userData = new BiwengerUserData(
                                 manager.getBiwengerManagerId(),
                                 manager.getName(),
+                                null,
                                 List.of(externalPlayer));
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1239,6 +1246,245 @@ class PlayerServiceTest {
                 assertNull(player.getClauseLockedUntil());
 
                 assertFalse(player.isFreePlayer());
+        }
+
+        @Test
+        void syncCurrentLineupShouldSetCaptainAndRamForCurrentManager() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player captain = new Player(
+                                "38405",
+                                "Odysseas",
+                                List.of(PlayerPosition.PT),
+                                "Sevilla",
+                                3_000_000L,
+                                league);
+
+                Player ram = new Player(
+                                "17756",
+                                "Camello",
+                                List.of(PlayerPosition.DL),
+                                "Rayo Vallecano",
+                                2_000_000L,
+                                league);
+
+                Player otherPlayer = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                captain.updateOwnership(manager, null, null, null);
+                ram.updateOwnership(manager, null, null, null);
+                otherPlayer.updateOwnership(manager, null, null, null);
+
+                BiwengerUserLineup lineup = new BiwengerUserLineup(
+                                "4-5-1",
+                                new BiwengerLineupPlayerRef(38405L),
+                                new BiwengerLineupPlayerRef(17756L),
+                                new BiwengerLineupPlayerRef(41088L),
+                                1785998437L,
+                                List.of(
+                                                38405L,
+                                                17731L,
+                                                17756L),
+                                List.of());
+
+                BiwengerUserData userData = new BiwengerUserData(
+                                manager.getBiwengerManagerId(),
+                                manager.getName(),
+                                lineup,
+                                List.of());
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                userData);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(),
+                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(
+                                                captain,
+                                                ram,
+                                                otherPlayer));
+
+                PlayerLineupSyncResponse result = playerService.syncCurrentLineup(LEAGUE_ID);
+
+                assertEquals(MANAGER_ID, result.managerId());
+                assertEquals("4-5-1", result.formation());
+                assertEquals(38405L, result.captainPlayerId());
+                assertEquals(17756L, result.ramPlayerId());
+                assertEquals(41088L, result.coachPlayerId());
+
+                assertTrue(captain.isCaptain());
+                assertFalse(captain.isRam());
+
+                assertFalse(ram.isCaptain());
+                assertTrue(ram.isRam());
+
+                assertFalse(otherPlayer.isCaptain());
+                assertFalse(otherPlayer.isRam());
+        }
+
+        @Test
+        void syncCurrentLineupShouldClearPreviousLineupRolesBeforeApplyingNewOnes() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player oldCaptainAndRam = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                Player newCaptain = new Player(
+                                "38405",
+                                "Odysseas",
+                                List.of(PlayerPosition.PT),
+                                "Sevilla",
+                                3_000_000L,
+                                league);
+
+                oldCaptainAndRam.updateOwnership(manager, null, null, null);
+                newCaptain.updateOwnership(manager, null, null, null);
+
+                oldCaptainAndRam.updateLineupRoles(true, true);
+
+                BiwengerUserLineup lineup = new BiwengerUserLineup(
+                                "4-4-2",
+                                new BiwengerLineupPlayerRef(38405L),
+                                null,
+                                null,
+                                1785998437L,
+                                List.of(38405L, 17731L),
+                                List.of());
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                lineup,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(),
+                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(
+                                                oldCaptainAndRam,
+                                                newCaptain));
+
+                playerService.syncCurrentLineup(LEAGUE_ID);
+
+                assertFalse(oldCaptainAndRam.isCaptain());
+                assertFalse(oldCaptainAndRam.isRam());
+
+                assertTrue(newCaptain.isCaptain());
+                assertFalse(newCaptain.isRam());
+        }
+
+        @Test
+        void syncCurrentLineupShouldHandleCurrentUserWithoutLineup() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player player = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                player.updateOwnership(manager, null, null, null);
+                player.updateLineupRoles(true, true);
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                null,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(),
+                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                PlayerLineupSyncResponse result = playerService.syncCurrentLineup(LEAGUE_ID);
+
+                assertEquals(MANAGER_ID, result.managerId());
+                assertNull(result.formation());
+                assertNull(result.captainPlayerId());
+                assertNull(result.ramPlayerId());
+                assertNull(result.coachPlayerId());
+
+                assertFalse(player.isCaptain());
+                assertFalse(player.isRam());
+        }
+
+        @Test
+        void syncCurrentLineupShouldThrowWhenCurrentManagerDoesNotExistLocally() {
+                League league = createLeague();
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                99_999_999L,
+                                                "Manager externo",
+                                                null,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                99_999_999L,
+                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(
+                                IllegalStateException.class,
+                                () -> playerService.syncCurrentLineup(LEAGUE_ID));
+
+                verify(playerRepository, never())
+                                .findAllByLeague_Id(LEAGUE_ID);
         }
 
         @Test

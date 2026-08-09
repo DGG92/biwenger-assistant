@@ -17,6 +17,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 import com.artajerjes.biwengerassistant.league.League;
@@ -26,6 +27,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
@@ -445,5 +447,77 @@ public class PlayerService {
                 return LocalDateTime.ofInstant(
                                 Instant.ofEpochSecond(timestamp),
                                 ZoneId.systemDefault());
+        }
+
+        @Transactional
+        public PlayerLineupSyncResponse syncCurrentLineup(Long leagueId) {
+                League league = leagueRepository.findById(leagueId)
+                                .orElseThrow(
+                                                () -> new LeagueNotFoundException(leagueId));
+
+                BiwengerUserResponse response = biwengerClient.getCurrentUser();
+
+                if (response == null
+                                || response.data() == null
+                                || response.data().id() == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an invalid current user response");
+                }
+
+                Manager manager = managerRepository
+                                .findByBiwengerManagerIdAndLeague_Id(
+                                                response.data().id(),
+                                                league.getId())
+                                .orElseThrow(
+                                                () -> new IllegalStateException(
+                                                                "Current Biwenger manager does not exist in local database"));
+
+                List<Player> players = playerRepository.findAllByLeague_Id(leagueId);
+
+                players.stream()
+                                .filter(player -> manager.equals(player.getOwner()))
+                                .forEach(Player::clearLineupRoles);
+
+                BiwengerUserLineup lineup = response.data().lineup();
+
+                if (lineup == null) {
+                        return new PlayerLineupSyncResponse(
+                                        manager.getId(),
+                                        null,
+                                        null,
+                                        null,
+                                        null);
+                }
+
+                Long captainId = lineup.captain() == null
+                                ? null
+                                : lineup.captain().id();
+
+                Long ramId = lineup.striker() == null
+                                ? null
+                                : lineup.striker().id();
+
+                Long coachId = lineup.coach() == null
+                                ? null
+                                : lineup.coach().id();
+
+                for (Player player : players) {
+                        if (!manager.equals(player.getOwner())) {
+                                continue;
+                        }
+
+                        Long biwengerPlayerId = Long.valueOf(player.getBiwengerPlayerId());
+
+                        player.updateLineupRoles(
+                                        biwengerPlayerId.equals(captainId),
+                                        biwengerPlayerId.equals(ramId));
+                }
+
+                return new PlayerLineupSyncResponse(
+                                manager.getId(),
+                                lineup.type(),
+                                captainId,
+                                ramId,
+                                coachId);
         }
 }

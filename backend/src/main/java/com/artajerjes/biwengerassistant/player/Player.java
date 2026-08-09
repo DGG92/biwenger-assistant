@@ -184,6 +184,18 @@ public class Player {
         this.clauseLockedUntil = null;
     }
 
+    public void updateLineupRoles(
+            boolean captain,
+            boolean ram) {
+        this.captain = captain;
+        this.ram = ram;
+    }
+
+    public void clearLineupRoles() {
+        this.captain = false;
+        this.ram = false;
+    }
+
     @PrePersist
     private void prePersist() {
         if (createdAt == null) {

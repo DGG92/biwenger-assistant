@@ -155,6 +155,41 @@ public class BiwengerClient {
                 }
         }
 
+        public BiwengerUserResponse getCurrentUser() {
+                byte[] responseBody = restClient
+                                .get()
+                                .uri(uriBuilder -> uriBuilder
+                                                .path("/api/v2/user")
+                                                .queryParam(
+                                                                "fields",
+                                                                "*,lineup(type,playersID,reservesID,captain,striker,coach,date),players(id,owner),market,offers,-trophies")
+                                                .build())
+                                .headers(headers -> {
+                                        headers.setBearerAuth(token);
+                                        headers.set("x-league", leagueId);
+                                        headers.set("x-user", userId);
+                                        headers.set("x-version", version);
+                                        headers.set("x-lang", language);
+                                })
+                                .retrieve()
+                                .body(byte[].class);
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty current user response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerUserResponse.class);
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger current user response",
+                                        exception);
+                }
+        }
+
         public TestApiResponse testConnection() {
                 return restClient
                                 .get()
