@@ -67,6 +67,12 @@ public class Player {
     @Column(nullable = false)
     private boolean ram;
 
+    @Column(nullable = false)
+    private boolean starter;
+
+    @Column(nullable = false)
+    private boolean reserve;
+
     @Column(name = "value_fluctuation", nullable = false)
     private Long valueFluctuation;
 
@@ -111,6 +117,8 @@ public class Player {
         this.injured = false;
         this.captain = false;
         this.ram = false;
+        this.starter = false;
+        this.reserve = false;
         this.valueFluctuation = 0L;
         this.clauseValue = null;
         this.owner = null;
@@ -186,14 +194,20 @@ public class Player {
 
     public void updateLineupRoles(
             boolean captain,
-            boolean ram) {
+            boolean ram,
+            boolean starter,
+            boolean reserve) {
         this.captain = captain;
         this.ram = ram;
+        this.starter = starter;
+        this.reserve = reserve;
     }
 
     public void clearLineupRoles() {
         this.captain = false;
         this.ram = false;
+        this.starter = false;
+        this.reserve = false;
     }
 
     @PrePersist
@@ -241,6 +255,14 @@ public class Player {
 
     public boolean isRam() {
         return ram;
+    }
+
+    public boolean isStarter() {
+        return starter;
+    }
+
+    public boolean isReserve() {
+        return reserve;
     }
 
     public Long getValueFluctuation() {

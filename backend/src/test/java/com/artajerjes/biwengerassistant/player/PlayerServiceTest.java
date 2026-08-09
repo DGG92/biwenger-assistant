@@ -1330,12 +1330,18 @@ class PlayerServiceTest {
 
                 assertTrue(captain.isCaptain());
                 assertFalse(captain.isRam());
+                assertTrue(captain.isStarter());
+                assertFalse(captain.isReserve());
 
                 assertFalse(ram.isCaptain());
                 assertTrue(ram.isRam());
+                assertTrue(ram.isStarter());
+                assertFalse(ram.isReserve());
 
                 assertFalse(otherPlayer.isCaptain());
                 assertFalse(otherPlayer.isRam());
+                assertTrue(otherPlayer.isStarter());
+                assertFalse(otherPlayer.isReserve());
         }
 
         @Test
@@ -1362,7 +1368,7 @@ class PlayerServiceTest {
                 oldCaptainAndRam.updateOwnership(manager, null, null, null);
                 newCaptain.updateOwnership(manager, null, null, null);
 
-                oldCaptainAndRam.updateLineupRoles(true, true);
+                oldCaptainAndRam.updateLineupRoles(true, true, true, true);
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
                                 "4-4-2",
@@ -1401,9 +1407,13 @@ class PlayerServiceTest {
 
                 assertFalse(oldCaptainAndRam.isCaptain());
                 assertFalse(oldCaptainAndRam.isRam());
+                assertTrue(oldCaptainAndRam.isStarter());
+                assertFalse(oldCaptainAndRam.isReserve());
 
                 assertTrue(newCaptain.isCaptain());
                 assertFalse(newCaptain.isRam());
+                assertTrue(newCaptain.isStarter());
+                assertFalse(newCaptain.isReserve());
         }
 
         @Test
@@ -1420,7 +1430,7 @@ class PlayerServiceTest {
                                 league);
 
                 player.updateOwnership(manager, null, null, null);
-                player.updateLineupRoles(true, true);
+                player.updateLineupRoles(true, true, true, true);
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
                                 200,
@@ -1454,6 +1464,64 @@ class PlayerServiceTest {
 
                 assertFalse(player.isCaptain());
                 assertFalse(player.isRam());
+                assertFalse(player.isStarter());
+                assertFalse(player.isReserve());
+        }
+
+        @Test
+        void syncCurrentLineupShouldMarkReservesAndKeepThemOutOfStartingLineup() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player starter = new Player(
+                                "38405", "Odysseas",
+                                List.of(PlayerPosition.PT),
+                                "Sevilla", 3_000_000L, league);
+
+                Player reserve = new Player(
+                                "2184", "Ryan",
+                                List.of(PlayerPosition.PT),
+                                "Levante", 2_500_000L, league);
+
+                starter.updateOwnership(manager, null, null, null);
+                reserve.updateOwnership(manager, null, null, null);
+
+                BiwengerUserLineup lineup = new BiwengerUserLineup(
+                                "4-5-1",
+                                new BiwengerLineupPlayerRef(38405L),
+                                null,
+                                null,
+                                1785998437L,
+                                List.of(38405L),
+                                List.of(2184L));
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                lineup,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(), LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(starter, reserve));
+
+                playerService.syncCurrentLineup(LEAGUE_ID);
+
+                assertTrue(starter.isStarter());
+                assertFalse(starter.isReserve());
+
+                assertFalse(reserve.isStarter());
+                assertTrue(reserve.isReserve());
+                assertFalse(reserve.isCaptain());
+                assertFalse(reserve.isRam());
         }
 
         @Test

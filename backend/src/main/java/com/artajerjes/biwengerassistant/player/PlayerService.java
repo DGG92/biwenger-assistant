@@ -198,6 +198,8 @@ public class PlayerService {
                                 player.isInjured(),
                                 player.isCaptain(),
                                 player.isRam(),
+                                player.isStarter(),
+                                player.isReserve(),
                                 player.getValueFluctuation(),
                                 player.isBlockedClause(),
                                 player.getClauseLockedUntil(),
@@ -508,9 +510,17 @@ public class PlayerService {
 
                         Long biwengerPlayerId = Long.valueOf(player.getBiwengerPlayerId());
 
+                        boolean starter = lineup.playersID() != null
+                                        && lineup.playersID().contains(biwengerPlayerId);
+
+                        boolean reserve = lineup.reservesID() != null
+                                        && lineup.reservesID().contains(biwengerPlayerId);
+
                         player.updateLineupRoles(
                                         biwengerPlayerId.equals(captainId),
-                                        biwengerPlayerId.equals(ramId));
+                                        biwengerPlayerId.equals(ramId),
+                                        starter,
+                                        reserve);
                 }
 
                 return new PlayerLineupSyncResponse(
