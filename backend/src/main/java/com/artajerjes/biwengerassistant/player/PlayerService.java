@@ -2,6 +2,12 @@ package com.artajerjes.biwengerassistant.player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Map;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +16,9 @@ import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -17,6 +26,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
@@ -348,5 +358,92 @@ public class PlayerService {
                 return team == null
                                 ? null
                                 : team.name();
+        }
+
+        @Transactional
+        public PlayerOwnershipSyncResponse syncPlayerOwnership(Long leagueId) {
+                League league = leagueRepository.findById(leagueId)
+                                .orElseThrow(
+                                                () -> new LeagueNotFoundException(leagueId));
+
+                List<Manager> managers = managerRepository.findAllByLeague_Id(leagueId);
+
+                List<Player> players = playerRepository.findAllByLeague_Id(leagueId);
+
+                Map<String, Player> playersByBiwengerId = players.stream()
+                                .collect(
+                                                Collectors.toMap(
+                                                                Player::getBiwengerPlayerId,
+                                                                Function.identity()));
+
+                /*
+                 * Empezamos suponiendo que todos están libres.
+                 *
+                 * Después asignaremos únicamente aquellos que Biwenger
+                 * indique actualmente como propiedad de algún manager.
+                 */
+                players.forEach(Player::clearOwnership);
+
+                int playersAssigned = 0;
+                int playersNotFound = 0;
+
+                for (Manager manager : managers) {
+                        BiwengerUserResponse response = biwengerClient.getUser(
+                                        manager.getBiwengerManagerId());
+
+                        if (response == null
+                                        || response.data() == null
+                                        || response.data().players() == null) {
+                                continue;
+                        }
+
+                        for (BiwengerUserPlayer externalPlayer : response.data().players()) {
+
+                                if (externalPlayer.id() == null) {
+                                        continue;
+                                }
+
+                                Player player = playersByBiwengerId.get(
+                                                externalPlayer.id().toString());
+
+                                if (player == null) {
+                                        playersNotFound++;
+                                        continue;
+                                }
+
+                                BiwengerPlayerOwner ownership = externalPlayer.owner();
+
+                                player.updateOwnership(
+                                                manager,
+                                                ownership == null
+                                                                ? null
+                                                                : toLocalDateTime(
+                                                                                ownership.date()),
+                                                ownership == null
+                                                                ? null
+                                                                : ownership.clause(),
+                                                ownership == null
+                                                                ? null
+                                                                : toLocalDateTime(
+                                                                                ownership.clauseLockedUntil()));
+
+                                playersAssigned++;
+                        }
+                }
+
+                return new PlayerOwnershipSyncResponse(
+                                managers.size(),
+                                playersAssigned,
+                                playersNotFound);
+        }
+
+        private LocalDateTime toLocalDateTime(Long timestamp) {
+                if (timestamp == null) {
+                        return null;
+                }
+
+                return LocalDateTime.ofInstant(
+                                Instant.ofEpochSecond(timestamp),
+                                ZoneId.systemDefault());
         }
 }

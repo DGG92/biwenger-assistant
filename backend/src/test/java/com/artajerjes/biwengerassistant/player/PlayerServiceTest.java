@@ -1,6 +1,8 @@
 package com.artajerjes.biwengerassistant.player;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.mockito.ArgumentMatchers.any;
-
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -31,6 +32,10 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -38,6 +43,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
@@ -369,10 +375,7 @@ class PlayerServiceTest {
                                 response.positions());
 
                 assertEquals(42, response.points());
-
-                assertEquals(
-                                1_750_000L,
-                                response.marketValue());
+                assertEquals(1_750_000L, response.marketValue());
 
                 assertTrue(response.captain());
                 assertTrue(response.blockedClause());
@@ -604,9 +607,7 @@ class PlayerServiceTest {
                                 "icon.png",
                                 "hero.png");
 
-                Map<String, BiwengerCompetitionPlayer> players = Map.of(
-                                "17731",
-                                externalPlayer);
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("17731", externalPlayer);
 
                 Map<String, BiwengerCompetitionTeam> teams = Map.of(
                                 "93",
@@ -635,9 +636,10 @@ class PlayerServiceTest {
                 when(biwengerClient.getCompetition())
                                 .thenReturn(response);
 
-                when(playerRepository.findByBiwengerPlayerIdAndLeague_Id(
-                                "17731",
-                                LEAGUE_ID))
+                when(
+                                playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                                "17731",
+                                                LEAGUE_ID))
                                 .thenReturn(Optional.empty());
 
                 when(playerRepository.save(any(Player.class)))
@@ -650,7 +652,8 @@ class PlayerServiceTest {
                 assertEquals(0, result.updated());
                 assertEquals(0, result.skipped());
 
-                verify(playerRepository).save(any(Player.class));
+                verify(playerRepository)
+                                .save(any(Player.class));
         }
 
         @Test
@@ -681,9 +684,7 @@ class PlayerServiceTest {
                                 "icon.png",
                                 "hero.png");
 
-                Map<String, BiwengerCompetitionPlayer> players = Map.of(
-                                "17731",
-                                externalPlayer);
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("17731", externalPlayer);
 
                 Map<String, BiwengerCompetitionTeam> teams = Map.of(
                                 "93",
@@ -733,9 +734,18 @@ class PlayerServiceTest {
                                                 PlayerPosition.MC),
                                 existingPlayer.getPositions());
 
-                assertEquals("Osasuna", existingPlayer.getTeamName());
-                assertEquals(3_630_000L, existingPlayer.getMarketValue());
-                assertEquals(120_000L, existingPlayer.getValueFluctuation());
+                assertEquals(
+                                "Osasuna",
+                                existingPlayer.getTeamName());
+
+                assertEquals(
+                                3_630_000L,
+                                existingPlayer.getMarketValue());
+
+                assertEquals(
+                                120_000L,
+                                existingPlayer.getValueFluctuation());
+
                 assertEquals(87, existingPlayer.getPoints());
                 assertFalse(existingPlayer.isInjured());
 
@@ -763,9 +773,7 @@ class PlayerServiceTest {
                                 null,
                                 null);
 
-                Map<String, BiwengerCompetitionPlayer> players = Map.of(
-                                "invalid",
-                                invalidPlayer);
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("invalid", invalidPlayer);
 
                 BiwengerCompetitionData data = new BiwengerCompetitionData(
                                 1L,
@@ -817,9 +825,7 @@ class PlayerServiceTest {
                                 null,
                                 null);
 
-                Map<String, BiwengerCompetitionPlayer> players = Map.of(
-                                "99999",
-                                externalPlayer);
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("99999", externalPlayer);
 
                 Map<String, BiwengerCompetitionTeam> teams = Map.of(
                                 "2",
@@ -894,9 +900,7 @@ class PlayerServiceTest {
                                 null,
                                 null);
 
-                Map<String, BiwengerCompetitionPlayer> players = Map.of(
-                                "88888",
-                                externalPlayer);
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("88888", externalPlayer);
 
                 Map<String, BiwengerCompetitionTeam> teams = Map.of(
                                 "93",
@@ -944,8 +948,297 @@ class PlayerServiceTest {
                 Player savedPlayer = playerCaptor.getValue();
 
                 assertTrue(savedPlayer.isInjured());
-                assertEquals(PlayerPosition.DL, savedPlayer.getPositions().get(0));
-                assertEquals(-50_000L, savedPlayer.getValueFluctuation());
+
+                assertEquals(
+                                PlayerPosition.DL,
+                                savedPlayer.getPositions().get(0));
+
+                assertEquals(
+                                -50_000L,
+                                savedPlayer.getValueFluctuation());
+        }
+
+        @Test
+        void syncPlayerOwnershipShouldAssignPlayerToManager() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player player = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                long signedTimestamp = 1785301319L;
+                long clauseLockedTimestamp = 1786510919L;
+
+                BiwengerPlayerOwner externalOwnership = new BiwengerPlayerOwner(
+                                signedTimestamp,
+                                3_650_000L,
+                                5_475_000L,
+                                clauseLockedTimestamp);
+
+                BiwengerUserPlayer externalPlayer = new BiwengerUserPlayer(
+                                17731L,
+                                externalOwnership);
+
+                BiwengerUserData userData = new BiwengerUserData(
+                                manager.getBiwengerManagerId(),
+                                manager.getName(),
+                                List.of(externalPlayer));
+
+                BiwengerUserResponse userResponse = new BiwengerUserResponse(
+                                200,
+                                userData);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(
+                                biwengerClient.getUser(
+                                                manager.getBiwengerManagerId()))
+                                .thenReturn(userResponse);
+
+                PlayerOwnershipSyncResponse result = playerService.syncPlayerOwnership(LEAGUE_ID);
+
+                assertEquals(1, result.managers());
+                assertEquals(1, result.playersAssigned());
+                assertEquals(0, result.playersNotFound());
+
+                assertEquals(manager, player.getOwner());
+
+                assertEquals(
+                                manager.getId(),
+                                player.getOwner().getId());
+
+                assertEquals(
+                                5_475_000L,
+                                player.getClauseValue());
+
+                assertEquals(
+                                LocalDateTime.ofInstant(
+                                                Instant.ofEpochSecond(signedTimestamp),
+                                                ZoneId.systemDefault()),
+                                player.getSignedAt());
+
+                assertEquals(
+                                LocalDateTime.ofInstant(
+                                                Instant.ofEpochSecond(clauseLockedTimestamp),
+                                                ZoneId.systemDefault()),
+                                player.getClauseLockedUntil());
+
+                assertFalse(player.isFreePlayer());
+        }
+
+        @Test
+        void syncPlayerOwnershipShouldClearPreviousOwnershipWhenPlayerIsNoLongerOwned() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player player = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                player.updateOwnership(
+                                manager,
+                                LocalDateTime.of(2026, 8, 1, 12, 0),
+                                5_000_000L,
+                                FUTURE_LOCK_DATE);
+
+                BiwengerUserData userData = new BiwengerUserData(
+                                manager.getBiwengerManagerId(),
+                                manager.getName(),
+                                List.of());
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                userData);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(
+                                biwengerClient.getUser(
+                                                manager.getBiwengerManagerId()))
+                                .thenReturn(response);
+
+                PlayerOwnershipSyncResponse result = playerService.syncPlayerOwnership(LEAGUE_ID);
+
+                assertEquals(1, result.managers());
+                assertEquals(0, result.playersAssigned());
+                assertEquals(0, result.playersNotFound());
+
+                assertNull(player.getOwner());
+                assertNull(player.getSignedAt());
+                assertNull(player.getClauseValue());
+                assertNull(player.getClauseLockedUntil());
+
+                assertTrue(player.isFreePlayer());
+                assertFalse(player.isBlockedClause());
+        }
+
+        @Test
+        void syncPlayerOwnershipShouldCountPlayersNotFoundInLocalDatabase() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                BiwengerUserPlayer unknownPlayer = new BiwengerUserPlayer(
+                                999999L,
+                                new BiwengerPlayerOwner(
+                                                1785301319L,
+                                                1_000_000L,
+                                                1_500_000L,
+                                                1786510919L));
+
+                BiwengerUserData userData = new BiwengerUserData(
+                                manager.getBiwengerManagerId(),
+                                manager.getName(),
+                                List.of(unknownPlayer));
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                userData);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                when(
+                                biwengerClient.getUser(
+                                                manager.getBiwengerManagerId()))
+                                .thenReturn(response);
+
+                PlayerOwnershipSyncResponse result = playerService.syncPlayerOwnership(LEAGUE_ID);
+
+                assertEquals(1, result.managers());
+                assertEquals(0, result.playersAssigned());
+                assertEquals(1, result.playersNotFound());
+        }
+
+        @Test
+        void syncPlayerOwnershipShouldIgnoreEmptyBiwengerResponse() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player player = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                player.updateOwnership(
+                                manager,
+                                LocalDateTime.of(2026, 8, 1, 12, 0),
+                                5_000_000L,
+                                FUTURE_LOCK_DATE);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(
+                                biwengerClient.getUser(
+                                                manager.getBiwengerManagerId()))
+                                .thenReturn(null);
+
+                PlayerOwnershipSyncResponse result = playerService.syncPlayerOwnership(LEAGUE_ID);
+
+                assertEquals(1, result.managers());
+                assertEquals(0, result.playersAssigned());
+                assertEquals(0, result.playersNotFound());
+
+                /*
+                 * El sync limpia primero toda propiedad previa.
+                 */
+                assertTrue(player.isFreePlayer());
+                assertNull(player.getOwner());
+                assertNull(player.getSignedAt());
+                assertNull(player.getClauseValue());
+                assertNull(player.getClauseLockedUntil());
+        }
+
+        @Test
+        void syncPlayerOwnershipShouldHandlePlayerWithoutOwnershipDetails() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player player = new Player(
+                                "17731",
+                                "Catena",
+                                List.of(PlayerPosition.DF),
+                                "Osasuna",
+                                3_700_000L,
+                                league);
+
+                BiwengerUserPlayer externalPlayer = new BiwengerUserPlayer(
+                                17731L,
+                                null);
+
+                BiwengerUserData userData = new BiwengerUserData(
+                                manager.getBiwengerManagerId(),
+                                manager.getName(),
+                                List.of(externalPlayer));
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                userData);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(
+                                biwengerClient.getUser(
+                                                manager.getBiwengerManagerId()))
+                                .thenReturn(response);
+
+                PlayerOwnershipSyncResponse result = playerService.syncPlayerOwnership(LEAGUE_ID);
+
+                assertEquals(1, result.managers());
+                assertEquals(1, result.playersAssigned());
+                assertEquals(0, result.playersNotFound());
+
+                assertEquals(manager, player.getOwner());
+                assertNull(player.getSignedAt());
+                assertNull(player.getClauseValue());
+                assertNull(player.getClauseLockedUntil());
+
+                assertFalse(player.isFreePlayer());
         }
 
         @Test

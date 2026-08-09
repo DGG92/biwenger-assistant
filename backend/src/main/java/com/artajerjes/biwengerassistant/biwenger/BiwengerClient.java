@@ -7,6 +7,7 @@ import org.springframework.web.client.RestClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.TestApiResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -115,6 +116,41 @@ public class BiwengerClient {
                 } catch (Exception exception) {
                         throw new IllegalStateException(
                                         "Could not deserialize Biwenger league response",
+                                        exception);
+                }
+        }
+
+        public BiwengerUserResponse getUser(Long managerId) {
+                byte[] responseBody = restClient
+                                .get()
+                                .uri(uriBuilder -> uriBuilder
+                                                .path("/api/v2/user/{managerId}")
+                                                .queryParam(
+                                                                "fields",
+                                                                "*,account(id),players(id,owner),lineups(round,points,count,position),league(id,name,competition,type,mode,marketMode,scoreID),market,seasons,offers,lastPositions,marketTransactions")
+                                                .build(managerId))
+                                .headers(headers -> {
+                                        headers.setBearerAuth(token);
+                                        headers.set("x-league", leagueId);
+                                        headers.set("x-user", userId);
+                                        headers.set("x-version", version);
+                                        headers.set("x-lang", language);
+                                })
+                                .retrieve()
+                                .body(byte[].class);
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty user response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerUserResponse.class);
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger user response",
                                         exception);
                 }
         }

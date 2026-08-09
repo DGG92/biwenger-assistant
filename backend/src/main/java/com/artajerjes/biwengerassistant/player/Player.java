@@ -24,39 +24,26 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "players",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_player_biwenger_id_league",
-                        columnNames = {
-                                "biwenger_player_id",
-                                "league_id"
-                        }
-                )
-        }
-)
+@Table(name = "players", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_player_biwenger_id_league", columnNames = {
+                "biwenger_player_id",
+                "league_id"
+        })
+})
 public class Player {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(
-        name = "biwenger_player_id",
-        nullable = false,
-        length = 255
-    )
+    @Column(name = "biwenger_player_id", nullable = false, length = 255)
     private String biwengerPlayerId;
 
     @Column(nullable = false, length = 100)
     private String name;
 
     @ElementCollection
-    @CollectionTable(
-            name = "player_positions",
-            joinColumns = @JoinColumn(name = "player_id")
-    )
+    @CollectionTable(name = "player_positions", joinColumns = @JoinColumn(name = "player_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "position", nullable = false)
     @OrderColumn(name = "position_order")
@@ -112,8 +99,7 @@ public class Player {
             List<PlayerPosition> positions,
             String teamName,
             Long marketValue,
-            League league
-    ) {
+            League league) {
         this.biwengerPlayerId = biwengerPlayerId;
         this.name = name;
         this.positions = new ArrayList<>(positions);
@@ -133,21 +119,20 @@ public class Player {
     }
 
     public void update(
-        String biwengerPlayerId,
-        String name,
-        List<PlayerPosition> positions,
-        Integer points,
-        String teamName,
-        Long marketValue,
-        Boolean injured,
-        Boolean captain,
-        Boolean ram,
-        Long valueFluctuation,
-        LocalDateTime clauseLockedUntil,
-        Long clauseValue,
-        Manager owner,
-        LocalDateTime signedAt
-    ) {
+            String biwengerPlayerId,
+            String name,
+            List<PlayerPosition> positions,
+            Integer points,
+            String teamName,
+            Long marketValue,
+            Boolean injured,
+            Boolean captain,
+            Boolean ram,
+            Long valueFluctuation,
+            LocalDateTime clauseLockedUntil,
+            Long clauseValue,
+            Manager owner,
+            LocalDateTime signedAt) {
         this.biwengerPlayerId = biwengerPlayerId;
         this.name = name;
         this.positions = new ArrayList<>(positions);
@@ -165,14 +150,13 @@ public class Player {
     }
 
     public void updateCompetitionData(
-        String name,
-        List<PlayerPosition> positions,
-        Integer points,
-        String teamName,
-        Long marketValue,
-        boolean injured,
-        Long valueFluctuation
-    ) {
+            String name,
+            List<PlayerPosition> positions,
+            Integer points,
+            String teamName,
+            Long marketValue,
+            boolean injured,
+            Long valueFluctuation) {
         this.name = name;
         this.positions = new ArrayList<>(positions);
         this.points = points;
@@ -180,6 +164,24 @@ public class Player {
         this.marketValue = marketValue;
         this.injured = injured;
         this.valueFluctuation = valueFluctuation;
+    }
+
+    public void updateOwnership(
+            Manager owner,
+            LocalDateTime signedAt,
+            Long clauseValue,
+            LocalDateTime clauseLockedUntil) {
+        this.owner = owner;
+        this.signedAt = signedAt;
+        this.clauseValue = clauseValue;
+        this.clauseLockedUntil = clauseLockedUntil;
+    }
+
+    public void clearOwnership() {
+        this.owner = null;
+        this.signedAt = null;
+        this.clauseValue = null;
+        this.clauseLockedUntil = null;
     }
 
     @PrePersist
@@ -242,8 +244,8 @@ public class Player {
     }
 
     public boolean isBlockedClause() {
-    return clauseLockedUntil != null
-        && clauseLockedUntil.isAfter(LocalDateTime.now());
+        return clauseLockedUntil != null
+                && clauseLockedUntil.isAfter(LocalDateTime.now());
     }
 
     public Manager getOwner() {
