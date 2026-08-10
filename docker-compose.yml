@@ -1,14 +1,52 @@
 services:
   postgres:
     image: postgres:17
+    container_name: biwenger-postgres
+    restart: unless-stopped
+
     environment:
-      POSTGRES_DB: biwenger
-      POSTGRES_USER: biwenger
-      POSTGRES_PASSWORD: biwenger
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: biwenger-backend
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      BIWENGER_TOKEN: ${BIWENGER_TOKEN}
+      BIWENGER_LEAGUE_ID: ${BIWENGER_LEAGUE_ID}
+      BIWENGER_USER_ID: ${BIWENGER_USER_ID}
+      BIWENGER_VERSION: ${BIWENGER_VERSION}
+
+      BIWENGER_SYNC_ENABLED: ${BIWENGER_SYNC_ENABLED}
+      BIWENGER_SYNC_INTERVAL_MS: ${BIWENGER_SYNC_INTERVAL_MS}
 
 volumes:
   postgres_data:
