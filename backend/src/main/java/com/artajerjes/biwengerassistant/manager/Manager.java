@@ -58,6 +58,9 @@ public class Manager {
     @Column
     private Long cash;
 
+    @Column(name = "maximum_bid")
+    private Long maximumBid;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "league_id", nullable = false)
     private League league;
@@ -90,6 +93,7 @@ public class Manager {
         this.role = role;
         this.league = league;
         this.cash = null;
+        this.maximumBid = null;
     }
 
     public void updateFromBiwenger(
@@ -113,6 +117,13 @@ public class Manager {
 
     public void updateCash(Long cash) {
         this.cash = cash;
+    }
+
+    public void updateEconomicStatus(
+            Long cash,
+            Long maximumBid) {
+        this.cash = cash;
+        this.maximumBid = maximumBid;
     }
 
     @PrePersist
@@ -164,6 +175,10 @@ public class Manager {
 
     public Long getCash() {
         return cash;
+    }
+
+    public Long getMaximumBid() {
+        return maximumBid;
     }
 
     public League getLeague() {

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,9 @@ public class OfferService {
     private final ManagerRepository managerRepository;
     private final BiwengerClient biwengerClient;
 
+    @Value("${biwenger.user-id}")
+    private Long biwengerUserId;
+
     public OfferService(
             OfferRepository offerRepository,
             LeagueRepository leagueRepository,
@@ -60,6 +64,10 @@ public class OfferService {
             throw new IllegalStateException(
                     "Biwenger returned an invalid market response");
         }
+
+        syncEconomicStatus(
+                leagueId,
+                response);
 
         Map<String, Player> playersByBiwengerId = playerRepository.findAllByLeague_Id(leagueId)
                 .stream()
@@ -191,19 +199,24 @@ public class OfferService {
                 .toList();
     }
 
-    public EconomicStatusResponse getEconomicStatus() {
-        BiwengerMarketResponse response = biwengerClient.getMarket();
-
-        if (response == null
-                || response.data() == null
-                || response.data().status() == null) {
-            throw new IllegalStateException(
-                    "Biwenger returned an invalid market status response");
+    @Transactional(readOnly = true)
+    public EconomicStatusResponse getEconomicStatus(
+            Long leagueId) {
+        if (!leagueRepository.existsById(leagueId)) {
+            throw new LeagueNotFoundException(leagueId);
         }
 
+        Manager manager = managerRepository
+                .findByBiwengerManagerIdAndLeague_Id(
+                        biwengerUserId,
+                        leagueId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Authenticated Biwenger manager not found for league "
+                                + leagueId));
+
         return new EconomicStatusResponse(
-                response.data().status().balance(),
-                response.data().status().maximumBid());
+                manager.getCash(),
+                manager.getMaximumBid());
     }
 
     private Manager resolveManager(
@@ -257,5 +270,26 @@ public class OfferService {
         return LocalDateTime.ofInstant(
                 Instant.ofEpochSecond(timestamp),
                 ZoneId.systemDefault());
+    }
+
+    private void syncEconomicStatus(
+            Long leagueId,
+            BiwengerMarketResponse response) {
+        if (response.data().status() == null) {
+            throw new IllegalStateException(
+                    "Biwenger returned an invalid market status response");
+        }
+
+        Manager manager = managerRepository
+                .findByBiwengerManagerIdAndLeague_Id(
+                        biwengerUserId,
+                        leagueId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Authenticated Biwenger manager not found for league "
+                                + leagueId));
+
+        manager.updateEconomicStatus(
+                response.data().status().balance(),
+                response.data().status().maximumBid());
     }
 }

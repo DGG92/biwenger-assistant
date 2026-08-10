@@ -38,6 +38,6 @@ public class OfferController {
     @GetMapping("/economic-status")
     public EconomicStatusResponse getEconomicStatus(
             @PathVariable Long leagueId) {
-        return offerService.getEconomicStatus();
+        return offerService.getEconomicStatus(leagueId);
     }
 }
