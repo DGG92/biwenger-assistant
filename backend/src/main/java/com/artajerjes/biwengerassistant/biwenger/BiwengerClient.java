@@ -59,6 +59,7 @@ public class BiwengerClient {
                 this.score = score;
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerCompetitionResponse getCompetition() {
                 byte[] responseBody = cdnRestClient
                                 .get()
@@ -86,6 +87,7 @@ public class BiwengerClient {
                 }
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerLeagueApiResponse getLeague() {
                 byte[] responseBody = restClient
                                 .get()
@@ -122,6 +124,7 @@ public class BiwengerClient {
                 }
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerUserResponse getUser(Long managerId) {
                 byte[] responseBody = restClient
                                 .get()
@@ -157,6 +160,7 @@ public class BiwengerClient {
                 }
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerUserResponse getCurrentUser() {
                 byte[] responseBody = restClient
                                 .get()
@@ -192,6 +196,7 @@ public class BiwengerClient {
                 }
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerMarketResponse getMarket() {
                 byte[] responseBody = restClient
                                 .get()
@@ -222,6 +227,7 @@ public class BiwengerClient {
                 }
         }
 
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerHomeResponse getHome() {
                 byte[] responseBody = restClient
                                 .get()
