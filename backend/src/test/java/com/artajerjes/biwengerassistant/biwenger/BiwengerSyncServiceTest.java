@@ -20,6 +20,8 @@ import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
+import com.artajerjes.biwengerassistant.offer.OfferService;
+import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
@@ -35,6 +37,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private MarketService marketService;
+
+        @Mock
+        private OfferService offerService;
 
         @Mock
         private MovementService movementService;
@@ -61,6 +66,13 @@ class BiwengerSyncServiceTest {
                                 0,
                                 0);
 
+                OfferSyncResponse offers = new OfferSyncResponse(
+                                1,
+                                1,
+                                0,
+                                0,
+                                0);
+
                 MovementSyncResponse movements = new MovementSyncResponse(
                                 12,
                                 0,
@@ -91,6 +103,11 @@ class BiwengerSyncServiceTest {
                                 .thenReturn(market);
 
                 when(
+                                offerService.sync(
+                                                LEAGUE_ID))
+                                .thenReturn(offers);
+
+                when(
                                 movementService.sync(
                                                 LEAGUE_ID))
                                 .thenReturn(movements);
@@ -105,6 +122,7 @@ class BiwengerSyncServiceTest {
                 InOrder inOrder = inOrder(
                                 playerService,
                                 marketService,
+                                offerService,
                                 movementService);
 
                 inOrder.verify(playerService)
@@ -121,6 +139,9 @@ class BiwengerSyncServiceTest {
 
                 inOrder.verify(playerService)
                                 .syncCurrentLineup(LEAGUE_ID);
+
+                inOrder.verify(offerService)
+                                .sync(LEAGUE_ID);
         }
 
         @Test
@@ -142,6 +163,13 @@ class BiwengerSyncServiceTest {
                                 0,
                                 0);
 
+                OfferSyncResponse offers = new OfferSyncResponse(
+                                1,
+                                1,
+                                0,
+                                0,
+                                0);
+
                 MovementSyncResponse movements = new MovementSyncResponse(
                                 12,
                                 0,
@@ -170,6 +198,11 @@ class BiwengerSyncServiceTest {
                                 marketService.sync(
                                                 LEAGUE_ID))
                                 .thenReturn(market);
+
+                when(
+                                offerService.sync(
+                                                LEAGUE_ID))
+                                .thenReturn(offers);
 
                 when(
                                 movementService.sync(
@@ -197,6 +230,10 @@ class BiwengerSyncServiceTest {
                                 result.market());
 
                 assertSame(
+                                offers,
+                                result.offers());
+
+                assertSame(
                                 movements,
                                 result.movements());
 
@@ -215,6 +252,10 @@ class BiwengerSyncServiceTest {
                 assertEquals(
                                 54,
                                 result.market().sales());
+
+                assertEquals(
+                                1,
+                                result.offers().total());
 
                 assertEquals(
                                 12,
@@ -241,6 +282,13 @@ class BiwengerSyncServiceTest {
                                 0);
 
                 MarketSyncResponse market = new MarketSyncResponse(
+                                0,
+                                0,
+                                0,
+                                0);
+
+                OfferSyncResponse offers = new OfferSyncResponse(
+                                0,
                                 0,
                                 0,
                                 0,
@@ -276,6 +324,11 @@ class BiwengerSyncServiceTest {
                                 .thenReturn(market);
 
                 when(
+                                offerService.sync(
+                                                customLeagueId))
+                                .thenReturn(offers);
+
+                when(
                                 movementService.sync(
                                                 customLeagueId))
                                 .thenReturn(movements);
@@ -297,6 +350,10 @@ class BiwengerSyncServiceTest {
                                                 customLeagueId);
 
                 verify(marketService)
+                                .sync(
+                                                customLeagueId);
+
+                verify(offerService)
                                 .sync(
                                                 customLeagueId);
 
@@ -351,6 +408,10 @@ class BiwengerSyncServiceTest {
                                 never()).sync(LEAGUE_ID);
 
                 verify(
+                                offerService,
+                                never()).sync(LEAGUE_ID);
+
+                verify(
                                 movementService,
                                 never()).sync(LEAGUE_ID);
 
@@ -359,4 +420,98 @@ class BiwengerSyncServiceTest {
                                 never()).syncCurrentLineup(
                                                 LEAGUE_ID);
         }
+
+        @Test
+        void syncAllShouldStopWhenOfferSyncFails() {
+                PlayerSyncResponse players = new PlayerSyncResponse(
+                                555,
+                                0,
+                                555,
+                                0);
+
+                PlayerOwnershipSyncResponse ownership = new PlayerOwnershipSyncResponse(
+                                14,
+                                209,
+                                0);
+
+                MarketSyncResponse market = new MarketSyncResponse(
+                                47,
+                                10,
+                                0,
+                                0);
+
+                MovementSyncResponse movements = new MovementSyncResponse(
+                                17,
+                                0,
+                                17,
+                                0,
+                                0);
+
+                PlayerLineupSyncResponse lineup = new PlayerLineupSyncResponse(
+                                13L,
+                                "4-5-1",
+                                38405L,
+                                17756L,
+                                41088L);
+
+                when(
+                                playerService.syncCompetitionPlayers(
+                                                LEAGUE_ID))
+                                .thenReturn(players);
+
+                when(
+                                playerService.syncPlayerOwnership(
+                                                LEAGUE_ID))
+                                .thenReturn(ownership);
+
+                when(
+                                marketService.sync(
+                                                LEAGUE_ID))
+                                .thenReturn(market);
+
+                when(
+                                movementService.sync(
+                                                LEAGUE_ID))
+                                .thenReturn(movements);
+
+                when(
+                                playerService.syncCurrentLineup(
+                                                LEAGUE_ID))
+                                .thenReturn(lineup);
+
+                when(
+                                offerService.sync(
+                                                LEAGUE_ID))
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Offer sync failed"));
+
+                IllegalStateException exception = assertThrows(
+                                IllegalStateException.class,
+                                () -> biwengerSyncService.syncAll(
+                                                LEAGUE_ID));
+
+                assertEquals(
+                                "Offer sync failed",
+                                exception.getMessage());
+
+                verify(playerService)
+                                .syncCompetitionPlayers(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(marketService)
+                                .sync(LEAGUE_ID);
+
+                verify(movementService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCurrentLineup(LEAGUE_ID);
+
+                verify(offerService)
+                                .sync(LEAGUE_ID);
+        }
+
 }

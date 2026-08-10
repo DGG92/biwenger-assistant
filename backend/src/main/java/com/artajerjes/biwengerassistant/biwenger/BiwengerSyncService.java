@@ -7,6 +7,8 @@ import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
+import com.artajerjes.biwengerassistant.offer.OfferService;
+import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
@@ -18,14 +20,17 @@ public class BiwengerSyncService {
 
     private final PlayerService playerService;
     private final MarketService marketService;
+    private final OfferService offerService;
     private final MovementService movementService;
 
     public BiwengerSyncService(
             PlayerService playerService,
             MarketService marketService,
+            OfferService offerService,
             MovementService movementService) {
         this.playerService = playerService;
         this.marketService = marketService;
+        this.offerService = offerService;
         this.movementService = movementService;
     }
 
@@ -41,10 +46,13 @@ public class BiwengerSyncService {
 
         PlayerLineupSyncResponse lineup = playerService.syncCurrentLineup(leagueId);
 
+        OfferSyncResponse offers = offerService.sync(leagueId);
+
         return new BiwengerSyncResponse(
                 players,
                 ownership,
                 market,
+                offers,
                 movements,
                 lineup);
     }
