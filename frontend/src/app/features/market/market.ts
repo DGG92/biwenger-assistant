@@ -3,10 +3,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { RecommendationService } from '../../core/services/recommendation';
-import { MarketRecommendation } from '../../core/models/market-recommendation.model';
+import { MarketRecommendation, MarketRecommendationReason } from '../../core/models/market-recommendation.model';
 
 type RecommendationFilter = 'ALL' | 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL' | 'E';
+type OriginFilter = 'ALL' | 'FREE' | 'MANAGER';
 type SortOption =
   | 'SCORE_DESC'
   | 'PRICE_ASC'
@@ -35,6 +36,8 @@ export class Market {
     signal<RecommendationFilter>('ALL');
   readonly positionFilter =
     signal<PositionFilter>('ALL');
+  readonly originFilter =
+    signal<OriginFilter>('ALL');
   readonly sortOption =
     signal<SortOption>('SCORE_DESC');
 
@@ -44,6 +47,8 @@ export class Market {
       this.recommendationFilter();
     const positionFilter =
       this.positionFilter();
+    const originFilter =
+      this.originFilter();
     const sortOption =
       this.sortOption();
 
@@ -65,6 +70,18 @@ export class Market {
     if (positionFilter !== 'ALL') {
       result = result.filter((player) =>
         player.positions.includes(positionFilter)
+      );
+    }
+
+    if (originFilter === 'FREE') {
+      result = result.filter(
+        (player) => player.sellerId === null
+      );
+    }
+
+    if (originFilter === 'MANAGER') {
+      result = result.filter(
+        (player) => player.sellerId !== null
       );
     }
 
@@ -90,8 +107,50 @@ export class Market {
     this.positionFilter.set(value);
   }
 
+  setOriginFilter(
+    value: OriginFilter
+  ): void {
+    this.originFilter.set(value);
+  }
+
   setSortOption(value: SortOption): void {
     this.sortOption.set(value);
+  }
+
+  reasonLabel(
+    reason: MarketRecommendationReason
+  ): string {
+    switch (reason) {
+      case 'PRICE_BELOW_MARKET':
+        return 'Precio por debajo del mercado';
+
+      case 'PRICE_ABOVE_MARKET':
+        return 'Precio por encima del mercado';
+
+      case 'VALUE_RISING':
+        return 'Valor en subida';
+
+      case 'VALUE_RISING_FAST':
+        return 'Valor subiendo con fuerza';
+
+      case 'VALUE_FALLING':
+        return 'Valor en descenso';
+
+      case 'GOOD_RECENT_FORM':
+        return 'Buen estado de forma';
+
+      case 'EXCELLENT_RECENT_FORM':
+        return 'Excelente estado de forma';
+
+      case 'SQUAD_POSITION_NEEDED':
+        return 'Refuerza una posición necesaria';
+
+      case 'INJURED':
+        return 'Jugador lesionado';
+
+      case 'UNAFFORDABLE':
+        return 'Fuera de presupuesto';
+    }
   }
 
   private comparePlayers(

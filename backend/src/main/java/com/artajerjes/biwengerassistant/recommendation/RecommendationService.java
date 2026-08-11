@@ -23,6 +23,7 @@ import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
@@ -134,11 +135,21 @@ public class RecommendationService {
                                 player,
                                 needScoreByPosition);
 
+                int recentFormScore = calculateRecentFormScore(player);
+
                 int score = calculateScore(
                                 player,
                                 differencePercentage,
                                 affordable,
-                                squadNeedScore);
+                                squadNeedScore,
+                                recentFormScore);
+
+                List<MarketRecommendationReason> reasons = calculateReasons(
+                                player,
+                                differencePercentage,
+                                affordable,
+                                squadNeedScore,
+                                recentFormScore);
 
                 /*
                  * En una subasta que ya ha superado nuestro límite
@@ -172,8 +183,74 @@ public class RecommendationService {
                                 score,
                                 resolveRecommendation(score),
                                 seller == null ? null : seller.getId(),
-                                seller == null ? null : seller.getName());
+                                seller == null ? null : seller.getName(),
+                                reasons);
 
+        }
+
+        private List<MarketRecommendationReason> calculateReasons(
+                        Player player,
+                        double differencePercentage,
+                        boolean affordable,
+                        int squadNeedScore,
+                        int recentFormScore) {
+
+                List<MarketRecommendationReason> reasons = new java.util.ArrayList<>();
+
+                if (differencePercentage >= 5) {
+                        reasons.add(
+                                        MarketRecommendationReason.PRICE_BELOW_MARKET);
+                }
+
+                if (differencePercentage <= -5) {
+                        reasons.add(
+                                        MarketRecommendationReason.PRICE_ABOVE_MARKET);
+                }
+
+                if (player.getMarketValue() != null
+                                && player.getMarketValue() > 0
+                                && player.getValueFluctuation() != null) {
+
+                        double fluctuationPercentage = ((double) player.getValueFluctuation()
+                                        / player.getMarketValue())
+                                        * 100;
+
+                        if (fluctuationPercentage >= 3) {
+                                reasons.add(
+                                                MarketRecommendationReason.VALUE_RISING_FAST);
+                        } else if (fluctuationPercentage > 0) {
+                                reasons.add(
+                                                MarketRecommendationReason.VALUE_RISING);
+                        } else if (fluctuationPercentage < 0) {
+                                reasons.add(
+                                                MarketRecommendationReason.VALUE_FALLING);
+                        }
+                }
+
+                if (squadNeedScore >= 50) {
+                        reasons.add(
+                                        MarketRecommendationReason.SQUAD_POSITION_NEEDED);
+                }
+
+                if (recentFormScore >= 15) {
+                        reasons.add(
+                                        MarketRecommendationReason.EXCELLENT_RECENT_FORM);
+                } else if (recentFormScore >= 5) {
+                        reasons.add(
+                                        MarketRecommendationReason.GOOD_RECENT_FORM);
+                }
+
+                if (player.isInjured()) {
+                        reasons.add(
+                                        MarketRecommendationReason.INJURED);
+                }
+
+                if (!affordable) {
+                        reasons.add(
+                                        MarketRecommendationReason.UNAFFORDABLE);
+                }
+
+                return List.copyOf(reasons);
         }
 
         private Long calculateMaximumRecommendedBid(
@@ -255,7 +332,8 @@ public class RecommendationService {
                         Player player,
                         double differencePercentage,
                         boolean affordable,
-                        int squadNeedScore) {
+                        int squadNeedScore,
+                        int recentFormScore) {
                 double score = 50;
 
                 double priceScore = differencePercentage * 3;
@@ -288,7 +366,7 @@ public class RecommendationService {
                  */
                 score += squadNeedScore * 0.20;
 
-                score += calculateRecentFormScore(player);
+                score += recentFormScore;
 
                 if (player.isInjured()) {
                         score -= 30;

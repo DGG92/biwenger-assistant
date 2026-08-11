@@ -35,6 +35,7 @@ import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
@@ -1087,6 +1088,239 @@ class RecommendationServiceTest {
                                 .get(0);
 
                 assertEquals(70, result.score());
+        }
+
+        @Test
+        void shouldIncludePriceBelowMarketReason() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                60L,
+                                "600",
+                                "Barato",
+                                List.of(PlayerPosition.DL),
+                                5_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                4_500_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.PRICE_BELOW_MARKET));
+        }
+
+        @Test
+        void shouldIncludeFastValueRiseReason() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                61L,
+                                "601",
+                                "En subida",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                50_000L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.VALUE_RISING_FAST));
+        }
+
+        @Test
+        void shouldIncludeInjuredAndUnaffordableReasons() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                62L,
+                                "602",
+                                "Caro y lesionado",
+                                List.of(PlayerPosition.DF),
+                                5_000_000L,
+                                0L,
+                                true);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                5_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                1_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.INJURED));
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.UNAFFORDABLE));
+        }
+
+        @Test
+        void shouldIncludeExcellentRecentFormReason() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                63L,
+                                "603",
+                                "En gran forma",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9101L,
+                                1L,
+                                "Jornada 2",
+                                "J2",
+                                LocalDateTime.of(2026, 8, 10, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                11);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9100L,
+                                1L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 3, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                9);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(63L))
+                                .thenReturn(
+                                                List.of(
+                                                                latestReport,
+                                                                previousReport));
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.EXCELLENT_RECENT_FORM));
+        }
+
+        @Test
+        void shouldIncludeGoodRecentFormReason() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                64L,
+                                "604",
+                                "En buena forma",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9201L,
+                                1L,
+                                "Jornada 2",
+                                "J2",
+                                LocalDateTime.of(2026, 8, 10, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                7);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9200L,
+                                1L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 3, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                7);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(64L))
+                                .thenReturn(
+                                                List.of(
+                                                                latestReport,
+                                                                previousReport));
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.GOOD_RECENT_FORM));
         }
 
         private void mockCommon(
