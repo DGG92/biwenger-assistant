@@ -42,7 +42,7 @@ public class PlayerService {
         private final LeagueRepository leagueRepository;
         private final ManagerRepository managerRepository;
         private final PlayerMatchReportService playerMatchReportService;
-
+        private final PlayerProtectionService playerProtectionService;
         private final BiwengerClient biwengerClient;
 
         public PlayerService(
@@ -50,12 +50,14 @@ public class PlayerService {
                         LeagueRepository leagueRepository,
                         ManagerRepository managerRepository,
                         BiwengerClient biwengerClient,
-                        PlayerMatchReportService playerMatchReportService) {
+                        PlayerMatchReportService playerMatchReportService,
+                        PlayerProtectionService playerProtectionService) {
                 this.playerRepository = playerRepository;
                 this.leagueRepository = leagueRepository;
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
                 this.playerMatchReportService = playerMatchReportService;
+                this.playerProtectionService = playerProtectionService;
         }
 
         @Transactional
@@ -247,7 +249,8 @@ public class PlayerService {
                                 player.isFreePlayer(),
                                 player.getSignedAt(),
                                 player.getLeague().getId(),
-                                player.getCreatedAt());
+                                player.getCreatedAt(),
+                                playerProtectionService.calculate(player));
         }
 
         private PlayerPosition mapPosition(Integer position) {

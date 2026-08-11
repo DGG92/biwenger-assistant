@@ -5,6 +5,8 @@ export interface MarketRecommendation {
     teamName: string;
     positions: string[];
     marketType: 'SALE' | 'AUCTION';
+    sellerId: number | null;
+    sellerName: string | null;
     marketValue: number;
     askingPrice: number;
     currentBid: number | null;

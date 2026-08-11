@@ -24,5 +24,7 @@ public record MarketRecommendationResponse(
                 boolean injured,
                 boolean affordable,
                 int score,
-                RecommendationType recommendation) {
+                RecommendationType recommendation,
+                Long sellerId,
+                String sellerName) {
 }

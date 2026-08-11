@@ -182,6 +182,109 @@
     color: #b91c1c;
 }
 
+.protection-alert {
+    margin-top: 20px;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 12px;
+}
+
+.protect-alert {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+
+    .protection-alert-title strong {
+        color: #166534;
+    }
+
+    .protection-score {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .protection-reasons span {
+        border-color: #bbf7d0;
+        background: #ffffff;
+        color: #166534;
+    }
+}
+
+.watch-alert {
+    border-color: #fde68a;
+    background: #fffbeb;
+
+    .protection-alert-title strong {
+        color: #92400e;
+    }
+
+    .protection-score {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .protection-reasons span {
+        border-color: #fde68a;
+        background: #ffffff;
+        color: #92400e;
+    }
+}
+
+.protection-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.protection-alert-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    >div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    strong {
+        font-size: 14px;
+    }
+
+    span:last-child {
+        color: #6b7280;
+        font-size: 10px;
+    }
+}
+
+.protection-alert-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.protection-score {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.protection-reasons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 11px;
+
+    span {
+        padding: 4px 7px;
+        border: 1px solid;
+        border-radius: 7px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+}
+
 .player-tags {
     display: flex;
     flex-wrap: wrap;

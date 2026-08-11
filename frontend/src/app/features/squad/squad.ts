@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, startWith } from 'rxjs';
 
-import { Player } from '../../core/models/player.model';
+import { Player, PlayerProtectionReason } from '../../core/models/player.model';
 import { SquadNeeds } from '../../core/models/squad-needs.model';
 import { PlayerService } from '../../core/services/player';
 import { RecommendationService } from '../../core/services/recommendation';
@@ -161,6 +161,43 @@ export class Squad {
       player => player.lineupPosition === 'DL'
     )
   );
+
+  protectionAlertTitle(player: Player): string {
+    switch (player.playerProtectionAlert.level) {
+      case 'PROTECT':
+        return 'Protégelo';
+
+      case 'WATCH':
+        return 'Vigila su cláusula';
+
+      default:
+        return '';
+    }
+  }
+
+  protectionReasonLabel(
+    reason: PlayerProtectionReason
+  ): string {
+    switch (reason) {
+      case 'VALUE_RISING_FAST':
+        return 'Valor subiendo muy rápido';
+
+      case 'VALUE_RISING':
+        return 'Valor en subida';
+
+      case 'EXCELLENT_RECENT_FORM':
+        return 'Excelente estado de forma';
+
+      case 'GOOD_RECENT_FORM':
+        return 'Buen estado de forma';
+
+      case 'HIGH_PROFITABILITY':
+        return 'Alta rentabilidad';
+
+      case 'INJURED':
+        return 'Actualmente lesionado';
+    }
+  }
 
   setPositionFilter(
     position: PositionFilter

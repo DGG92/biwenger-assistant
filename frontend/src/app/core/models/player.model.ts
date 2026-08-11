@@ -1,3 +1,20 @@
+export type PlayerProtectionAlertLevel =
+    'NONE' | 'WATCH' | 'PROTECT';
+
+export type PlayerProtectionReason =
+    | 'VALUE_RISING'
+    | 'VALUE_RISING_FAST'
+    | 'GOOD_RECENT_FORM'
+    | 'EXCELLENT_RECENT_FORM'
+    | 'HIGH_PROFITABILITY'
+    | 'INJURED';
+
+export interface PlayerProtectionAlert {
+    level: PlayerProtectionAlertLevel;
+    score: number;
+    reasons: PlayerProtectionReason[];
+}
+
 export interface Player {
     id: number;
     biwengerPlayerId: string;
@@ -26,4 +43,5 @@ export interface Player {
     signedAt: string | null;
     leagueId: number;
     createdAt: string;
+    playerProtectionAlert: PlayerProtectionAlert;
 }

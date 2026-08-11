@@ -5,8 +5,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RecommendationService } from '../../core/services/recommendation';
 import { MarketRecommendation } from '../../core/models/market-recommendation.model';
 
-type RecommendationFilter = 'ALL' | 'BUY' | 'WATCH' | 'AVOID';
-type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL';
+type RecommendationFilter = 'ALL' | 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
+type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL' | 'E';
 type SortOption =
   | 'SCORE_DESC'
   | 'PRICE_ASC'

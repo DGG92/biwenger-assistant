@@ -150,6 +150,8 @@ public class RecommendationService {
                         score = Math.min(score, 25);
                 }
 
+                Manager seller = listing.getSeller();
+
                 return new MarketRecommendationResponse(
                                 player.getId(),
                                 player.getBiwengerPlayerId(),
@@ -168,7 +170,10 @@ public class RecommendationService {
                                 player.isInjured(),
                                 affordable,
                                 score,
-                                resolveRecommendation(score));
+                                resolveRecommendation(score),
+                                seller == null ? null : seller.getId(),
+                                seller == null ? null : seller.getName());
+
         }
 
         private Long calculateMaximumRecommendedBid(

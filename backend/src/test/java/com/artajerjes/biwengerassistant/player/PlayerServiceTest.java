@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -20,6 +21,8 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +51,8 @@ import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
@@ -73,8 +78,22 @@ class PlayerServiceTest {
         @Mock
         private BiwengerClient biwengerClient;
 
+        @Mock
+        private PlayerProtectionService playerProtectionService;
+
         @InjectMocks
         private PlayerService playerService;
+
+        @BeforeEach
+        void setUp() {
+                lenient()
+                                .when(playerProtectionService.calculate(any(Player.class)))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+        }
 
         @Test
         void createShouldSaveAndReturnPlayer() {

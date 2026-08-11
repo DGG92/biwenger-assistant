@@ -370,6 +370,52 @@
                 </div>
             </div>
 
+            @if (
+            player.playerProtectionAlert &&
+            player.playerProtectionAlert.level !== 'NONE'
+            ) {
+            <section class="protection-alert" [class.protect-alert]="player.playerProtectionAlert.level === 'PROTECT'"
+                [class.watch-alert]="player.playerProtectionAlert.level === 'WATCH'">
+
+                <div class="protection-alert-header">
+                    <div class="protection-alert-title">
+                        <span class="protection-alert-icon">
+                            @if (player.playerProtectionAlert.level === 'PROTECT') {
+                            🛡️
+                            } @else {
+                            👀
+                            }
+                        </span>
+
+                        <div>
+                            <strong>
+                                {{ protectionAlertTitle(player) }}
+                            </strong>
+
+                            <span>
+                                Recomendación de protección
+                            </span>
+                        </div>
+                    </div>
+
+                    <span class="protection-score">
+                        {{ player.playerProtectionAlert.score }}/100
+                    </span>
+                </div>
+
+                <div class="protection-reasons">
+                    @for (
+                    reason of player.playerProtectionAlert.reasons;
+                    track reason
+                    ) {
+                    <span>
+                        {{ protectionReasonLabel(reason) }}
+                    </span>
+                    }
+                </div>
+            </section>
+            }
+
             <footer class="player-tags">
                 @if (player.starter) {
                 <span class="lineup-status starter-status">
