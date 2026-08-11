@@ -1,5 +1,6 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,6 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,6 +33,8 @@ import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
@@ -50,11 +56,19 @@ class RecommendationServiceTest {
         @Mock
         private PlayerRepository playerRepository;
 
+        @Mock
+        private PlayerMatchReportRepository playerMatchReportRepository;
+
         @InjectMocks
         private RecommendationService recommendationService;
 
         @BeforeEach
         void setUp() {
+                lenient()
+                                .when(
+                                                playerMatchReportRepository
+                                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(anyLong()))
+                                .thenReturn(List.of());
                 ReflectionTestUtils.setField(
                                 recommendationService,
                                 "biwengerUserId",
@@ -102,7 +116,7 @@ class RecommendationServiceTest {
                 assertTrue(result.affordable());
                 assertFalse(result.injured());
 
-                assertEquals(90, result.score());
+                assertEquals(94, result.score());
                 assertEquals(
                                 RecommendationType.STRONG_BUY,
                                 result.recommendation());
@@ -347,10 +361,10 @@ class RecommendationServiceTest {
                                 .get(0);
 
                 assertEquals(
-                                1_100_000L,
+                                1_120_000L,
                                 result.maximumRecommendedBid());
 
-                assertEquals(70, result.score());
+                assertEquals(75, result.score());
 
                 assertEquals(
                                 RecommendationType.BUY,
@@ -386,7 +400,7 @@ class RecommendationServiceTest {
                                 .get(0);
 
                 assertEquals(
-                                900_000L,
+                                880_000L,
                                 result.maximumRecommendedBid());
 
                 assertTrue(result.affordable());
@@ -495,6 +509,268 @@ class RecommendationServiceTest {
 
                 assertEquals(
                                 RecommendationType.AVOID,
+                                result.recommendation());
+        }
+
+        @Test
+        void marketRecommendationShouldIncreaseScoreForExcellentRecentForm() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                70L,
+                                "700",
+                                "Jugador en racha",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9001L,
+                                1L,
+                                "Jornada 2",
+                                "J2",
+                                LocalDateTime.of(2026, 8, 10, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                11);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9000L,
+                                1L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 3, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                11);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(70L))
+                                .thenReturn(
+                                                List.of(
+                                                                latestReport,
+                                                                previousReport));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(65, result.score());
+                assertEquals(
+                                RecommendationType.BUY,
+                                result.recommendation());
+        }
+
+        @Test
+        void marketRecommendationShouldDecreaseScoreForPoorRecentForm() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                71L,
+                                "701",
+                                "Jugador en mala racha",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9003L,
+                                2L,
+                                "Jornada 2",
+                                "J2",
+                                LocalDateTime.of(2026, 8, 10, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                2);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9002L,
+                                2L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 3, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                1);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(71L))
+                                .thenReturn(
+                                                List.of(
+                                                                latestReport,
+                                                                previousReport));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(45, result.score());
+                assertEquals(
+                                RecommendationType.WATCH,
+                                result.recommendation());
+        }
+
+        @Test
+        void marketRecommendationShouldIgnoreRecentFormAcrossDifferentSeasons() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                72L,
+                                "702",
+                                "Jugador cambio temporada",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9101L,
+                                1L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 15, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                11);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9100L,
+                                38L,
+                                "Jornada 38",
+                                "J38",
+                                LocalDateTime.of(2026, 5, 23, 21, 0),
+                                "2025-2026",
+                                true,
+                                null,
+                                11);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(72L))
+                                .thenReturn(List.of(
+                                                latestReport,
+                                                previousReport));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(50, result.score());
+                assertEquals(
+                                RecommendationType.WATCH,
+                                result.recommendation());
+        }
+
+        @Test
+        void marketRecommendationShouldResetRecentFormWhenPlayerDidNotParticipate() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                73L,
+                                "703",
+                                "Jugador con ausencia",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9201L,
+                                6L,
+                                "Jornada 6",
+                                "J6",
+                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                "2026-2027",
+                                false,
+                                "injured",
+                                null);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9200L,
+                                5L,
+                                "Jornada 5",
+                                "J5",
+                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                15);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(73L))
+                                .thenReturn(List.of(
+                                                latestReport,
+                                                previousReport));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(50, result.score());
+                assertEquals(
+                                RecommendationType.WATCH,
                                 result.recommendation());
         }
 

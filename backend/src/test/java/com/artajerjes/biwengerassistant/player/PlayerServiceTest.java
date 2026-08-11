@@ -33,6 +33,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupPlayerRef;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupReserve;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
@@ -730,6 +731,9 @@ class PlayerServiceTest {
                 assertEquals(0, result.skipped());
 
                 assertEquals("Catena", existingPlayer.getName());
+                assertEquals(
+                                "catena",
+                                existingPlayer.getSlug());
 
                 assertEquals(
                                 List.of(
@@ -1058,6 +1062,7 @@ class PlayerServiceTest {
                 player.updateOwnership(
                                 manager,
                                 LocalDateTime.of(2026, 8, 1, 12, 0),
+                                null,
                                 5_000_000L,
                                 FUTURE_LOCK_DATE);
 
@@ -1160,6 +1165,7 @@ class PlayerServiceTest {
                 player.updateOwnership(
                                 manager,
                                 LocalDateTime.of(2026, 8, 1, 12, 0),
+                                null,
                                 5_000_000L,
                                 FUTURE_LOCK_DATE);
 
@@ -1327,7 +1333,7 @@ class PlayerServiceTest {
 
                 players.forEach(
                                 player -> player.updateOwnership(
-                                                manager, null, null, null));
+                                                manager, null, null, null, null));
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
                                 "4-5-1",
@@ -1347,6 +1353,7 @@ class PlayerServiceTest {
                                                 20004L,
                                                 20005L,
                                                 17756L),
+                                List.of(),
                                 List.of());
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1424,15 +1431,17 @@ class PlayerServiceTest {
                                 3_000_000L,
                                 league);
 
-                oldCaptainAndRam.updateOwnership(manager, null, null, null);
-                newCaptain.updateOwnership(manager, null, null, null);
+                oldCaptainAndRam.updateOwnership(manager, null, null, null, null);
+                newCaptain.updateOwnership(manager, null, null, null, null);
 
                 oldCaptainAndRam.updateLineupRoles(
                                 true,
                                 true,
+                                false,
                                 true,
                                 true,
-                                PlayerPosition.DF);
+                                PlayerPosition.DF,
+                                null);
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
                                 "4-5-1",
@@ -1441,6 +1450,7 @@ class PlayerServiceTest {
                                 null,
                                 1785998437L,
                                 complete451Lineup(38405L, 17731L),
+                                List.of(),
                                 List.of());
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1493,13 +1503,15 @@ class PlayerServiceTest {
                                 3_700_000L,
                                 league);
 
-                player.updateOwnership(manager, null, null, null);
+                player.updateOwnership(manager, null, null, null, null);
                 player.updateLineupRoles(
                                 true,
                                 true,
+                                false,
                                 true,
                                 true,
-                                PlayerPosition.DF);
+                                PlayerPosition.DF,
+                                null);
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
                                 200,
@@ -1553,8 +1565,8 @@ class PlayerServiceTest {
                                 List.of(PlayerPosition.PT),
                                 "Levante", 2_500_000L, league);
 
-                starter.updateOwnership(manager, null, null, null);
-                reserve.updateOwnership(manager, null, null, null);
+                starter.updateOwnership(manager, null, null, null, null);
+                reserve.updateOwnership(manager, null, null, null, null);
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
                                 "4-5-1",
@@ -1563,7 +1575,8 @@ class PlayerServiceTest {
                                 null,
                                 1785998437L,
                                 complete451Lineup(38405L),
-                                List.of(2184L));
+                                List.of(2184L),
+                                List.of(new BiwengerLineupReserve(2184L, 1)));
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
                                 200,
@@ -1593,6 +1606,121 @@ class PlayerServiceTest {
                 assertFalse(reserve.isCaptain());
                 assertFalse(reserve.isRam());
                 assertNull(reserve.getLineupPosition());
+                assertEquals(
+                                PlayerPosition.PT,
+                                reserve.getBenchPosition());
+        }
+
+        @Test
+        void syncCurrentLineupShouldUseExplicitBenchPositionsWhenSomeSlotsAreEmpty() {
+                League league = createLeague();
+                Manager manager = createManager();
+
+                Player starter = new Player(
+                                "38405",
+                                "Odysseas",
+                                List.of(PlayerPosition.PT),
+                                "Sevilla",
+                                3_000_000L,
+                                league);
+
+                Player defenderReserve = new Player(
+                                "9065",
+                                "Ximo Navarro",
+                                List.of(PlayerPosition.DF),
+                                "Levante",
+                                1_000_000L,
+                                league);
+
+                Player midfielderReserve = new Player(
+                                "38355",
+                                "Yangel Herrera",
+                                List.of(PlayerPosition.MC),
+                                "Girona",
+                                2_000_000L,
+                                league);
+
+                Player forwardReserve = new Player(
+                                "41077",
+                                "David Mella",
+                                List.of(PlayerPosition.DL),
+                                "Deportivo",
+                                1_500_000L,
+                                league);
+
+                List<Player> players = List.of(
+                                starter,
+                                defenderReserve,
+                                midfielderReserve,
+                                forwardReserve);
+
+                players.forEach(
+                                player -> player.updateOwnership(
+                                                manager,
+                                                null,
+                                                null,
+                                                null,
+                                                null));
+
+                BiwengerUserLineup lineup = new BiwengerUserLineup(
+                                "4-5-1",
+                                new BiwengerLineupPlayerRef(38405L),
+                                null,
+                                null,
+                                1785998437L,
+                                complete451Lineup(38405L),
+                                List.of(
+                                                9065L,
+                                                38355L,
+                                                41077L),
+                                List.of(
+                                                new BiwengerLineupReserve(9065L, 2),
+                                                new BiwengerLineupReserve(38355L, 3),
+                                                new BiwengerLineupReserve(41077L, 4)));
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                lineup,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser())
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(),
+                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(players);
+
+                playerService.syncCurrentLineup(LEAGUE_ID);
+
+                assertEquals(
+                                PlayerPosition.DF,
+                                defenderReserve.getBenchPosition());
+
+                assertEquals(
+                                PlayerPosition.MC,
+                                midfielderReserve.getBenchPosition());
+
+                assertEquals(
+                                PlayerPosition.DL,
+                                forwardReserve.getBenchPosition());
+
+                assertFalse(defenderReserve.isStarter());
+                assertFalse(midfielderReserve.isStarter());
+                assertFalse(forwardReserve.isStarter());
+
+                assertTrue(defenderReserve.isReserve());
+                assertTrue(midfielderReserve.isReserve());
+                assertTrue(forwardReserve.isReserve());
         }
 
         @Test
@@ -1666,6 +1794,20 @@ class PlayerServiceTest {
 
                 verify(playerRepository, never())
                                 .delete(any(Player.class));
+        }
+
+        @Test
+        void profitabilityShouldBeNullWhenPurchasePriceIsUnknown() {
+                Player player = new Player(
+                                "17756",
+                                "Camello",
+                                List.of(PlayerPosition.DL),
+                                "Rayo Vallecano",
+                                2_420_000L,
+                                createLeague());
+
+                assertNull(player.getPurchasePrice());
+                assertNull(player.getProfitability());
         }
 
         private List<Long> complete451Lineup(Long... relevantIds) {

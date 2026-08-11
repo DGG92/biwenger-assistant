@@ -9,6 +9,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.home.BiwengerHomeResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.market.BiwengerMarketResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayerDetailResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 
 import tools.jackson.databind.ObjectMapper;
@@ -88,6 +89,38 @@ public class BiwengerClient {
         }
 
         @SuppressWarnings("UseSpecificCatch")
+        public BiwengerPlayerDetailResponse getPlayerDetail(String playerSlug) {
+                byte[] responseBody = cdnRestClient
+                                .get()
+                                .uri(uriBuilder -> uriBuilder
+                                                .path("/api/v2/players/{competition}/{playerSlug}")
+                                                .queryParam("lang", language)
+                                                .queryParam(
+                                                                "fields",
+                                                                "*,team,fitness,reports(points,home,events,status(status,statusInfo),match(*,round,home,away),star),prices,competition,seasons,news,threads")
+                                                .build(
+                                                                competition,
+                                                                playerSlug))
+                                .retrieve()
+                                .body(byte[].class);
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty player detail response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerPlayerDetailResponse.class);
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger player detail response",
+                                        exception);
+                }
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerLeagueApiResponse getLeague() {
                 byte[] responseBody = restClient
                                 .get()
@@ -149,6 +182,12 @@ public class BiwengerClient {
                                         "Biwenger returned an empty user response");
                 }
 
+                System.out.println("RAW BIWENGER MANAGER RESPONSE:");
+                System.out.println(
+                                new String(
+                                                responseBody,
+                                                java.nio.charset.StandardCharsets.UTF_8));
+
                 try {
                         return objectMapper.readValue(
                                         responseBody,
@@ -168,7 +207,7 @@ public class BiwengerClient {
                                                 .path("/api/v2/user")
                                                 .queryParam(
                                                                 "fields",
-                                                                "*,lineup(type,playersID,reservesID,captain,striker,coach,date),players(id,owner),market,offers,-trophies")
+                                                                "*,lineup(type,playersID,reservesID,reserves(id,position),captain,striker,coach,date),players(id,owner),market,offers,-trophies")
                                                 .build())
                                 .headers(headers -> {
                                         headers.setBearerAuth(token);
@@ -184,6 +223,12 @@ public class BiwengerClient {
                         throw new IllegalStateException(
                                         "Biwenger returned an empty current user response");
                 }
+
+                System.out.println("RAW BIWENGER USER RESPONSE:");
+                System.out.println(
+                                new String(
+                                                responseBody,
+                                                java.nio.charset.StandardCharsets.UTF_8));
 
                 try {
                         return objectMapper.readValue(

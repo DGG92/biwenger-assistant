@@ -196,6 +196,34 @@
     }
 }
 
+.lineup-status {
+    border: 1px solid transparent;
+}
+
+.starter-status {
+    border-color: #bbf7d0;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.reserve-status {
+    border-color: #bfdbfe;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.coach-status {
+    border-color: #ddd6fe;
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.discarded-status {
+    border-color: #e5e7eb;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
 .captain {
     background: #fef3c7;
     color: #92400e;
@@ -498,6 +526,102 @@
     font-size: 13px;
 }
 
+.bench-slots {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.bench-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f9fafb;
+}
+
+.bench-slot-position {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.bench-slot-player {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+        overflow: hidden;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    span {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 11px;
+    }
+}
+
+.bench-empty {
+    color: #9ca3af;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.coach-section {
+    margin-top: 18px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.coach-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f9fafb;
+
+    >div {
+        display: flex;
+        flex-direction: column;
+    }
+
+    strong {
+        font-size: 13px;
+    }
+
+    >div span {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 11px;
+    }
+}
+
+.coach-badge {
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #ede9fe;
+    color: #5b21b6;
+    font-size: 10px;
+    font-weight: 800;
+}
+
 @media (max-width: 850px) {
     .players-grid {
         grid-template-columns: 1fr;
@@ -549,5 +673,9 @@
 
     .penalty-area {
         width: 180px;
+    }
+
+    .bench-slots {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

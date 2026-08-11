@@ -113,6 +113,43 @@ export class Squad {
     )
   );
 
+  readonly coach = computed(() =>
+    this.players().find(player => player.coach) ?? null
+  );
+
+  readonly discardedPlayers = computed(() =>
+    this.players().filter(
+      player =>
+        !player.starter &&
+        !player.reserve &&
+        !player.coach
+    )
+  );
+
+  readonly goalkeeperReserve = computed(() =>
+    this.reserves().find(
+      player => player.benchPosition === 'PT'
+    ) ?? null
+  );
+
+  readonly defenderReserve = computed(() =>
+    this.reserves().find(
+      player => player.benchPosition === 'DF'
+    ) ?? null
+  );
+
+  readonly midfielderReserve = computed(() =>
+    this.reserves().find(
+      player => player.benchPosition === 'MC'
+    ) ?? null
+  );
+
+  readonly forwardReserve = computed(() =>
+    this.reserves().find(
+      player => player.benchPosition === 'DL'
+    ) ?? null
+  );
+
   readonly midfielders = computed(() =>
     this.starters().filter(
       player => player.lineupPosition === 'MC'

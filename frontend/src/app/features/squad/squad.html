@@ -181,32 +181,83 @@
         <div class="bench">
             <div class="bench-heading">
                 <h3>Banquillo</h3>
-                <span>{{ reserves().length }} jugadores</span>
+                <span>{{ reserves().length }} / 4 jugadores</span>
             </div>
 
-            <div class="bench-list">
-                @for (player of reserves(); track player.id) {
-                <article class="bench-player">
-                    <div>
+            <div class="bench-slots">
+                <article class="bench-slot">
+                    <span class="bench-slot-position">PT</span>
+
+                    @if (goalkeeperReserve(); as player) {
+                    <div class="bench-slot-player">
                         <strong>{{ player.name }}</strong>
                         <span>{{ player.teamName }}</span>
                     </div>
-
-                    <div class="bench-positions">
-                        @for (
-                        position of player.positions;
-                        track position
-                        ) {
-                        <span>{{ position }}</span>
-                        }
-                    </div>
+                    } @else {
+                    <span class="bench-empty">Vacío</span>
+                    }
                 </article>
-                } @empty {
-                <p class="no-bench">
-                    No hay suplentes registrados.
-                </p>
-                }
+
+                <article class="bench-slot">
+                    <span class="bench-slot-position">DF</span>
+
+                    @if (defenderReserve(); as player) {
+                    <div class="bench-slot-player">
+                        <strong>{{ player.name }}</strong>
+                        <span>{{ player.teamName }}</span>
+                    </div>
+                    } @else {
+                    <span class="bench-empty">Vacío</span>
+                    }
+                </article>
+
+                <article class="bench-slot">
+                    <span class="bench-slot-position">MC</span>
+
+                    @if (midfielderReserve(); as player) {
+                    <div class="bench-slot-player">
+                        <strong>{{ player.name }}</strong>
+                        <span>{{ player.teamName }}</span>
+                    </div>
+                    } @else {
+                    <span class="bench-empty">Vacío</span>
+                    }
+                </article>
+
+                <article class="bench-slot">
+                    <span class="bench-slot-position">DL</span>
+
+                    @if (forwardReserve(); as player) {
+                    <div class="bench-slot-player">
+                        <strong>{{ player.name }}</strong>
+                        <span>{{ player.teamName }}</span>
+                    </div>
+                    } @else {
+                    <span class="bench-empty">Vacío</span>
+                    }
+                </article>
             </div>
+        </div>
+
+        <div class="coach-section">
+            <div class="bench-heading">
+                <h3>Entrenador</h3>
+            </div>
+
+            @if (coach(); as player) {
+            <article class="coach-card">
+                <div>
+                    <strong>{{ player.name }}</strong>
+                    <span>{{ player.teamName }}</span>
+                </div>
+
+                <span class="coach-badge">ENT</span>
+            </article>
+            } @else {
+            <p class="no-bench">
+                No hay entrenador registrado.
+            </p>
+            }
         </div>
     </section>
 
@@ -272,6 +323,21 @@
                 </div>
 
                 <div>
+                    <span>Rentabilidad</span>
+
+                    @if (player.profitability !== null) {
+                    <strong [class.positive]="player.profitability > 0" [class.negative]="player.profitability < 0">
+                        {{
+                        player.profitability
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                    </strong>
+                    } @else {
+                    <strong>—</strong>
+                    }
+                </div>
+
+                <div>
                     <span>Puntos</span>
                     <strong>{{ player.points }}</strong>
                 </div>
@@ -305,6 +371,23 @@
             </div>
 
             <footer class="player-tags">
+                @if (player.starter) {
+                <span class="lineup-status starter-status">
+                    Titular
+                </span>
+                } @else if (player.reserve) {
+                <span class="lineup-status reserve-status">
+                    Suplente {{ player.benchPosition }}
+                </span>
+                } @else if (player.coach) {
+                <span class="lineup-status coach-status">
+                    Entrenador
+                </span>
+                } @else {
+                <span class="lineup-status discarded-status">
+                    Descartado
+                </span>
+                }
                 @if (player.captain) {
                 <span class="captain">
                     Capitán
@@ -313,7 +396,7 @@
 
                 @if (player.ram) {
                 <span class="ram">
-                    RAM
+                    Ariete
                 </span>
                 }
 

@@ -16,6 +16,7 @@ import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionTeam;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupReserve;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
@@ -32,6 +33,7 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
 
 @Service
 public class PlayerService {
@@ -39,6 +41,7 @@ public class PlayerService {
         private final PlayerRepository playerRepository;
         private final LeagueRepository leagueRepository;
         private final ManagerRepository managerRepository;
+        private final PlayerMatchReportService playerMatchReportService;
 
         private final BiwengerClient biwengerClient;
 
@@ -46,11 +49,13 @@ public class PlayerService {
                         PlayerRepository playerRepository,
                         LeagueRepository leagueRepository,
                         ManagerRepository managerRepository,
-                        BiwengerClient biwengerClient) {
+                        BiwengerClient biwengerClient,
+                        PlayerMatchReportService playerMatchReportService) {
                 this.playerRepository = playerRepository;
                 this.leagueRepository = leagueRepository;
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
+                this.playerMatchReportService = playerMatchReportService;
         }
 
         @Transactional
@@ -150,6 +155,34 @@ public class PlayerService {
                 playerRepository.delete(player);
         }
 
+        @Transactional
+        public int syncPlayerReports(
+                        Long leagueId,
+                        Long playerId) {
+
+                Player player = playerRepository
+                                .findByIdAndLeague_Id(
+                                                playerId,
+                                                leagueId)
+                                .orElseThrow(
+                                                () -> new PlayerNotFoundException(
+                                                                playerId,
+                                                                leagueId));
+
+                return playerMatchReportService
+                                .syncPlayerReports(player);
+        }
+
+        @Transactional
+        public int syncLeagueReports(Long leagueId) {
+                if (!leagueRepository.existsById(leagueId)) {
+                        throw new LeagueNotFoundException(leagueId);
+                }
+
+                return playerMatchReportService
+                                .syncLeagueReports(leagueId);
+        }
+
         private Player findPlayer(
                         Long leagueId,
                         Long playerId) {
@@ -195,12 +228,16 @@ public class PlayerService {
                                 player.getPoints(),
                                 player.getTeamName(),
                                 player.getMarketValue(),
+                                player.getPurchasePrice(),
+                                player.getProfitability(),
                                 player.isInjured(),
                                 player.isCaptain(),
                                 player.isRam(),
+                                player.isCoach(),
                                 player.isStarter(),
                                 player.isReserve(),
                                 player.getLineupPosition(),
+                                player.getBenchPosition(),
                                 player.getValueFluctuation(),
                                 player.isBlockedClause(),
                                 player.getClauseLockedUntil(),
@@ -313,6 +350,7 @@ public class PlayerService {
 
                                 newPlayer.updateCompetitionData(
                                                 externalPlayer.name(),
+                                                externalPlayer.slug(),
                                                 positions,
                                                 externalPlayer.points() == null
                                                                 ? 0
@@ -329,6 +367,7 @@ public class PlayerService {
                         } else {
                                 player.updateCompetitionData(
                                                 externalPlayer.name(),
+                                                externalPlayer.slug(),
                                                 positions,
                                                 externalPlayer.points() == null
                                                                 ? 0
@@ -422,8 +461,10 @@ public class PlayerService {
                                                 manager,
                                                 ownership == null
                                                                 ? null
-                                                                : toLocalDateTime(
-                                                                                ownership.date()),
+                                                                : toLocalDateTime(ownership.date()),
+                                                ownership == null
+                                                                ? null
+                                                                : ownership.price(),
                                                 ownership == null
                                                                 ? null
                                                                 : ownership.clause(),
@@ -503,6 +544,38 @@ public class PlayerService {
                 return positions;
         }
 
+        private Map<Long, PlayerPosition> buildBenchPositions(
+                        List<BiwengerLineupReserve> reserves) {
+
+                if (reserves == null || reserves.isEmpty()) {
+                        return Map.of();
+                }
+
+                Map<Long, PlayerPosition> result = new java.util.HashMap<>();
+
+                for (BiwengerLineupReserve reserve : reserves) {
+                        if (reserve == null
+                                        || reserve.id() == null
+                                        || reserve.position() == null) {
+                                continue;
+                        }
+
+                        PlayerPosition position = switch (reserve.position()) {
+                                case 1 -> PlayerPosition.PT;
+                                case 2 -> PlayerPosition.DF;
+                                case 3 -> PlayerPosition.MC;
+                                case 4 -> PlayerPosition.DL;
+                                default -> null;
+                        };
+
+                        if (position != null) {
+                                result.put(reserve.id(), position);
+                        }
+                }
+
+                return result;
+        }
+
         @Transactional
         public PlayerLineupSyncResponse syncCurrentLineup(Long leagueId) {
                 League league = leagueRepository.findById(leagueId)
@@ -563,6 +636,8 @@ public class PlayerService {
                                 ? List.of()
                                 : lineup.reservesID();
 
+                Map<Long, PlayerPosition> benchPositionByPlayerId = buildBenchPositions(lineup.reserves());
+
                 List<PlayerPosition> lineupPositions = buildLineupPositions(lineup.type());
 
                 if (starterIds.size() != lineupPositions.size()) {
@@ -595,13 +670,16 @@ public class PlayerService {
                         boolean reserve = reserveIds.contains(biwengerPlayerId);
 
                         PlayerPosition lineupPosition = lineupPositionByPlayerId.get(biwengerPlayerId);
+                        PlayerPosition benchPosition = benchPositionByPlayerId.get(biwengerPlayerId);
 
                         player.updateLineupRoles(
                                         biwengerPlayerId.equals(captainId),
                                         biwengerPlayerId.equals(ramId),
+                                        biwengerPlayerId.equals(coachId),
                                         starter,
                                         reserve,
-                                        lineupPosition);
+                                        lineupPosition,
+                                        benchPosition);
                 }
 
                 return new PlayerLineupSyncResponse(

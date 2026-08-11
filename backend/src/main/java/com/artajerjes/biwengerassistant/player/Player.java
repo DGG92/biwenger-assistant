@@ -42,6 +42,9 @@ public class Player {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 150)
+    private String slug;
+
     @ElementCollection
     @CollectionTable(name = "player_positions", joinColumns = @JoinColumn(name = "player_id"))
     @Enumerated(EnumType.STRING)
@@ -68,6 +71,9 @@ public class Player {
     private boolean ram;
 
     @Column(nullable = false)
+    private boolean coach;
+
+    @Column(nullable = false)
     private boolean starter;
 
     @Column(nullable = false)
@@ -76,6 +82,10 @@ public class Player {
     @Enumerated(EnumType.STRING)
     @Column(name = "lineup_position")
     private PlayerPosition lineupPosition;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bench_position")
+    private PlayerPosition benchPosition;
 
     @Column(name = "value_fluctuation", nullable = false)
     private Long valueFluctuation;
@@ -100,6 +110,9 @@ public class Player {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "purchase_price")
+    private Long purchasePrice;
+
     protected Player() {
     }
 
@@ -121,13 +134,18 @@ public class Player {
         this.injured = false;
         this.captain = false;
         this.ram = false;
+        this.coach = false;
         this.starter = false;
         this.reserve = false;
+        this.lineupPosition = null;
+        this.benchPosition = null;
         this.valueFluctuation = 0L;
         this.clauseValue = null;
         this.owner = null;
         this.signedAt = null;
         this.clauseLockedUntil = null;
+        this.createdAt = null;
+        this.purchasePrice = null;
     }
 
     public void update(
@@ -163,6 +181,7 @@ public class Player {
 
     public void updateCompetitionData(
             String name,
+            String slug,
             List<PlayerPosition> positions,
             Integer points,
             String teamName,
@@ -170,6 +189,7 @@ public class Player {
             boolean injured,
             Long valueFluctuation) {
         this.name = name;
+        this.slug = slug;
         this.positions = new ArrayList<>(positions);
         this.points = points;
         this.teamName = teamName;
@@ -181,10 +201,12 @@ public class Player {
     public void updateOwnership(
             Manager owner,
             LocalDateTime signedAt,
+            Long purchasePrice,
             Long clauseValue,
             LocalDateTime clauseLockedUntil) {
         this.owner = owner;
         this.signedAt = signedAt;
+        this.purchasePrice = purchasePrice;
         this.clauseValue = clauseValue;
         this.clauseLockedUntil = clauseLockedUntil;
     }
@@ -192,6 +214,7 @@ public class Player {
     public void clearOwnership() {
         this.owner = null;
         this.signedAt = null;
+        this.purchasePrice = null;
         this.clauseValue = null;
         this.clauseLockedUntil = null;
     }
@@ -199,14 +222,18 @@ public class Player {
     public void updateLineupRoles(
             boolean captain,
             boolean ram,
+            boolean coach,
             boolean starter,
             boolean reserve,
-            PlayerPosition lineupPosition) {
+            PlayerPosition lineupPosition,
+            PlayerPosition benchPosition) {
         this.captain = captain;
         this.ram = ram;
+        this.coach = coach;
         this.starter = starter;
         this.reserve = reserve;
         this.lineupPosition = lineupPosition;
+        this.benchPosition = benchPosition;
     }
 
     public void clearLineupRoles() {
@@ -215,6 +242,7 @@ public class Player {
         this.starter = false;
         this.reserve = false;
         this.lineupPosition = null;
+        this.benchPosition = null;
     }
 
     @PrePersist
@@ -234,6 +262,10 @@ public class Player {
 
     public String getName() {
         return name;
+    }
+
+    public String getSlug() {
+        return slug;
     }
 
     public List<PlayerPosition> getPositions() {
@@ -264,6 +296,10 @@ public class Player {
         return ram;
     }
 
+    public boolean isCoach() {
+        return coach;
+    }
+
     public boolean isStarter() {
         return starter;
     }
@@ -274,6 +310,10 @@ public class Player {
 
     public PlayerPosition getLineupPosition() {
         return lineupPosition;
+    }
+
+    public PlayerPosition getBenchPosition() {
+        return benchPosition;
     }
 
     public Long getValueFluctuation() {
@@ -311,5 +351,17 @@ public class Player {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public Long getPurchasePrice() {
+        return purchasePrice;
+    }
+
+    public Long getProfitability() {
+        if (purchasePrice == null || marketValue == null) {
+            return null;
+        }
+
+        return marketValue - purchasePrice;
     }
 }

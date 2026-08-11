@@ -9,9 +9,13 @@ export interface Player {
     injured: boolean;
     captain: boolean;
     ram: boolean;
-    starter: boolean,
-    reserve: boolean,
-    lineupPosition: string | null,
+    coach: boolean;
+    starter: boolean;
+    reserve: boolean;
+    lineupPosition: string | null;
+    benchPosition: string | null;
+    purchasePrice: number | null;
+    profitability: number | null;
     valueFluctuation: number;
     blockedClause: boolean;
     clauseLockedUntil: string | null;

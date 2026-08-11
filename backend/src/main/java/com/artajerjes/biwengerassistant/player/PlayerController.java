@@ -93,4 +93,22 @@ public class PlayerController {
                         @PathVariable Long leagueId) {
                 return playerService.syncCurrentLineup(leagueId);
         }
+
+        @PostMapping("/{playerId}/reports/sync")
+        public int syncPlayerReports(
+                        @PathVariable Long leagueId,
+                        @PathVariable Long playerId) {
+
+                return playerService.syncPlayerReports(
+                                leagueId,
+                                playerId);
+        }
+
+        @PostMapping("/reports/sync")
+        public int syncLeagueReports(
+                        @PathVariable Long leagueId) {
+
+                return playerService
+                                .syncLeagueReports(leagueId);
+        }
 }
