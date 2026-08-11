@@ -73,6 +73,10 @@ public class Player {
     @Column(nullable = false)
     private boolean reserve;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lineup_position")
+    private PlayerPosition lineupPosition;
+
     @Column(name = "value_fluctuation", nullable = false)
     private Long valueFluctuation;
 
@@ -196,11 +200,13 @@ public class Player {
             boolean captain,
             boolean ram,
             boolean starter,
-            boolean reserve) {
+            boolean reserve,
+            PlayerPosition lineupPosition) {
         this.captain = captain;
         this.ram = ram;
         this.starter = starter;
         this.reserve = reserve;
+        this.lineupPosition = lineupPosition;
     }
 
     public void clearLineupRoles() {
@@ -208,6 +214,7 @@ public class Player {
         this.ram = false;
         this.starter = false;
         this.reserve = false;
+        this.lineupPosition = null;
     }
 
     @PrePersist
@@ -263,6 +270,10 @@ public class Player {
 
     public boolean isReserve() {
         return reserve;
+    }
+
+    public PlayerPosition getLineupPosition() {
+        return lineupPosition;
     }
 
     public Long getValueFluctuation() {

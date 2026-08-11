@@ -1,0 +1,312 @@
+.market-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 24px;
+
+    h1 {
+        margin: 0;
+        font-size: 32px;
+    }
+
+    p:last-child {
+        margin: 8px 0 0;
+        color: #6b7280;
+    }
+}
+
+.eyebrow {
+    margin: 0 0 6px;
+    color: #16a34a;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Filtros */
+
+.filters {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 1fr) minmax(280px, auto) minmax(280px, auto) minmax(200px, auto);
+    gap: 18px;
+    align-items: end;
+    margin-bottom: 22px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.search-box,
+.sort-box,
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-box label,
+.sort-box label,
+.filter-group>span {
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.search-box input,
+.sort-box select {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    outline: none;
+}
+
+.search-box input:focus,
+.sort-box select:focus {
+    border-color: #22c55e;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-buttons button {
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #4b5563;
+    cursor: pointer;
+    font-weight: 600;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.filter-buttons button:hover {
+    border-color: #9ca3af;
+}
+
+.filter-buttons button.active {
+    border-color: #22c55e;
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* Resumen */
+
+.market-summary {
+    margin-bottom: 16px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* Listado */
+
+.market-list {
+    display: grid;
+    gap: 14px;
+}
+
+.player-card {
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.player-name {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+
+    h2 {
+        margin: 0;
+        font-size: 19px;
+    }
+
+    p {
+        margin: 5px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+}
+
+/* BUY / WATCH / AVOID */
+
+.recommendation {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+
+    &.buy {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    &.watch {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    &.avoid {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+}
+
+/* Datos del jugador */
+
+.player-data {
+    display: grid;
+    grid-template-columns:
+        repeat(5, minmax(120px, 1fr));
+    gap: 20px;
+    margin-top: 22px;
+
+    div {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    span {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    strong {
+        font-size: 15px;
+    }
+}
+
+.positive {
+    color: #15803d;
+}
+
+.negative {
+    color: #b91c1c;
+}
+
+/* Barra de puntuación */
+
+.score-bar {
+    height: 7px;
+    margin-top: 18px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e7eb;
+}
+
+.score-value {
+    height: 100%;
+    border-radius: inherit;
+    background: #22c55e;
+    transition: width 0.25s ease;
+}
+
+.score-value.watch-score {
+    background: #f59e0b;
+}
+
+.score-value.avoid-score {
+    background: #ef4444;
+}
+
+/* Información adicional */
+
+.player-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.injured,
+.unaffordable {
+    padding: 3px 7px;
+    border-radius: 6px;
+}
+
+.injured {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.unaffordable {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+/* Sin resultados */
+
+.empty-state {
+    padding: 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #6b7280;
+    text-align: center;
+}
+
+/* Responsive */
+
+@media (max-width: 1150px) {
+    .filters {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .player-data {
+        grid-template-columns:
+            repeat(2, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .filters {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .page-header h1 {
+        font-size: 26px;
+    }
+
+    .player-name {
+        flex-direction: column;
+    }
+
+    .player-data {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    .player-data {
+        grid-template-columns: 1fr;
+    }
+
+    .player-card {
+        padding: 16px;
+    }
+}

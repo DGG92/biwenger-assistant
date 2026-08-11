@@ -1,0 +1,49 @@
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">BA</div>
+
+            <div>
+                <h1>Biwenger Assistant</h1>
+                <p>VII Güenguer</p>
+            </div>
+        </div>
+
+        <nav class="navigation">
+            <a routerLink="/dashboard" routerLinkActive="active">
+                Inicio
+            </a>
+
+            <a routerLink="/squad" routerLinkActive="active">
+                Mi plantilla
+            </a>
+
+            <a routerLink="/market" routerLinkActive="active">
+                Mercado
+            </a>
+
+            <a routerLink="/offers" routerLinkActive="active">
+                Ofertas
+            </a>
+
+            <a routerLink="/movements" routerLinkActive="active">
+                Movimientos
+            </a>
+        </nav>
+
+        <div class="manager">
+            <div class="manager-avatar">
+                CO
+            </div>
+
+            <div class="manager-info">
+                <strong>Califato Omeya</strong>
+                <span>Manager</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="content">
+        <router-outlet />
+    </main>
+</div>

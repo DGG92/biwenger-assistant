@@ -1,0 +1,129 @@
+<section class="dashboard">
+    @if (dashboard$ | async; as data) {
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">VII Güenguer</p>
+            <h1>Hola, {{ data.squad.managerName }}</h1>
+            <p class="subtitle">
+                Tu asistente ha analizado tu plantilla y el mercado actual.
+            </p>
+        </div>
+    </header>
+
+    <div class="summary-grid">
+        <article class="summary-card">
+            <span class="label">Jugadores</span>
+            <strong>{{ data.squad.totalPlayers }}</strong>
+        </article>
+
+        <article class="summary-card">
+            <span class="label">Saldo</span>
+            <strong>
+                {{ data.economy.balance | currency:'EUR':'symbol':'1.0-0':'es-ES' }}
+            </strong>
+        </article>
+
+        <article class="summary-card">
+            <span class="label">Puja máxima</span>
+            <strong>
+                {{ data.economy.maximumBid | currency:'EUR':'symbol':'1.0-0':'es-ES' }}
+            </strong>
+        </article>
+
+        <article class="summary-card">
+            <span class="label">Oportunidades BUY</span>
+            <strong>
+                {{
+                data.market.filter(
+                recommendation =>
+                recommendation.recommendation === 'BUY'
+                ).length
+                }}
+            </strong>
+        </article>
+    </div>
+
+    <section class="dashboard-section">
+        <div class="section-header">
+            <div>
+                <p class="eyebrow">Mercado</p>
+                <h2>Mejores oportunidades</h2>
+            </div>
+        </div>
+
+        <div class="recommendations">
+            @for (
+            recommendation of data.topRecommendations;
+            track recommendation.playerId
+            ) {
+            <article class="recommendation-card">
+                <div>
+                    <div class="player-heading">
+                        <strong>{{ recommendation.playerName }}</strong>
+
+                        <span class="recommendation-badge" [class.buy]="recommendation.recommendation === 'BUY'"
+                            [class.watch]="recommendation.recommendation === 'WATCH'"
+                            [class.avoid]="recommendation.recommendation === 'AVOID'">
+                            {{ recommendation.recommendation }}
+                        </span>
+                    </div>
+
+                    <p>
+                        {{ recommendation.teamName }}
+                        ·
+                        {{ recommendation.positions.join(' / ') }}
+                    </p>
+                </div>
+
+                <div class="recommendation-values">
+                    <span>
+                        Precio
+                        <strong>
+                            {{
+                            recommendation.askingPrice
+                            | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                            }}
+                        </strong>
+                    </span>
+
+                    <span>
+                        Score
+                        <strong>{{ recommendation.score }}/100</strong>
+                    </span>
+                </div>
+            </article>
+            }
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <p class="eyebrow">Plantilla</p>
+        <h2>Necesidades por posición</h2>
+
+        <div class="needs-grid">
+            @for (
+            position of ['PT', 'DF', 'MC', 'DL'];
+            track position
+            ) {
+            <article class="need-card">
+                <div class="need-title">
+                    <strong>{{ position }}</strong>
+
+                    <span>
+                        {{ data.squad.needScoreByPosition[position] }}/100
+                    </span>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-value" [style.width.%]="
+                  data.squad.needScoreByPosition[position]
+                "></div>
+                </div>
+            </article>
+            }
+        </div>
+    </section>
+    } @else {
+    <p>Cargando dashboard...</p>
+    }
+</section>

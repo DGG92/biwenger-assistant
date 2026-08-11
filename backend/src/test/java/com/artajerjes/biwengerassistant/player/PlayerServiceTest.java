@@ -1249,37 +1249,85 @@ class PlayerServiceTest {
         }
 
         @Test
-        void syncCurrentLineupShouldSetCaptainAndRamForCurrentManager() {
+        void syncCurrentLineupShouldSetCaptainRamAndEffectivePositions() {
                 League league = createLeague();
                 Manager manager = createManager();
 
-                Player captain = new Player(
-                                "38405",
-                                "Odysseas",
+                Player goalkeeper = new Player(
+                                "38405", "Odysseas",
                                 List.of(PlayerPosition.PT),
-                                "Sevilla",
-                                3_000_000L,
-                                league);
+                                "Sevilla", 3_000_000L, league);
+
+                Player defender1 = new Player(
+                                "10001", "Defensa 1",
+                                List.of(PlayerPosition.DF),
+                                "Equipo", 1_000_000L, league);
+
+                Player defender2 = new Player(
+                                "10002", "Defensa 2",
+                                List.of(PlayerPosition.DF),
+                                "Equipo", 1_000_000L, league);
+
+                Player defender3 = new Player(
+                                "10003", "Defensa 3",
+                                List.of(PlayerPosition.DF),
+                                "Equipo", 1_000_000L, league);
+
+                Player defender4 = new Player(
+                                "10004", "Defensa 4",
+                                List.of(PlayerPosition.DF),
+                                "Equipo", 1_000_000L, league);
+
+                /*
+                 * Su posición principal es DL, pero en esta alineación
+                 * ocupa el primer hueco de MC.
+                 */
+                Player multiPosition = new Player(
+                                "20001", "Multiposición",
+                                List.of(PlayerPosition.DL, PlayerPosition.MC),
+                                "Equipo", 5_000_000L, league);
+
+                Player midfielder2 = new Player(
+                                "20002", "Medio 2",
+                                List.of(PlayerPosition.MC),
+                                "Equipo", 1_000_000L, league);
+
+                Player midfielder3 = new Player(
+                                "20003", "Medio 3",
+                                List.of(PlayerPosition.MC),
+                                "Equipo", 1_000_000L, league);
+
+                Player midfielder4 = new Player(
+                                "20004", "Medio 4",
+                                List.of(PlayerPosition.MC),
+                                "Equipo", 1_000_000L, league);
+
+                Player midfielder5 = new Player(
+                                "20005", "Medio 5",
+                                List.of(PlayerPosition.MC),
+                                "Equipo", 1_000_000L, league);
 
                 Player ram = new Player(
-                                "17756",
-                                "Camello",
+                                "17756", "Camello",
                                 List.of(PlayerPosition.DL),
-                                "Rayo Vallecano",
-                                2_000_000L,
-                                league);
+                                "Rayo Vallecano", 2_000_000L, league);
 
-                Player otherPlayer = new Player(
-                                "17731",
-                                "Catena",
-                                List.of(PlayerPosition.DF),
-                                "Osasuna",
-                                3_700_000L,
-                                league);
+                List<Player> players = List.of(
+                                goalkeeper,
+                                defender1,
+                                defender2,
+                                defender3,
+                                defender4,
+                                multiPosition,
+                                midfielder2,
+                                midfielder3,
+                                midfielder4,
+                                midfielder5,
+                                ram);
 
-                captain.updateOwnership(manager, null, null, null);
-                ram.updateOwnership(manager, null, null, null);
-                otherPlayer.updateOwnership(manager, null, null, null);
+                players.forEach(
+                                player -> player.updateOwnership(
+                                                manager, null, null, null));
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
                                 "4-5-1",
@@ -1289,19 +1337,25 @@ class PlayerServiceTest {
                                 1785998437L,
                                 List.of(
                                                 38405L,
-                                                17731L,
+                                                10001L,
+                                                10002L,
+                                                10003L,
+                                                10004L,
+                                                20001L,
+                                                20002L,
+                                                20003L,
+                                                20004L,
+                                                20005L,
                                                 17756L),
-                                List.of());
-
-                BiwengerUserData userData = new BiwengerUserData(
-                                manager.getBiwengerManagerId(),
-                                manager.getName(),
-                                lineup,
                                 List.of());
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
                                 200,
-                                userData);
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                lineup,
+                                                List.of()));
 
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
@@ -1315,10 +1369,7 @@ class PlayerServiceTest {
                                 .thenReturn(Optional.of(manager));
 
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                                .thenReturn(List.of(
-                                                captain,
-                                                ram,
-                                                otherPlayer));
+                                .thenReturn(players);
 
                 PlayerLineupSyncResponse result = playerService.syncCurrentLineup(LEAGUE_ID);
 
@@ -1328,20 +1379,28 @@ class PlayerServiceTest {
                 assertEquals(17756L, result.ramPlayerId());
                 assertEquals(41088L, result.coachPlayerId());
 
-                assertTrue(captain.isCaptain());
-                assertFalse(captain.isRam());
-                assertTrue(captain.isStarter());
-                assertFalse(captain.isReserve());
+                assertTrue(goalkeeper.isCaptain());
+                assertEquals(
+                                PlayerPosition.PT,
+                                goalkeeper.getLineupPosition());
 
-                assertFalse(ram.isCaptain());
+                assertEquals(
+                                PlayerPosition.DF,
+                                defender1.getLineupPosition());
+
+                /*
+                 * Este es el caso importante:
+                 * DL/MC utilizado realmente como MC.
+                 */
+                assertTrue(multiPosition.isStarter());
+                assertEquals(
+                                PlayerPosition.MC,
+                                multiPosition.getLineupPosition());
+
                 assertTrue(ram.isRam());
-                assertTrue(ram.isStarter());
-                assertFalse(ram.isReserve());
-
-                assertFalse(otherPlayer.isCaptain());
-                assertFalse(otherPlayer.isRam());
-                assertTrue(otherPlayer.isStarter());
-                assertFalse(otherPlayer.isReserve());
+                assertEquals(
+                                PlayerPosition.DL,
+                                ram.getLineupPosition());
         }
 
         @Test
@@ -1368,15 +1427,20 @@ class PlayerServiceTest {
                 oldCaptainAndRam.updateOwnership(manager, null, null, null);
                 newCaptain.updateOwnership(manager, null, null, null);
 
-                oldCaptainAndRam.updateLineupRoles(true, true, true, true);
+                oldCaptainAndRam.updateLineupRoles(
+                                true,
+                                true,
+                                true,
+                                true,
+                                PlayerPosition.DF);
 
                 BiwengerUserLineup lineup = new BiwengerUserLineup(
-                                "4-4-2",
+                                "4-5-1",
                                 new BiwengerLineupPlayerRef(38405L),
                                 null,
                                 null,
                                 1785998437L,
-                                List.of(38405L, 17731L),
+                                complete451Lineup(38405L, 17731L),
                                 List.of());
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1430,7 +1494,12 @@ class PlayerServiceTest {
                                 league);
 
                 player.updateOwnership(manager, null, null, null);
-                player.updateLineupRoles(true, true, true, true);
+                player.updateLineupRoles(
+                                true,
+                                true,
+                                true,
+                                true,
+                                PlayerPosition.DF);
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
                                 200,
@@ -1466,6 +1535,7 @@ class PlayerServiceTest {
                 assertFalse(player.isRam());
                 assertFalse(player.isStarter());
                 assertFalse(player.isReserve());
+                assertNull(player.getLineupPosition());
         }
 
         @Test
@@ -1492,7 +1562,7 @@ class PlayerServiceTest {
                                 null,
                                 null,
                                 1785998437L,
-                                List.of(38405L),
+                                complete451Lineup(38405L),
                                 List.of(2184L));
 
                 BiwengerUserResponse response = new BiwengerUserResponse(
@@ -1522,6 +1592,7 @@ class PlayerServiceTest {
                 assertTrue(reserve.isReserve());
                 assertFalse(reserve.isCaptain());
                 assertFalse(reserve.isRam());
+                assertNull(reserve.getLineupPosition());
         }
 
         @Test
@@ -1595,6 +1666,28 @@ class PlayerServiceTest {
 
                 verify(playerRepository, never())
                                 .delete(any(Player.class));
+        }
+
+        private List<Long> complete451Lineup(Long... relevantIds) {
+                List<Long> ids = new java.util.ArrayList<>(
+                                List.of(
+                                                90001L,
+                                                90002L,
+                                                90003L,
+                                                90004L,
+                                                90005L,
+                                                90006L,
+                                                90007L,
+                                                90008L,
+                                                90009L,
+                                                90010L,
+                                                90011L));
+
+                for (int i = 0; i < relevantIds.length; i++) {
+                        ids.set(i, relevantIds[i]);
+                }
+
+                return ids;
         }
 
         private League createLeague() {

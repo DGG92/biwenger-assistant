@@ -1,0 +1,342 @@
+<section class="squad-page">
+    @if (manager(); as manager) {
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">VII Güenguer</p>
+            <h1>Mi plantilla</h1>
+
+            <p>
+                Plantilla actual de
+                <strong>{{ manager.managerName }}</strong>
+            </p>
+        </div>
+    </header>
+
+    <div class="summary-grid">
+        <article class="summary-card">
+            <span>Jugadores</span>
+            <strong>{{ players().length }}</strong>
+        </article>
+
+        <article class="summary-card">
+            <span>Valor de plantilla</span>
+            <strong>
+                {{
+                totalValue()
+                | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                }}
+            </strong>
+        </article>
+
+        <article class="summary-card">
+            <span>Puntos</span>
+            <strong>{{ totalPoints() }}</strong>
+        </article>
+
+        <article class="summary-card">
+            <span>Lesionados</span>
+            <strong>{{ injuredPlayers() }}</strong>
+        </article>
+    </div>
+
+    <section class="lineup-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Alineación actual</p>
+                <h2>Once titular</h2>
+            </div>
+
+            <span class="formation">
+                {{ defenders().length }}-{{ midfielders().length }}-{{ forwards().length }}
+            </span>
+        </div>
+
+        <div class="football-pitch">
+            <div class="pitch-line center-line"></div>
+            <div class="center-circle"></div>
+
+            <div class="penalty-area penalty-area-top"></div>
+            <div class="penalty-area penalty-area-bottom"></div>
+
+            <div class="lineup-row forwards-row">
+                @for (player of forwards(); track player.id) {
+                <div class="lineup-player">
+                    <div class="player-circle" [class.injured]="player.injured">
+                        {{ player.name.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>{{ player.name }}</strong>
+
+                        @if (player.captain) {
+                        <span class="role-icon captain-icon" title="Capitán">
+                            C
+                        </span>
+                        }
+
+                        @if (player.ram) {
+                        <span class="role-icon ram-icon" title="Ariete">
+                            A
+                        </span>
+                        }
+                    </div>
+
+                    <span>
+                        {{ player.lineupPosition }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row midfielders-row">
+                @for (player of midfielders(); track player.id) {
+                <div class="lineup-player">
+                    <div class="player-circle" [class.injured]="player.injured">
+                        {{ player.name.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>{{ player.name }}</strong>
+
+                        @if (player.captain) {
+                        <span class="role-icon captain-icon" title="Capitán">
+                            C
+                        </span>
+                        }
+
+                        @if (player.ram) {
+                        <span class="role-icon ram-icon" title="Ariete">
+                            A
+                        </span>
+                        }
+                    </div>
+
+                    <span>
+                        {{ player.lineupPosition }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row defenders-row">
+                @for (player of defenders(); track player.id) {
+                <div class="lineup-player">
+                    <div class="player-circle" [class.injured]="player.injured">
+                        {{ player.name.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>{{ player.name }}</strong>
+
+                        @if (player.captain) {
+                        <span class="role-icon captain-icon" title="Capitán">
+                            C
+                        </span>
+                        }
+
+                        @if (player.ram) {
+                        <span class="role-icon ram-icon" title="Ariete">
+                            A
+                        </span>
+                        }
+                    </div>
+
+                    <span>
+                        {{ player.lineupPosition }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row goalkeeper-row">
+                @for (player of goalkeeper(); track player.id) {
+                <div class="lineup-player">
+                    <div class="player-circle goalkeeper" [class.captain]="player.captain"
+                        [class.injured]="player.injured">
+                        {{ player.name.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>{{ player.name }}</strong>
+
+                        @if (player.captain) {
+                        <span class="role-icon captain-icon" title="Capitán">
+                            C
+                        </span>
+                        }
+
+                        @if (player.ram) {
+                        <span class="role-icon ram-icon" title="Ariete">
+                            A
+                        </span>
+                        }
+                    </div>
+
+                    <span>{{ player.lineupPosition }}</span>
+                </div>
+                }
+            </div>
+        </div>
+
+        <div class="bench">
+            <div class="bench-heading">
+                <h3>Banquillo</h3>
+                <span>{{ reserves().length }} jugadores</span>
+            </div>
+
+            <div class="bench-list">
+                @for (player of reserves(); track player.id) {
+                <article class="bench-player">
+                    <div>
+                        <strong>{{ player.name }}</strong>
+                        <span>{{ player.teamName }}</span>
+                    </div>
+
+                    <div class="bench-positions">
+                        @for (
+                        position of player.positions;
+                        track position
+                        ) {
+                        <span>{{ position }}</span>
+                        }
+                    </div>
+                </article>
+                } @empty {
+                <p class="no-bench">
+                    No hay suplentes registrados.
+                </p>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="filters">
+        <span>Posición</span>
+
+        <div class="filter-buttons">
+            @for (
+            position of ['ALL', 'PT', 'DF', 'MC', 'DL'];
+            track position
+            ) {
+            <button type="button" [class.active]="positionFilter() === position"
+                (click)="setPositionFilter($any(position))">
+                {{
+                position === 'ALL'
+                ? 'Todos'
+                : position
+                }}
+            </button>
+            }
+        </div>
+    </section>
+
+    <div class="player-count">
+        {{ filteredPlayers().length }}
+        jugadores
+    </div>
+
+    <div class="players-grid">
+        @for (
+        player of filteredPlayers();
+        track player.id
+        ) {
+        <article class="player-card" [class.injured-card]="player.injured">
+            <div class="player-header">
+                <div>
+                    <h2>{{ player.name }}</h2>
+
+                    <p>
+                        {{ player.teamName || 'Sin equipo' }}
+                    </p>
+                </div>
+
+                <div class="positions">
+                    @for (
+                    position of player.positions;
+                    track position
+                    ) {
+                    <span>{{ position }}</span>
+                    }
+                </div>
+            </div>
+
+            <div class="player-info">
+                <div>
+                    <span>Valor</span>
+                    <strong>
+                        {{
+                        player.marketValue
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Puntos</span>
+                    <strong>{{ player.points }}</strong>
+                </div>
+
+                <div>
+                    <span>Variación</span>
+
+                    <strong [class.positive]="player.valueFluctuation > 0"
+                        [class.negative]="player.valueFluctuation < 0">
+                        {{
+                        player.valueFluctuation
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Cláusula</span>
+
+                    <strong>
+                        @if (player.clauseValue !== null) {
+                        {{
+                        player.clauseValue
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                        } @else {
+                        —
+                        }
+                    </strong>
+                </div>
+            </div>
+
+            <footer class="player-tags">
+                @if (player.captain) {
+                <span class="captain">
+                    Capitán
+                </span>
+                }
+
+                @if (player.ram) {
+                <span class="ram">
+                    RAM
+                </span>
+                }
+
+                @if (player.injured) {
+                <span class="injured">
+                    Lesionado
+                </span>
+                }
+
+                @if (player.blockedClause) {
+                <span class="blocked">
+                    Cláusula bloqueada
+                </span>
+                }
+            </footer>
+        </article>
+        } @empty {
+        <div class="empty-state">
+            No hay jugadores para esta posición.
+        </div>
+        }
+    </div>
+    } @else {
+    <p>Cargando plantilla...</p>
+    }
+</section>

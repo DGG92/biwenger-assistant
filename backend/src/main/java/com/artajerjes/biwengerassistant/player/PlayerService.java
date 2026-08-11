@@ -200,6 +200,7 @@ public class PlayerService {
                                 player.isRam(),
                                 player.isStarter(),
                                 player.isReserve(),
+                                player.getLineupPosition(),
                                 player.getValueFluctuation(),
                                 player.isBlockedClause(),
                                 player.getClauseLockedUntil(),
@@ -451,6 +452,57 @@ public class PlayerService {
                                 ZoneId.systemDefault());
         }
 
+        private List<PlayerPosition> buildLineupPositions(String formation) {
+                if (formation == null || formation.isBlank()) {
+                        return List.of();
+                }
+
+                String[] lines = formation.split("-");
+
+                if (lines.length < 2) {
+                        throw new IllegalArgumentException(
+                                        "Invalid Biwenger formation: " + formation);
+                }
+
+                List<Integer> counts = new ArrayList<>();
+
+                for (String line : lines) {
+                        try {
+                                counts.add(Integer.valueOf(line));
+                        } catch (NumberFormatException exception) {
+                                throw new IllegalArgumentException(
+                                                "Invalid Biwenger formation: " + formation,
+                                                exception);
+                        }
+                }
+
+                List<PlayerPosition> positions = new ArrayList<>();
+
+                // Siempre hay un portero.
+                positions.add(PlayerPosition.PT);
+
+                // Primera línea de la formación: defensas.
+                for (int i = 0; i < counts.get(0); i++) {
+                        positions.add(PlayerPosition.DF);
+                }
+
+                // Todas las líneas intermedias se consideran centrocampistas.
+                for (int lineIndex = 1; lineIndex < counts.size() - 1; lineIndex++) {
+                        for (int i = 0; i < counts.get(lineIndex); i++) {
+                                positions.add(PlayerPosition.MC);
+                        }
+                }
+
+                // Última línea: delanteros.
+                int forwards = counts.get(counts.size() - 1);
+
+                for (int i = 0; i < forwards; i++) {
+                        positions.add(PlayerPosition.DL);
+                }
+
+                return positions;
+        }
+
         @Transactional
         public PlayerLineupSyncResponse syncCurrentLineup(Long leagueId) {
                 League league = leagueRepository.findById(leagueId)
@@ -503,6 +555,34 @@ public class PlayerService {
                                 ? null
                                 : lineup.coach().id();
 
+                List<Long> starterIds = lineup.playersID() == null
+                                ? List.of()
+                                : lineup.playersID();
+
+                List<Long> reserveIds = lineup.reservesID() == null
+                                ? List.of()
+                                : lineup.reservesID();
+
+                List<PlayerPosition> lineupPositions = buildLineupPositions(lineup.type());
+
+                if (starterIds.size() != lineupPositions.size()) {
+                        throw new IllegalStateException(
+                                        "Biwenger lineup does not match formation "
+                                                        + lineup.type()
+                                                        + ": expected "
+                                                        + lineupPositions.size()
+                                                        + " starters but received "
+                                                        + starterIds.size());
+                }
+
+                Map<Long, PlayerPosition> lineupPositionByPlayerId = new java.util.HashMap<>();
+
+                for (int i = 0; i < starterIds.size(); i++) {
+                        lineupPositionByPlayerId.put(
+                                        starterIds.get(i),
+                                        lineupPositions.get(i));
+                }
+
                 for (Player player : players) {
                         if (!manager.equals(player.getOwner())) {
                                 continue;
@@ -510,17 +590,18 @@ public class PlayerService {
 
                         Long biwengerPlayerId = Long.valueOf(player.getBiwengerPlayerId());
 
-                        boolean starter = lineup.playersID() != null
-                                        && lineup.playersID().contains(biwengerPlayerId);
+                        boolean starter = starterIds.contains(biwengerPlayerId);
 
-                        boolean reserve = lineup.reservesID() != null
-                                        && lineup.reservesID().contains(biwengerPlayerId);
+                        boolean reserve = reserveIds.contains(biwengerPlayerId);
+
+                        PlayerPosition lineupPosition = lineupPositionByPlayerId.get(biwengerPlayerId);
 
                         player.updateLineupRoles(
                                         biwengerPlayerId.equals(captainId),
                                         biwengerPlayerId.equals(ramId),
                                         starter,
-                                        reserve);
+                                        reserve,
+                                        lineupPosition);
                 }
 
                 return new PlayerLineupSyncResponse(
