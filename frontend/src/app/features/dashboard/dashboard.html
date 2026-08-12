@@ -31,17 +31,161 @@
         </article>
 
         <article class="summary-card">
-            <span class="label">Oportunidades BUY</span>
+            <span class="label">Oportunidades de compra</span>
             <strong>
                 {{
                 data.market.filter(
                 recommendation =>
                 recommendation.recommendation === 'BUY'
+                || recommendation.recommendation === 'STRONG_BUY'
                 ).length
                 }}
             </strong>
         </article>
     </div>
+
+    @if (
+    data.protectionAlerts.length > 0
+    || data.strongBuys.length > 0
+    || data.injuredPlayers.length > 0
+    || data.highNeeds.length > 0
+    ) {
+    <section class="attention-section">
+        <div class="section-header">
+            <div>
+                <p class="eyebrow">Asistente</p>
+                <h2>Requiere tu atención</h2>
+            </div>
+        </div>
+
+        <div class="attention-grid">
+
+            @for (
+            player of data.protectionAlerts;
+            track player.id
+            ) {
+            <a class="attention-card protection-attention attention-link" routerLink="/squad" [queryParams]="{
+        search: player.name
+    }">
+                <span class="attention-icon">🛡️</span>
+
+                <div>
+                    <strong>
+                        {{
+                        player.playerProtectionAlert.level === 'PROTECT'
+                        ? 'Protege a ' + player.name
+                        : 'Vigila la cláusula de ' + player.name
+                        }}
+                    </strong>
+
+                    <p>
+                        Alerta de protección
+                        ·
+                        {{ player.playerProtectionAlert.score }}/100
+                    </p>
+                </div>
+            </a>
+            }
+
+            @for (
+            recommendation of data.strongBuys;
+            track recommendation.playerId
+            ) {
+            <a class="attention-card market-attention attention-link" routerLink="/market" [queryParams]="{
+        search: recommendation.playerName
+    }">
+                <span class="attention-icon">🔥</span>
+
+                <div>
+                    <strong>
+                        Oportunidad de mercado:
+                        {{ recommendation.playerName }}
+                    </strong>
+
+                    <p>
+                        STRONG BUY
+                        ·
+                        {{ recommendation.score }}/100
+                    </p>
+                </div>
+            </a>
+            }
+
+            @if (data.strongBuyCount > data.strongBuys.length) {
+            <a class="attention-card more-opportunities attention-link" routerLink="/market" [queryParams]="{
+        recommendation: 'STRONG_BUY'
+    }">
+                <span class="attention-icon">+</span>
+
+                <div>
+                    <strong>
+                        {{
+                        data.strongBuyCount
+                        - data.strongBuys.length
+                        }}
+                        oportunidades más
+                    </strong>
+
+                    <p>
+                        Consulta el mercado para ver todas las recomendaciones.
+                    </p>
+                </div>
+            </a>
+            }
+
+            @if (data.injuredPlayers.length > 0) {
+            <a class="attention-card injury-attention attention-link" routerLink="/squad" [queryParams]="{
+        status: 'INJURED'
+    }">
+                <span class="attention-icon">🚑</span>
+
+                <div>
+                    <strong>
+                        {{
+                        data.injuredPlayers.length === 1
+                        ? 'Tienes 1 jugador lesionado'
+                        : 'Tienes '
+                        + data.injuredPlayers.length
+                        + ' jugadores lesionados'
+                        }}
+                    </strong>
+
+                    <p>
+                        {{
+                        data.injuredPlayers
+                        .map(player => player.name)
+                        .join(', ')
+                        }}
+                    </p>
+                </div>
+            </a>
+            }
+
+            @for (
+            need of data.highNeeds;
+            track need[0]
+            ) {
+            <a class="attention-card need-attention attention-link" routerLink="/market" [queryParams]="{
+        position: need[0]
+    }">
+                <span class="attention-icon">⚠️</span>
+
+                <div>
+                    <strong>
+                        Necesidad alta en {{ need[0] }}
+                    </strong>
+
+                    <p>
+                        Prioridad de refuerzo:
+                        {{ need[1] }}/100
+                    </p>
+                </div>
+            </a>
+            }
+
+        </div>
+    </section>
+    }
 
     <section class="dashboard-section">
         <div class="section-header">
@@ -56,15 +200,23 @@
             recommendation of data.topRecommendations;
             track recommendation.playerId
             ) {
-            <article class="recommendation-card">
+            <a class="recommendation-card recommendation-link" routerLink="/market" [queryParams]="{
+        search: recommendation.playerName
+    }">
                 <div>
                     <div class="player-heading">
                         <strong>{{ recommendation.playerName }}</strong>
 
-                        <span class="recommendation-badge" [class.buy]="recommendation.recommendation === 'BUY'"
+                        <span class="recommendation-badge"
+                            [class.strong-buy]="recommendation.recommendation === 'STRONG_BUY'"
+                            [class.buy]="recommendation.recommendation === 'BUY'"
                             [class.watch]="recommendation.recommendation === 'WATCH'"
                             [class.avoid]="recommendation.recommendation === 'AVOID'">
-                            {{ recommendation.recommendation }}
+                            {{
+                            recommendation.recommendation === 'STRONG_BUY'
+                            ? 'STRONG BUY'
+                            : recommendation.recommendation
+                            }}
                         </span>
                     </div>
 
@@ -74,6 +226,31 @@
                         {{ recommendation.positions.join(' / ') }}
                     </p>
                 </div>
+
+                @if (recommendation.reasons.length > 0) {
+                <div class="dashboard-reasons">
+                    @for (
+                    reason of recommendation.reasons.slice(0, 2);
+                    track reason
+                    ) {
+                    <span [class.positive]="
+            reason === 'PRICE_BELOW_MARKET'
+            || reason === 'VALUE_RISING'
+            || reason === 'VALUE_RISING_FAST'
+            || reason === 'GOOD_RECENT_FORM'
+            || reason === 'EXCELLENT_RECENT_FORM'
+            || reason === 'SQUAD_POSITION_NEEDED'
+        " [class.negative]="
+            reason === 'PRICE_ABOVE_MARKET'
+            || reason === 'VALUE_FALLING'
+            || reason === 'INJURED'
+            || reason === 'UNAFFORDABLE'
+        ">
+                        {{ reasonLabel(reason) }}
+                    </span>
+                    }
+                </div>
+                }
 
                 <div class="recommendation-values">
                     <span>
@@ -91,7 +268,7 @@
                         <strong>{{ recommendation.score }}/100</strong>
                     </span>
                 </div>
-            </article>
+            </a>
             }
         </div>
     </section>
@@ -105,7 +282,9 @@
             position of ['PT', 'DF', 'MC', 'DL'];
             track position
             ) {
-            <article class="need-card">
+            <a class="need-card need-link" routerLink="/market" [queryParams]="{
+        position: position
+    }">
                 <div class="need-title">
                     <strong>{{ position }}</strong>
 
@@ -119,7 +298,7 @@
                   data.squad.needScoreByPosition[position]
                 "></div>
                 </div>
-            </article>
+            </a>
             }
         </div>
     </section>

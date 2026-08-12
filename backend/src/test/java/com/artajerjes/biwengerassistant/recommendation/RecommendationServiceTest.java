@@ -33,6 +33,7 @@ import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
@@ -156,6 +157,211 @@ class RecommendationServiceTest {
                 assertEquals(
                                 RecommendationType.AVOID,
                                 result.recommendation());
+        }
+
+        @Test
+        void saleShouldPenalizeDoubtPlayer() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                81L,
+                                "801",
+                                "Jugador duda",
+                                List.of(PlayerPosition.DL),
+                                5_000_000L,
+                                0L,
+                                PlayerStatus.DOUBT);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                5_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                PlayerStatus.DOUBT,
+                                result.status());
+
+                assertFalse(result.injured());
+
+                assertEquals(
+                                40,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.WATCH,
+                                result.recommendation());
+        }
+
+        @Test
+        void saleShouldPenalizeSanctionedPlayer() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                82L,
+                                "802",
+                                "Jugador sancionado",
+                                List.of(PlayerPosition.MC),
+                                5_000_000L,
+                                0L,
+                                PlayerStatus.SANCTIONED);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                5_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                PlayerStatus.SANCTIONED,
+                                result.status());
+
+                assertFalse(result.injured());
+
+                assertEquals(
+                                20,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.AVOID,
+                                result.recommendation());
+        }
+
+        @Test
+        void saleShouldPenalizeDiscardedPlayer() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                83L,
+                                "803",
+                                "Jugador no convocado",
+                                List.of(PlayerPosition.DF),
+                                5_000_000L,
+                                0L,
+                                PlayerStatus.DISCARDED);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                5_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                PlayerStatus.DISCARDED,
+                                result.status());
+
+                assertFalse(result.injured());
+
+                assertEquals(
+                                25,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.AVOID,
+                                result.recommendation());
+        }
+
+        @Test
+        void saleShouldSlightlyPenalizeWarnedPlayer() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                84L,
+                                "804",
+                                "Jugador apercibido",
+                                List.of(PlayerPosition.DF),
+                                5_000_000L,
+                                0L,
+                                PlayerStatus.WARNED);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                5_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                PlayerStatus.WARNED,
+                                result.status());
+
+                assertFalse(result.injured());
+
+                assertEquals(
+                                45,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.WATCH,
+                                result.recommendation());
+        }
+
+        @Test
+        void auctionShouldReduceRecommendedBidForDoubtPlayer() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                85L,
+                                "805",
+                                "Subasta duda",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                PlayerStatus.DOUBT);
+
+                MarketListing listing = createListing(
+                                MarketListingType.AUCTION,
+                                player,
+                                800_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                950_000L,
+                                result.maximumRecommendedBid());
         }
 
         @Test
@@ -949,6 +1155,11 @@ class RecommendationServiceTest {
                                 "injured",
                                 true);
 
+                ReflectionTestUtils.setField(
+                                injuredDefender,
+                                "status",
+                                PlayerStatus.INJURED);
+
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
@@ -1409,6 +1620,28 @@ class RecommendationServiceTest {
                         Long marketValue,
                         Long valueFluctuation,
                         boolean injured) {
+
+                return createPlayer(
+                                id,
+                                biwengerPlayerId,
+                                name,
+                                positions,
+                                marketValue,
+                                valueFluctuation,
+                                injured
+                                                ? PlayerStatus.INJURED
+                                                : PlayerStatus.OK);
+        }
+
+        private Player createPlayer(
+                        Long id,
+                        String biwengerPlayerId,
+                        String name,
+                        List<PlayerPosition> positions,
+                        Long marketValue,
+                        Long valueFluctuation,
+                        PlayerStatus status) {
+
                 Player player = new Player(
                                 biwengerPlayerId,
                                 name,
@@ -1429,8 +1662,13 @@ class RecommendationServiceTest {
 
                 ReflectionTestUtils.setField(
                                 player,
+                                "status",
+                                status);
+
+                ReflectionTestUtils.setField(
+                                player,
                                 "injured",
-                                injured);
+                                status == PlayerStatus.INJURED);
 
                 return player;
         }

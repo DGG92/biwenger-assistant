@@ -1,14 +1,22 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, startWith } from 'rxjs';
 
-import { Player, PlayerProtectionReason } from '../../core/models/player.model';
+import { Player, PlayerProtectionReason, PlayerStatus } from '../../core/models/player.model';
 import { SquadNeeds } from '../../core/models/squad-needs.model';
 import { PlayerService } from '../../core/services/player';
 import { RecommendationService } from '../../core/services/recommendation';
 
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL';
+
+type StatusFilter =
+  | 'ALL'
+  | 'STARTER'
+  | 'RESERVE'
+  | 'INJURED'
+  | 'ALERT';
 
 interface SquadData {
   manager: SquadNeeds | null;
@@ -28,9 +36,36 @@ const INITIAL_SQUAD_DATA: SquadData = {
 })
 export class Squad {
   private readonly playerService = inject(PlayerService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly recommendationService = inject(RecommendationService);
 
-  private readonly recommendationService =
-    inject(RecommendationService);
+  statusLabel(
+    status: PlayerStatus
+  ): string {
+    switch (status) {
+      case 'DOUBT':
+        return 'Duda';
+
+      case 'INJURED':
+        return 'Lesionado';
+
+      case 'SANCTIONED':
+        return 'Sancionado';
+
+      case 'WARNED':
+        return 'Apercibido';
+
+      case 'DISCARDED':
+        return 'Descartado';
+
+      case 'UNKNOWN':
+        return 'Estado desconocido';
+
+      case 'OK':
+      default:
+        return 'Disponible';
+    }
+  }
 
   private readonly squadData = toSignal(
     combineLatest({
@@ -53,6 +88,12 @@ export class Squad {
   readonly positionFilter =
     signal<PositionFilter>('ALL');
 
+  readonly search =
+    signal('');
+
+  readonly statusFilter =
+    signal<StatusFilter>('ALL');
+
   readonly manager = computed(
     () => this.squadData().manager
   );
@@ -62,15 +103,58 @@ export class Squad {
   );
 
   readonly filteredPlayers = computed(() => {
-    const position = this.positionFilter();
+    const search =
+      this.search().trim().toLowerCase();
 
-    if (position === 'ALL') {
-      return this.players();
+    const position =
+      this.positionFilter();
+
+    const status =
+      this.statusFilter();
+
+    let result = [...this.players()];
+
+    if (search) {
+      result = result.filter(player =>
+        player.name
+          .toLowerCase()
+          .includes(search)
+      );
     }
 
-    return this.players().filter(player =>
-      player.positions.includes(position)
-    );
+    if (position !== 'ALL') {
+      result = result.filter(player =>
+        player.positions.includes(position)
+      );
+    }
+
+    if (status === 'STARTER') {
+      result = result.filter(
+        player => player.starter
+      );
+    }
+
+    if (status === 'RESERVE') {
+      result = result.filter(
+        player => player.reserve
+      );
+    }
+
+    if (status === 'INJURED') {
+      result = result.filter(
+        player => player.injured
+      );
+    }
+
+    if (status === 'ALERT') {
+      result = result.filter(
+        player =>
+          player.playerProtectionAlert &&
+          player.playerProtectionAlert.level !== 'NONE'
+      );
+    }
+
+    return result;
   });
 
   readonly totalValue = computed(() =>
@@ -197,6 +281,52 @@ export class Squad {
       case 'INJURED':
         return 'Actualmente lesionado';
     }
+  }
+
+  private isStatusFilter(
+    value: string
+  ): value is StatusFilter {
+    return [
+      'ALL',
+      'STARTER',
+      'RESERVE',
+      'INJURED',
+      'ALERT'
+    ].includes(value);
+  }
+
+  constructor() {
+    const params =
+      this.route.snapshot.queryParamMap;
+
+    const search =
+      params.get('search');
+
+    const status =
+      params.get('status');
+
+    if (search) {
+      this.search.set(search);
+    }
+
+    if (
+      status &&
+      this.isStatusFilter(status)
+    ) {
+      this.statusFilter.set(status);
+    }
+  }
+
+  setSearch(
+    value: string
+  ): void {
+    this.search.set(value);
+  }
+
+  setStatusFilter(
+    status: StatusFilter
+  ): void {
+    this.statusFilter.set(status);
   }
 
   setPositionFilter(

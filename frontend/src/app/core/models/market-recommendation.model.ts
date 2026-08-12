@@ -1,3 +1,5 @@
+import { PlayerStatus } from "./player.model";
+
 export type MarketRecommendationReason =
     | 'PRICE_BELOW_MARKET'
     | 'PRICE_ABOVE_MARKET'
@@ -28,8 +30,9 @@ export interface MarketRecommendation {
     valueFluctuation: number;
     points: number;
     injured: boolean;
+    status: PlayerStatus;
     affordable: boolean;
     score: number;
-    recommendation: 'BUY' | 'WATCH' | 'AVOID';
+    recommendation: 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
     reasons: MarketRecommendationReason[];
 }

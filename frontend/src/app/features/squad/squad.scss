@@ -52,19 +52,83 @@
 }
 
 .filters {
-    margin-top: 28px;
-    padding: 18px 20px;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    background: #ffffff;
+    display: grid;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas:
+        "search position"
+        "search status";
+    column-gap: 48px;
+    row-gap: 16px;
 
-    >span {
-        display: block;
-        margin-bottom: 10px;
-        color: #6b7280;
-        font-size: 12px;
-        font-weight: 600;
-    }
+    margin-bottom: 24px;
+    padding: 24px 30px;
+
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+}
+
+.search-box {
+    grid-area: search;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.search-box label,
+.filter-group>span {
+    color: #4b5563;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.search-box input {
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+
+    padding: 14px 16px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    outline: none;
+
+    background: #ffffff;
+    color: #111827;
+
+    font: inherit;
+    font-size: 15px;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.search-box input::placeholder {
+    color: #9ca3af;
+}
+
+.search-box input:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+}
+
+.filter-group:nth-of-type(2) {
+    grid-area: position;
+}
+
+.filter-group:nth-of-type(3) {
+    grid-area: status;
 }
 
 .filter-buttons {
@@ -340,6 +404,48 @@
 .injured {
     background: #fee2e2;
     color: #991b1b;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 8px;
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+
+    &.doubt {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    &.injured {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    &.sanctioned {
+        background: #f3e8ff;
+        color: #6b21a8;
+    }
+
+    &.warned {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    &.discarded {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    &.unknown {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
 }
 
 .blocked {
@@ -726,6 +832,20 @@
 }
 
 @media (max-width: 850px) {
+    .filters {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "search"
+            "position"
+            "status";
+        gap: 18px;
+        padding: 20px;
+    }
+
+    .search-box input {
+        max-width: none;
+    }
+
     .players-grid {
         grid-template-columns: 1fr;
     }

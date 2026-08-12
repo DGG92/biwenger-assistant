@@ -64,6 +64,10 @@ public class Player {
     @Column(nullable = false)
     private boolean injured;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PlayerStatus status;
+
     @Column(nullable = false)
     private boolean captain;
 
@@ -132,6 +136,7 @@ public class Player {
 
         this.points = 0;
         this.injured = false;
+        this.status = PlayerStatus.OK;
         this.captain = false;
         this.ram = false;
         this.coach = false;
@@ -155,7 +160,7 @@ public class Player {
             Integer points,
             String teamName,
             Long marketValue,
-            Boolean injured,
+            PlayerStatus status,
             Boolean captain,
             Boolean ram,
             Long valueFluctuation,
@@ -169,7 +174,8 @@ public class Player {
         this.points = points;
         this.teamName = teamName;
         this.marketValue = marketValue;
-        this.injured = injured;
+        this.status = status;
+        this.injured = status == PlayerStatus.INJURED;
         this.captain = captain;
         this.ram = ram;
         this.valueFluctuation = valueFluctuation;
@@ -186,15 +192,17 @@ public class Player {
             Integer points,
             String teamName,
             Long marketValue,
-            boolean injured,
+            PlayerStatus status,
             Long valueFluctuation) {
+
         this.name = name;
         this.slug = slug;
         this.positions = new ArrayList<>(positions);
         this.points = points;
         this.teamName = teamName;
         this.marketValue = marketValue;
-        this.injured = injured;
+        this.status = status;
+        this.injured = status == PlayerStatus.INJURED;
         this.valueFluctuation = valueFluctuation;
     }
 
@@ -286,6 +294,10 @@ public class Player {
 
     public boolean isInjured() {
         return injured;
+    }
+
+    public PlayerStatus getStatus() {
+        return status;
     }
 
     public boolean isCaptain() {

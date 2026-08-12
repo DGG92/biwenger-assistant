@@ -262,22 +262,65 @@
     </section>
 
     <section class="filters">
-        <span>Posición</span>
+        <div class="search-box">
+            <label for="player-search">
+                Buscar jugador
+            </label>
 
-        <div class="filter-buttons">
-            @for (
-            position of ['ALL', 'PT', 'DF', 'MC', 'DL'];
-            track position
-            ) {
-            <button type="button" [class.active]="positionFilter() === position"
-                (click)="setPositionFilter($any(position))">
-                {{
-                position === 'ALL'
-                ? 'Todos'
-                : position
-                }}
-            </button>
-            }
+            <input id="player-search" type="search" placeholder="Ej. Ryan" [value]="search()"
+                (input)="setSearch($any($event.target).value)" />
+        </div>
+
+        <div class="filter-group">
+            <span>Posición</span>
+
+            <div class="filter-buttons">
+                @for (
+                position of ['ALL', 'PT', 'DF', 'MC', 'DL'];
+                track position
+                ) {
+                <button type="button" [class.active]="positionFilter() === position"
+                    (click)="setPositionFilter($any(position))">
+                    {{
+                    position === 'ALL'
+                    ? 'Todos'
+                    : position
+                    }}
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <span>Estado</span>
+
+            <div class="filter-buttons">
+                @for (
+                status of [
+                'ALL',
+                'STARTER',
+                'RESERVE',
+                'INJURED',
+                'ALERT'
+                ];
+                track status
+                ) {
+                <button type="button" [class.active]="statusFilter() === status"
+                    (click)="setStatusFilter($any(status))">
+                    {{
+                    status === 'ALL'
+                    ? 'Todos'
+                    : status === 'STARTER'
+                    ? 'Titulares'
+                    : status === 'RESERVE'
+                    ? 'Suplentes'
+                    : status === 'INJURED'
+                    ? 'Lesionados'
+                    : 'Alertas'
+                    }}
+                </button>
+                }
+            </div>
         </div>
     </section>
 
@@ -446,9 +489,12 @@
                 </span>
                 }
 
-                @if (player.injured) {
-                <span class="injured">
-                    Lesionado
+                @if (player.status !== 'OK') {
+                <span class="status-badge" [class.doubt]="player.status === 'DOUBT'"
+                    [class.injured]="player.status === 'INJURED'" [class.sanctioned]="player.status === 'SANCTIONED'"
+                    [class.warned]="player.status === 'WARNED'" [class.discarded]="player.status === 'DISCARDED'"
+                    [class.unknown]="player.status === 'UNKNOWN'">
+                    {{ statusLabel(player.status) }}
                 </span>
                 }
 

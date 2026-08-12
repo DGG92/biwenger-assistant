@@ -9,6 +9,15 @@ export type PlayerProtectionReason =
     | 'HIGH_PROFITABILITY'
     | 'INJURED';
 
+export type PlayerStatus =
+    | 'OK'
+    | 'DOUBT'
+    | 'INJURED'
+    | 'SANCTIONED'
+    | 'WARNED'
+    | 'DISCARDED'
+    | 'UNKNOWN';
+
 export interface PlayerProtectionAlert {
     level: PlayerProtectionAlertLevel;
     score: number;
@@ -24,6 +33,7 @@ export interface Player {
     teamName: string | null;
     marketValue: number;
     injured: boolean;
+    status: PlayerStatus;
     captain: boolean;
     ram: boolean;
     coach: boolean;

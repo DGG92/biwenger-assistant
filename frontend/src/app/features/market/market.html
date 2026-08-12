@@ -156,10 +156,14 @@
                         </div>
                     </div>
 
-                    <span class="recommendation" [class.buy]="player.recommendation === 'BUY'"
-                        [class.watch]="player.recommendation === 'WATCH'"
+                    <span class="recommendation" [class.strong-buy]="player.recommendation === 'STRONG_BUY'"
+                        [class.buy]="player.recommendation === 'BUY'" [class.watch]="player.recommendation === 'WATCH'"
                         [class.avoid]="player.recommendation === 'AVOID'">
-                        {{ player.recommendation }}
+                        {{
+                        player.recommendation === 'STRONG_BUY'
+                        ? 'STRONG BUY'
+                        : player.recommendation
+                        }}
                     </span>
                 </div>
 
@@ -265,12 +269,6 @@
                     }
                     }
 
-                    @if (player.injured) {
-                    <span class="injured">
-                        Lesionado
-                    </span>
-                    }
-
                     @if (!player.affordable) {
                     <span class="unaffordable">
                         Fuera de presupuesto
@@ -278,6 +276,13 @@
                     }
                 </div>
             </div>
+
+            <span class="player-status player-status-corner" [class.ok]="player.status === 'OK'"
+                [class.doubt]="player.status === 'DOUBT'" [class.injured]="player.status === 'INJURED'"
+                [class.sanctioned]="player.status === 'SANCTIONED'" [class.warned]="player.status === 'WARNED'"
+                [class.discarded]="player.status === 'DISCARDED'" [class.unknown]="player.status === 'UNKNOWN'">
+                {{ statusLabel(player.status) }}
+            </span>
         </article>
         } @empty {
         <div class="empty-state">

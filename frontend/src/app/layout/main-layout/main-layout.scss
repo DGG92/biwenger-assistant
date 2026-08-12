@@ -11,12 +11,16 @@
 }
 
 .sidebar {
+    position: sticky;
+    top: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
     padding: 24px 18px;
     background: #111827;
     color: #ffffff;
+    align-self: start;
+    box-sizing: border-box;
 }
 
 .brand {
@@ -121,6 +125,8 @@
     }
 
     .sidebar {
+        position: static;
+        height: auto;
         min-height: auto;
     }
 

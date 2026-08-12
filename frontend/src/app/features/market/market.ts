@@ -1,9 +1,11 @@
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { RecommendationService } from '../../core/services/recommendation';
 import { MarketRecommendation, MarketRecommendationReason } from '../../core/models/market-recommendation.model';
+import { PlayerStatus } from '../../core/models/player.model';
 
 type RecommendationFilter = 'ALL' | 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL' | 'E';
@@ -25,6 +27,9 @@ export class Market {
   private readonly recommendationService =
     inject(RecommendationService);
 
+  private readonly route =
+    inject(ActivatedRoute);
+
   private readonly recommendations =
     toSignal(
       this.recommendationService.getMarketRecommendations(),
@@ -40,6 +45,40 @@ export class Market {
     signal<OriginFilter>('ALL');
   readonly sortOption =
     signal<SortOption>('SCORE_DESC');
+
+  constructor() {
+    const params =
+      this.route.snapshot.queryParamMap;
+
+    const search =
+      params.get('search');
+
+    const recommendation =
+      params.get('recommendation');
+
+    const position =
+      params.get('position');
+
+    if (search) {
+      this.search.set(search);
+    }
+
+    if (
+      recommendation &&
+      this.isRecommendationFilter(recommendation)
+    ) {
+      this.recommendationFilter.set(
+        recommendation
+      );
+    }
+
+    if (
+      position &&
+      this.isPositionFilter(position)
+    ) {
+      this.positionFilter.set(position);
+    }
+  }
 
   readonly filteredRecommendations = computed(() => {
     const search = this.search().trim().toLowerCase();
@@ -151,6 +190,59 @@ export class Market {
       case 'UNAFFORDABLE':
         return 'Fuera de presupuesto';
     }
+  }
+
+  statusLabel(
+    status: PlayerStatus
+  ): string {
+    switch (status) {
+      case 'OK':
+        return 'Disponible';
+
+      case 'DOUBT':
+        return 'Duda';
+
+      case 'INJURED':
+        return 'Lesionado';
+
+      case 'SANCTIONED':
+        return 'Sancionado';
+
+      case 'WARNED':
+        return 'Apercibido';
+
+      case 'DISCARDED':
+        return 'No convocado';
+
+      case 'UNKNOWN':
+      default:
+        return 'Estado desconocido';
+    }
+  }
+
+  private isRecommendationFilter(
+    value: string
+  ): value is RecommendationFilter {
+    return [
+      'ALL',
+      'STRONG_BUY',
+      'BUY',
+      'WATCH',
+      'AVOID'
+    ].includes(value);
+  }
+
+  private isPositionFilter(
+    value: string
+  ): value is PositionFilter {
+    return [
+      'ALL',
+      'PT',
+      'DF',
+      'MC',
+      'DL',
+      'E'
+    ].includes(value);
   }
 
   private comparePlayers(

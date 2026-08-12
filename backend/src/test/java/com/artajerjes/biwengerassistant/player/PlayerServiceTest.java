@@ -149,6 +149,7 @@ class PlayerServiceTest {
                 assertEquals(0, response.points());
                 assertTrue(response.freePlayer());
                 assertFalse(response.injured());
+                assertEquals(PlayerStatus.OK, response.status());
                 assertFalse(response.captain());
                 assertFalse(response.ram());
                 assertFalse(response.blockedClause());
@@ -437,7 +438,7 @@ class PlayerServiceTest {
                                 player.getPoints(),
                                 player.getTeamName(),
                                 player.getMarketValue(),
-                                player.isInjured(),
+                                player.getStatus(),
                                 player.isCaptain(),
                                 player.isRam(),
                                 player.getValueFluctuation(),
@@ -907,7 +908,7 @@ class PlayerServiceTest {
         }
 
         @Test
-        void syncCompetitionPlayersShouldMarkNonOkStatusAsInjured() {
+        void syncCompetitionPlayersShouldMapInjuredStatus() {
                 League league = createLeague();
 
                 BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
@@ -976,12 +977,90 @@ class PlayerServiceTest {
                 assertTrue(savedPlayer.isInjured());
 
                 assertEquals(
+                                PlayerStatus.INJURED,
+                                savedPlayer.getStatus());
+
+                assertEquals(
                                 PlayerPosition.DL,
                                 savedPlayer.getPositions().get(0));
 
                 assertEquals(
                                 -50_000L,
                                 savedPlayer.getValueFluctuation());
+        }
+
+        @Test
+        void syncCompetitionPlayersShouldMapDoubtStatusWithoutMarkingInjured() {
+                League league = createLeague();
+
+                BiwengerCompetitionPlayer externalPlayer = new BiwengerCompetitionPlayer(
+                                77777L,
+                                "Jugador duda",
+                                "jugador-duda",
+                                93L,
+                                3,
+                                null,
+                                5_000_000L,
+                                null,
+                                10,
+                                "doubt",
+                                25_000L,
+                                40,
+                                null,
+                                null);
+
+                Map<String, BiwengerCompetitionPlayer> players = Map.of("77777", externalPlayer);
+
+                Map<String, BiwengerCompetitionTeam> teams = Map.of(
+                                "93",
+                                new BiwengerCompetitionTeam(
+                                                93L,
+                                                "Osasuna",
+                                                "osasuna",
+                                                "icon.png"));
+
+                BiwengerCompetitionData data = new BiwengerCompetitionData(
+                                1L,
+                                "Primera División",
+                                "la-liga",
+                                "football",
+                                "€",
+                                players,
+                                teams);
+
+                BiwengerCompetitionResponse response = new BiwengerCompetitionResponse(
+                                200,
+                                data);
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(response);
+
+                when(
+                                playerRepository.findByBiwengerPlayerIdAndLeague_Id(
+                                                "77777",
+                                                LEAGUE_ID))
+                                .thenReturn(Optional.empty());
+
+                when(playerRepository.save(any(Player.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                playerService.syncCompetitionPlayers(LEAGUE_ID);
+
+                ArgumentCaptor<Player> playerCaptor = ArgumentCaptor.forClass(Player.class);
+
+                verify(playerRepository)
+                                .save(playerCaptor.capture());
+
+                Player savedPlayer = playerCaptor.getValue();
+
+                assertEquals(
+                                PlayerStatus.DOUBT,
+                                savedPlayer.getStatus());
+
+                assertFalse(savedPlayer.isInjured());
         }
 
         @Test

@@ -129,6 +129,10 @@ public class PlayerService {
                                 request.ownerId(),
                                 leagueId);
 
+                PlayerStatus status = Boolean.TRUE.equals(request.injured())
+                                ? PlayerStatus.INJURED
+                                : PlayerStatus.OK;
+
                 player.update(
                                 request.biwengerPlayerId(),
                                 request.name(),
@@ -136,7 +140,7 @@ public class PlayerService {
                                 request.points(),
                                 request.teamName(),
                                 request.marketValue(),
-                                request.injured(),
+                                status,
                                 request.captain(),
                                 request.ram(),
                                 request.valueFluctuation(),
@@ -233,6 +237,7 @@ public class PlayerService {
                                 player.getPurchasePrice(),
                                 player.getProfitability(),
                                 player.isInjured(),
+                                player.getStatus(),
                                 player.isCaptain(),
                                 player.isRam(),
                                 player.isCoach(),
@@ -290,9 +295,20 @@ public class PlayerService {
                 return result;
         }
 
-        private boolean isInjured(String status) {
-                return status != null
-                                && !"ok".equalsIgnoreCase(status);
+        private PlayerStatus mapStatus(String status) {
+                if (status == null || status.isBlank()) {
+                        return PlayerStatus.UNKNOWN;
+                }
+
+                return switch (status.toLowerCase()) {
+                        case "ok" -> PlayerStatus.OK;
+                        case "doubt" -> PlayerStatus.DOUBT;
+                        case "injured" -> PlayerStatus.INJURED;
+                        case "sanctioned" -> PlayerStatus.SANCTIONED;
+                        case "warned" -> PlayerStatus.WARNED;
+                        case "discarded" -> PlayerStatus.DISCARDED;
+                        default -> PlayerStatus.UNKNOWN;
+                };
         }
 
         @Transactional
@@ -333,7 +349,7 @@ public class PlayerService {
                                         response,
                                         externalPlayer.teamId());
 
-                        boolean injured = isInjured(
+                        PlayerStatus status = mapStatus(
                                         externalPlayer.status());
 
                         Player player = playerRepository
@@ -360,7 +376,7 @@ public class PlayerService {
                                                                 : externalPlayer.points(),
                                                 teamName,
                                                 externalPlayer.price(),
-                                                injured,
+                                                status,
                                                 externalPlayer.priceIncrement() == null
                                                                 ? 0L
                                                                 : externalPlayer.priceIncrement());
@@ -377,7 +393,7 @@ public class PlayerService {
                                                                 : externalPlayer.points(),
                                                 teamName,
                                                 externalPlayer.price(),
-                                                injured,
+                                                status,
                                                 externalPlayer.priceIncrement() == null
                                                                 ? 0L
                                                                 : externalPlayer.priceIncrement());

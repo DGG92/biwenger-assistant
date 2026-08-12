@@ -20,6 +20,7 @@ import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
+import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
@@ -179,6 +180,7 @@ public class RecommendationService {
                                 player.getValueFluctuation(),
                                 player.getPoints(),
                                 player.isInjured(),
+                                player.getStatus(),
                                 affordable,
                                 score,
                                 resolveRecommendation(score),
@@ -300,11 +302,10 @@ public class RecommendationService {
                 }
 
                 /*
-                 * Un lesionado requiere mayor margen de seguridad.
+                 * Un lesionado/en duda/no convocado/... requiere mayor margen de seguridad.
                  */
-                if (player.isInjured()) {
-                        multiplier -= 0.15;
-                }
+                multiplier -= calculateStatusBidPenalty(
+                                player.getStatus());
 
                 long recommended = Math.round(
                                 player.getMarketValue()
@@ -368,9 +369,8 @@ public class RecommendationService {
 
                 score += recentFormScore;
 
-                if (player.isInjured()) {
-                        score -= 30;
-                }
+                score += calculateStatusPenalty(
+                                player.getStatus());
 
                 if (!affordable) {
                         score = Math.min(score, 25);
@@ -380,6 +380,42 @@ public class RecommendationService {
                                 (int) Math.round(score),
                                 0,
                                 100);
+        }
+
+        private int calculateStatusPenalty(
+                        PlayerStatus status) {
+
+                if (status == null) {
+                        return 0;
+                }
+
+                return switch (status) {
+                        case OK -> 0;
+                        case DOUBT -> -10;
+                        case INJURED -> -30;
+                        case SANCTIONED -> -30;
+                        case WARNED -> -5;
+                        case DISCARDED -> -25;
+                        case UNKNOWN -> 0;
+                };
+        }
+
+        private double calculateStatusBidPenalty(
+                        PlayerStatus status) {
+
+                if (status == null) {
+                        return 0;
+                }
+
+                return switch (status) {
+                        case OK -> 0;
+                        case DOUBT -> 0.05;
+                        case INJURED -> 0.15;
+                        case SANCTIONED -> 0.15;
+                        case WARNED -> 0.02;
+                        case DISCARDED -> 0.12;
+                        case UNKNOWN -> 0;
+                };
         }
 
         private int calculatePlayerSquadNeedScore(
