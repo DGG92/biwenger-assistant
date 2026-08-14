@@ -12,6 +12,18 @@ export type MarketRecommendationReason =
     | 'INJURED'
     | 'UNAFFORDABLE';
 
+export interface MarketScoreBreakdown {
+    base: number;
+    price: number;
+    valueTrend: number;
+    squadNeed: number;
+    recentForm: number;
+    status: number;
+    scoreBeforeCaps: number;
+    affordabilityCapApplied: boolean;
+    auctionBidCapApplied: boolean;
+}
+
 export interface MarketRecommendation {
     playerId: number;
     biwengerPlayerId: string;
@@ -29,10 +41,10 @@ export interface MarketRecommendation {
     priceDifferencePercentage: number;
     valueFluctuation: number;
     points: number;
-    injured: boolean;
     status: PlayerStatus;
     affordable: boolean;
     score: number;
     recommendation: 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
     reasons: MarketRecommendationReason[];
+    scoreBreakdown: MarketScoreBreakdown;
 }

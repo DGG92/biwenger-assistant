@@ -116,7 +116,9 @@ class RecommendationServiceTest {
                 assertEquals(1_000_000L, result.priceDifference());
                 assertEquals(20.0, result.priceDifferencePercentage());
                 assertTrue(result.affordable());
-                assertFalse(result.injured());
+                assertEquals(
+                                PlayerStatus.OK,
+                                result.status());
 
                 assertEquals(94, result.score());
                 assertEquals(
@@ -152,8 +154,27 @@ class RecommendationServiceTest {
                                 .getMarketRecommendations(LEAGUE_ID)
                                 .get(0);
 
-                assertTrue(result.injured());
+                assertEquals(
+                                PlayerStatus.INJURED,
+                                result.status());
                 assertEquals(20, result.score());
+                assertEquals(
+                                50.0,
+                                result.scoreBreakdown().base());
+
+                assertEquals(
+                                -30.0,
+                                result.scoreBreakdown().status());
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().scoreBeforeCaps());
+
+                assertFalse(
+                                result.scoreBreakdown().affordabilityCapApplied());
+
+                assertFalse(
+                                result.scoreBreakdown().auctionBidCapApplied());
                 assertEquals(
                                 RecommendationType.AVOID,
                                 result.recommendation());
@@ -191,7 +212,9 @@ class RecommendationServiceTest {
                                 PlayerStatus.DOUBT,
                                 result.status());
 
-                assertFalse(result.injured());
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.INJURED));
 
                 assertEquals(
                                 40,
@@ -234,8 +257,6 @@ class RecommendationServiceTest {
                                 PlayerStatus.SANCTIONED,
                                 result.status());
 
-                assertFalse(result.injured());
-
                 assertEquals(
                                 20,
                                 result.score());
@@ -277,8 +298,6 @@ class RecommendationServiceTest {
                                 PlayerStatus.DISCARDED,
                                 result.status());
 
-                assertFalse(result.injured());
-
                 assertEquals(
                                 25,
                                 result.score());
@@ -319,8 +338,6 @@ class RecommendationServiceTest {
                 assertEquals(
                                 PlayerStatus.WARNED,
                                 result.status());
-
-                assertFalse(result.injured());
 
                 assertEquals(
                                 45,
@@ -394,6 +411,11 @@ class RecommendationServiceTest {
 
                 assertFalse(result.affordable());
                 assertEquals(25, result.score());
+                assertTrue(
+                                result.scoreBreakdown().affordabilityCapApplied());
+
+                assertTrue(
+                                result.scoreBreakdown().scoreBeforeCaps() > 25);
                 assertEquals(
                                 RecommendationType.AVOID,
                                 result.recommendation());
@@ -713,6 +735,59 @@ class RecommendationServiceTest {
 
                 assertFalse(result.affordable());
                 assertEquals(20, result.score());
+
+                assertEquals(
+                                RecommendationType.AVOID,
+                                result.recommendation());
+        }
+
+        @Test
+        void auctionShouldReportBidCapWhenCurrentBidCapsScore() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                27L,
+                                "207",
+                                "Puja limitada",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                10_000L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.AUCTION,
+                                player,
+                                800_000L,
+                                1_100_000L,
+                                league);
+
+                mockCommon(
+                                5_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                1_025_000L,
+                                result.maximumRecommendedBid());
+
+                assertEquals(
+                                25,
+                                result.score());
+
+                assertTrue(
+                                result.scoreBreakdown()
+                                                .scoreBeforeCaps() > 25);
+
+                assertTrue(
+                                result.scoreBreakdown()
+                                                .auctionBidCapApplied());
+
+                assertFalse(
+                                result.scoreBreakdown()
+                                                .affordabilityCapApplied());
 
                 assertEquals(
                                 RecommendationType.AVOID,
@@ -1152,11 +1227,6 @@ class RecommendationServiceTest {
 
                 ReflectionTestUtils.setField(
                                 injuredDefender,
-                                "injured",
-                                true);
-
-                ReflectionTestUtils.setField(
-                                injuredDefender,
                                 "status",
                                 PlayerStatus.INJURED);
 
@@ -1175,6 +1245,534 @@ class RecommendationServiceTest {
                 assertEquals(
                                 1,
                                 result.injuredByPosition().get("DF"));
+        }
+
+        @Test
+        void squadNeedsShouldTreatSanctionedPlayerAsUnavailable() {
+
+                List<Player> squad = createCompleteSquad();
+
+                Player sanctionedDefender = squad.stream()
+                                .filter(player -> player.getPositions().contains(PlayerPosition.DF))
+                                .findFirst()
+                                .orElseThrow();
+
+                ReflectionTestUtils.setField(
+                                sanctionedDefender,
+                                "status",
+                                PlayerStatus.SANCTIONED);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                assertTrue(
+                                result.needScoreByPosition().get("DF") > 0);
+        }
+
+        @Test
+        void squadNeedsShouldTreatDiscardedPlayerAsUnavailable() {
+
+                List<Player> squad = createCompleteSquad();
+
+                Player discardedMidfielder = squad.stream()
+                                .filter(player -> player.getPositions().contains(PlayerPosition.MC))
+                                .findFirst()
+                                .orElseThrow();
+
+                ReflectionTestUtils.setField(
+                                discardedMidfielder,
+                                "status",
+                                PlayerStatus.DISCARDED);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                assertTrue(
+                                result.needScoreByPosition().get("MC") > 0);
+        }
+
+        @Test
+        void squadNeedsShouldPartiallyPenalizeDoubtPlayer() {
+                List<Player> squad = createCompleteSquad();
+
+                Player doubtForward = squad.stream()
+                                .filter(player -> player.getPositions().contains(PlayerPosition.DL))
+                                .findFirst()
+                                .orElseThrow();
+
+                ReflectionTestUtils.setField(
+                                doubtForward,
+                                "status",
+                                PlayerStatus.DOUBT);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                int forwardNeed = result.needScoreByPosition().get("DL");
+
+                assertTrue(forwardNeed > 0);
+                assertTrue(forwardNeed < 25);
+        }
+
+        @Test
+        void squadNeedsShouldNotPenalizeWarnedPlayerAvailability() {
+                List<Player> squad = createCompleteSquad();
+
+                Player warnedDefender = squad.stream()
+                                .filter(player -> player.getPositions().contains(PlayerPosition.DF))
+                                .findFirst()
+                                .orElseThrow();
+
+                ReflectionTestUtils.setField(
+                                warnedDefender,
+                                "status",
+                                PlayerStatus.WARNED);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                assertEquals(
+                                0,
+                                result.needScoreByPosition().get("DF"));
+        }
+
+        @Test
+        void squadNeedsShouldNotDoubleCountMultiPositionPlayerForFormationCoverage() {
+                Manager manager = createManager();
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                2001L,
+                                                "2001",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2002L,
+                                                "2002",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2003L,
+                                                "2003",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2004L,
+                                                "2004",
+                                                "Polivalente",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2005L,
+                                                "2005",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2006L,
+                                                "2006",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2007L,
+                                                "2007",
+                                                "MC 3",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2008L,
+                                                "2008",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2009L,
+                                                "2009",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2010L,
+                                                "2010",
+                                                "DL 3",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                /*
+                 * El jugador DF/MC no puede cubrir simultáneamente
+                 * el tercer defensa y el cuarto centrocampista
+                 * de un 3-4-3.
+                 */
+                assertTrue(
+                                result.needScoreByPosition().get("DF") > 0
+                                                || result.needScoreByPosition().get("MC") > 0);
+        }
+
+        @Test
+        void squadNeedsShouldDetectWhenMultiPositionCountsHideLackOfElevenPlayers() {
+                Manager manager = createManager();
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                2301L,
+                                                "2301",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2302L,
+                                                "2302",
+                                                "DF MC 1",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2303L,
+                                                "2303",
+                                                "DF MC 2",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2304L,
+                                                "2304",
+                                                "DF MC 3",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2305L,
+                                                "2305",
+                                                "DF MC 4",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2306L,
+                                                "2306",
+                                                "DF MC 5",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2307L,
+                                                "2307",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2308L,
+                                                "2308",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2309L,
+                                                "2309",
+                                                "DL 3",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2310L,
+                                                "2310",
+                                                "DL 4",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                /*
+                 * Aparentemente tenemos:
+                 *
+                 * DF = 5
+                 * MC = 5
+                 * DL = 4
+                 *
+                 * Pero esos cinco DF/MC son los mismos cinco jugadores.
+                 *
+                 * En total solo existen 9 jugadores de campo,
+                 * por lo que es imposible construir ningún once válido.
+                 *
+                 * El sistema debe detectar que la plantilla
+                 * todavía tiene alguna necesidad real.
+                 */
+                assertTrue(
+                                result.needScoreByPosition().get("DF") > 0
+                                                || result.needScoreByPosition().get("MC") > 0
+                                                || result.needScoreByPosition().get("DL") > 0);
+        }
+
+        @Test
+        void squadNeedsShouldRecognizeFlexibleMultiPositionSquad() {
+                Manager manager = createManager();
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                2101L,
+                                                "2101",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2102L,
+                                                "2102",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2103L,
+                                                "2103",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2104L,
+                                                "2104",
+                                                "DF MC 1",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2105L,
+                                                "2105",
+                                                "DF MC 2",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2106L,
+                                                "2106",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2107L,
+                                                "2107",
+                                                "MC DL",
+                                                List.of(
+                                                                PlayerPosition.MC,
+                                                                PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2108L,
+                                                "2108",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2109L,
+                                                "2109",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2110L,
+                                                "2110",
+                                                "DL 3",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2111L,
+                                                "2111",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                /*
+                 * La plantilla tiene suficientes combinaciones
+                 * para cubrir al menos una formación válida
+                 * sin reutilizar jugadores.
+                 */
+                assertTrue(
+                                result.needScoreByPosition().get("DF") < 75);
+
+                assertTrue(
+                                result.needScoreByPosition().get("MC") < 75);
+
+                assertTrue(
+                                result.needScoreByPosition().get("DL") < 75);
+        }
+
+        @Test
+        void squadNeedsShouldLoseFormationCoverageWhenVersatilePlayerIsUnavailable() {
+                Manager manager = createManager();
+
+                Player versatile = createOwnedPlayer(
+                                2204L,
+                                "2204",
+                                "Polivalente clave",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                versatile,
+                                "status",
+                                PlayerStatus.SANCTIONED);
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                2201L,
+                                                "2201",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2202L,
+                                                "2202",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2203L,
+                                                "2203",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                versatile,
+
+                                createOwnedPlayer(
+                                                2205L,
+                                                "2205",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2206L,
+                                                "2206",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2207L,
+                                                "2207",
+                                                "MC 3",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2208L,
+                                                "2208",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2209L,
+                                                "2209",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                2210L,
+                                                "2210",
+                                                "DL 3",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                SquadNeedsResponse result = recommendationService.getSquadNeeds(LEAGUE_ID);
+
+                assertTrue(
+                                result.needScoreByPosition().get("DF") >= 25);
+
+                assertTrue(
+                                result.needScoreByPosition().get("MC") >= 25);
         }
 
         @Test
@@ -1547,7 +2145,7 @@ class RecommendationServiceTest {
                                                                 maximumBid));
 
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                                .thenReturn(createCompleteSquad());
+                                .thenReturn(createNeutralMarketSquad());
 
                 when(
                                 marketListingRepository
@@ -1664,12 +2262,6 @@ class RecommendationServiceTest {
                                 player,
                                 "status",
                                 status);
-
-                ReflectionTestUtils.setField(
-                                player,
-                                "injured",
-                                status == PlayerStatus.INJURED);
-
                 return player;
         }
 
@@ -1798,5 +2390,24 @@ class RecommendationServiceTest {
                                                 "DL 4",
                                                 List.of(PlayerPosition.DL),
                                                 manager));
+        }
+
+        private List<Player> createNeutralMarketSquad() {
+                List<Player> squad = new java.util.ArrayList<>(
+                                createCompleteSquad());
+
+                Manager manager = squad.get(0).getOwner();
+
+                squad.add(
+                                createOwnedPlayer(
+                                                1017L,
+                                                "1017",
+                                                "MC DL neutral",
+                                                List.of(
+                                                                PlayerPosition.MC,
+                                                                PlayerPosition.DL),
+                                                manager));
+
+                return squad;
         }
 }

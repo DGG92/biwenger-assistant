@@ -26,10 +26,33 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketScoreBreakdown;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
 @Service
 public class RecommendationService {
+
+        private record Formation(
+                        int defenders,
+                        int midfielders,
+                        int forwards) {
+        }
+
+        private static final List<Formation> VALID_FORMATIONS = List.of(
+                        new Formation(3, 4, 3),
+                        new Formation(3, 5, 2),
+                        new Formation(4, 3, 3),
+                        new Formation(4, 4, 2),
+                        new Formation(4, 5, 1),
+                        new Formation(5, 3, 2),
+                        new Formation(5, 4, 1),
+                        new Formation(3, 6, 1),
+                        new Formation(3, 3, 4),
+                        new Formation(4, 2, 4),
+                        new Formation(4, 6, 0),
+                        new Formation(5, 2, 3),
+                        new Formation(3, 2, 5),
+                        new Formation(5, 1, 4));
 
         private final LeagueRepository leagueRepository;
         private final MarketListingRepository marketListingRepository;
@@ -138,12 +161,24 @@ public class RecommendationService {
 
                 int recentFormScore = calculateRecentFormScore(player);
 
-                int score = calculateScore(
+                MarketScoreBreakdown scoreBreakdown = calculateScoreBreakdown(
                                 player,
                                 differencePercentage,
-                                affordable,
                                 squadNeedScore,
                                 recentFormScore);
+
+                int score = calculateScore(
+                                scoreBreakdown,
+                                affordable);
+
+                boolean auctionBidCapApplied = listing.getType() == MarketListingType.AUCTION
+                                && maximumRecommendedBid != null
+                                && effectivePrice > maximumRecommendedBid
+                                && scoreBreakdown.scoreBeforeCaps() > 25;
+
+                boolean affordabilityCapApplied = !affordable
+                                && !auctionBidCapApplied
+                                && scoreBreakdown.scoreBeforeCaps() > 25;
 
                 List<MarketRecommendationReason> reasons = calculateReasons(
                                 player,
@@ -159,8 +194,22 @@ public class RecommendationService {
                 if (listing.getType() == MarketListingType.AUCTION
                                 && maximumRecommendedBid != null
                                 && effectivePrice > maximumRecommendedBid) {
-                        score = Math.min(score, 25);
+
+                        score = Math.min(
+                                        score,
+                                        25);
                 }
+
+                scoreBreakdown = new MarketScoreBreakdown(
+                                scoreBreakdown.base(),
+                                scoreBreakdown.price(),
+                                scoreBreakdown.valueTrend(),
+                                scoreBreakdown.squadNeed(),
+                                scoreBreakdown.recentForm(),
+                                scoreBreakdown.status(),
+                                scoreBreakdown.scoreBeforeCaps(),
+                                affordabilityCapApplied,
+                                auctionBidCapApplied);
 
                 Manager seller = listing.getSeller();
 
@@ -179,14 +228,14 @@ public class RecommendationService {
                                 round(differencePercentage),
                                 player.getValueFluctuation(),
                                 player.getPoints(),
-                                player.isInjured(),
                                 player.getStatus(),
                                 affordable,
                                 score,
                                 resolveRecommendation(score),
                                 seller == null ? null : seller.getId(),
                                 seller == null ? null : seller.getName(),
-                                reasons);
+                                reasons,
+                                scoreBreakdown);
 
         }
 
@@ -242,7 +291,7 @@ public class RecommendationService {
                                         MarketRecommendationReason.GOOD_RECENT_FORM);
                 }
 
-                if (player.isInjured()) {
+                if (player.getStatus() == PlayerStatus.INJURED) {
                         reasons.add(
                                         MarketRecommendationReason.INJURED);
                 }
@@ -329,51 +378,71 @@ public class RecommendationService {
                 return recommended;
         }
 
-        private int calculateScore(
+        private MarketScoreBreakdown calculateScoreBreakdown(
                         Player player,
                         double differencePercentage,
-                        boolean affordable,
                         int squadNeedScore,
                         int recentFormScore) {
-                double score = 50;
 
-                double priceScore = differencePercentage * 3;
+                double baseScore = 50;
 
-                score += clampDouble(
-                                priceScore,
+                double priceScore = clampDouble(
+                                differencePercentage * 3,
                                 -30,
                                 30);
+
+                double valueTrendScore = 0;
 
                 if (player.getMarketValue() != null
                                 && player.getMarketValue() > 0
                                 && player.getValueFluctuation() != null) {
+
                         double fluctuationPercentage = ((double) player.getValueFluctuation()
                                         / player.getMarketValue())
                                         * 100;
 
-                        double fluctuationScore = fluctuationPercentage * 7;
-
-                        score += clampDouble(
-                                        fluctuationScore,
-                                        -25,
-                                        25);
+                        valueTrendScore = (int) Math.round(
+                                        clampDouble(
+                                                        fluctuationPercentage * 7,
+                                                        -25,
+                                                        25));
                 }
 
-                /*
-                 * Necesidad de plantilla.
-                 *
-                 * needScore va de 0 a 100.
-                 * Lo convertimos en un bonus máximo de +20.
-                 */
-                score += squadNeedScore * 0.20;
+                double squadNeedContribution = (int) Math.round(
+                                squadNeedScore * 0.20);
 
-                score += recentFormScore;
-
-                score += calculateStatusPenalty(
+                double statusPenalty = calculateStatusPenalty(
                                 player.getStatus());
 
+                double scoreBeforeCaps = baseScore
+                                + priceScore
+                                + valueTrendScore
+                                + squadNeedContribution
+                                + recentFormScore
+                                + statusPenalty;
+
+                return new MarketScoreBreakdown(
+                                baseScore,
+                                priceScore,
+                                valueTrendScore,
+                                squadNeedContribution,
+                                recentFormScore,
+                                statusPenalty,
+                                scoreBeforeCaps,
+                                false,
+                                false);
+        }
+
+        private int calculateScore(
+                        MarketScoreBreakdown breakdown,
+                        boolean affordable) {
+
+                double score = breakdown.scoreBeforeCaps();
+
                 if (!affordable) {
-                        score = Math.min(score, 25);
+                        score = Math.min(
+                                        score,
+                                        25);
                 }
 
                 return clamp(
@@ -398,6 +467,12 @@ public class RecommendationService {
                         case DISCARDED -> -25;
                         case UNKNOWN -> 0;
                 };
+        }
+
+        private boolean isInjuredStatus(
+                        PlayerStatus status) {
+
+                return status == PlayerStatus.INJURED;
         }
 
         private double calculateStatusBidPenalty(
@@ -561,12 +636,14 @@ public class RecommendationService {
 
                 Map<String, Integer> injuredByPosition = countPositions(
                                 squadPlayers.stream()
-                                                .filter(Player::isInjured)
+                                                .filter(player -> player.getStatus() == PlayerStatus.INJURED)
                                                 .toList());
 
+                Map<String, Double> effectiveAvailabilityByPosition = countEffectiveAvailabilityByPosition(
+                                squadPlayers);
+
                 Map<String, Integer> needScoreByPosition = calculateNeedScores(
-                                playersByPosition,
-                                injuredByPosition);
+                                effectiveAvailabilityByPosition, squadPlayers);
 
                 Manager manager = squad.isEmpty()
                                 ? null
@@ -586,9 +663,279 @@ public class RecommendationService {
                                 needScoreByPosition);
         }
 
+        private double calculateAvailabilityWeight(
+                        PlayerStatus status) {
+
+                if (status == null) {
+                        return 1.0;
+                }
+
+                return switch (status) {
+                        case OK -> 1.0;
+                        case WARNED -> 1.0;
+                        case DOUBT -> 0.5;
+                        case INJURED -> 0.0;
+                        case SANCTIONED -> 0.0;
+                        case DISCARDED -> 0.0;
+                        case UNKNOWN -> 1.0;
+                };
+        }
+
+        private Map<String, Double> countEffectiveAvailabilityByPosition(
+                        List<Player> players) {
+
+                Map<String, Double> result = createEmptyAvailabilityPositionMap();
+
+                for (Player player : players) {
+
+                        double availability = calculateAvailabilityWeight(
+                                        player.getStatus());
+
+                        for (PlayerPosition position : player.getPositions()) {
+
+                                if (position == PlayerPosition.E) {
+                                        continue;
+                                }
+
+                                result.compute(
+                                                position.name(),
+                                                (key, current) -> (current == null ? 0.0 : current)
+                                                                + availability);
+                        }
+                }
+
+                return result;
+        }
+
+        private Map<String, Double> createEmptyAvailabilityPositionMap() {
+                Map<String, Double> positions = new LinkedHashMap<>();
+
+                positions.put("PT", 0.0);
+                positions.put("DF", 0.0);
+                positions.put("MC", 0.0);
+                positions.put("DL", 0.0);
+
+                return positions;
+        }
+
+        private List<PlayerPosition> buildRequiredPositions(
+                        Formation formation) {
+
+                List<PlayerPosition> requiredPositions = new java.util.ArrayList<>();
+
+                requiredPositions.add(PlayerPosition.PT);
+
+                for (int i = 0; i < formation.defenders(); i++) {
+                        requiredPositions.add(PlayerPosition.DF);
+                }
+
+                for (int i = 0; i < formation.midfielders(); i++) {
+                        requiredPositions.add(PlayerPosition.MC);
+                }
+
+                for (int i = 0; i < formation.forwards(); i++) {
+                        requiredPositions.add(PlayerPosition.DL);
+                }
+
+                return requiredPositions;
+        }
+
+        private int calculateCoverageForRequiredPositions(
+                        List<Player> players,
+                        List<PlayerPosition> requiredPositions) {
+
+                int[] playerAssignedToSlot = new int[requiredPositions.size()];
+
+                java.util.Arrays.fill(
+                                playerAssignedToSlot,
+                                -1);
+
+                int matches = 0;
+
+                for (int playerIndex = 0; playerIndex < players.size(); playerIndex++) {
+
+                        Player player = players.get(playerIndex);
+
+                        if (calculateAvailabilityWeight(
+                                        player.getStatus()) <= 0) {
+                                continue;
+                        }
+
+                        boolean[] visitedSlots = new boolean[requiredPositions.size()];
+
+                        if (tryAssignPlayerToSlot(
+                                        playerIndex,
+                                        players,
+                                        requiredPositions,
+                                        playerAssignedToSlot,
+                                        visitedSlots)) {
+
+                                matches++;
+                        }
+                }
+
+                return matches;
+        }
+
+        private int calculateFormationCoverage(
+                        List<Player> players,
+                        Formation formation) {
+
+                return calculateCoverageForRequiredPositions(
+                                players,
+                                buildRequiredPositions(formation));
+        }
+
+        private boolean tryAssignPlayerToSlot(
+                        int playerIndex,
+                        List<Player> players,
+                        List<PlayerPosition> requiredPositions,
+                        int[] playerAssignedToSlot,
+                        boolean[] visitedSlots) {
+
+                Player player = players.get(playerIndex);
+
+                for (int slotIndex = 0; slotIndex < requiredPositions.size(); slotIndex++) {
+
+                        if (visitedSlots[slotIndex]) {
+                                continue;
+                        }
+
+                        PlayerPosition requiredPosition = requiredPositions.get(slotIndex);
+
+                        if (!player.getPositions().contains(
+                                        requiredPosition)) {
+                                continue;
+                        }
+
+                        visitedSlots[slotIndex] = true;
+
+                        int currentlyAssignedPlayer = playerAssignedToSlot[slotIndex];
+
+                        if (currentlyAssignedPlayer == -1
+                                        || tryAssignPlayerToSlot(
+                                                        currentlyAssignedPlayer,
+                                                        players,
+                                                        requiredPositions,
+                                                        playerAssignedToSlot,
+                                                        visitedSlots)) {
+
+                                playerAssignedToSlot[slotIndex] = playerIndex;
+
+                                return true;
+                        }
+                }
+
+                return false;
+        }
+
+        private int calculateFormationCoverageWithExtraPosition(
+                        List<Player> players,
+                        Formation formation,
+                        PlayerPosition extraPosition) {
+
+                int currentCoverage = calculateFormationCoverage(
+                                players,
+                                formation);
+
+                if (currentCoverage >= 11) {
+                        return 11;
+                }
+
+                if (canExtraPositionImproveCoverage(
+                                players,
+                                formation,
+                                extraPosition)) {
+
+                        return Math.min(
+                                        currentCoverage + 1,
+                                        11);
+                }
+
+                return currentCoverage;
+        }
+
+        private boolean canExtraPositionImproveCoverage(
+                        List<Player> players,
+                        Formation formation,
+                        PlayerPosition extraPosition) {
+
+                List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
+
+                int slotToRemove = -1;
+
+                for (int i = 0; i < requiredPositions.size(); i++) {
+
+                        if (requiredPositions.get(i) == extraPosition) {
+
+                                slotToRemove = i;
+                                break;
+                        }
+                }
+
+                if (slotToRemove == -1) {
+                        return false;
+                }
+
+                int currentCoverage = calculateFormationCoverage(
+                                players,
+                                formation);
+
+                requiredPositions.remove(slotToRemove);
+
+                int coverageWithoutThatSlot = calculateCoverageForRequiredPositions(
+                                players,
+                                requiredPositions);
+
+                return coverageWithoutThatSlot >= currentCoverage;
+        }
+
+        private int calculateFormationNeedScore(
+                        List<Player> squadPlayers,
+                        PlayerPosition position) {
+
+                int usefulImprovements = 0;
+                int totalMissingSlots = 0;
+
+                for (Formation formation : VALID_FORMATIONS) {
+
+                        int currentCoverage = calculateFormationCoverage(
+                                        squadPlayers,
+                                        formation);
+
+                        int missingSlots = 11 - currentCoverage;
+
+                        if (missingSlots <= 0) {
+                                continue;
+                        }
+
+                        totalMissingSlots += missingSlots;
+
+                        int reinforcedCoverage = calculateFormationCoverageWithExtraPosition(
+                                        squadPlayers,
+                                        formation,
+                                        position);
+
+                        usefulImprovements += Math.max(
+                                        reinforcedCoverage
+                                                        - currentCoverage,
+                                        0);
+                }
+
+                if (totalMissingSlots == 0) {
+                        return 0;
+                }
+
+                double usefulness = (double) usefulImprovements
+                                / totalMissingSlots;
+
+                return (int) Math.round(
+                                usefulness * 25);
+        }
+
         private Map<String, Integer> calculateNeedScores(
-                        Map<String, Integer> playersByPosition,
-                        Map<String, Integer> injuredByPosition) {
+                        Map<String, Double> effectiveAvailabilityByPosition, List<Player> squadPlayers) {
+
                 Map<String, Integer> targetDepth = new LinkedHashMap<>();
 
                 targetDepth.put("PT", 2);
@@ -603,34 +950,37 @@ public class RecommendationService {
                         String position = entry.getKey();
                         int target = entry.getValue();
 
-                        int current = playersByPosition.getOrDefault(
-                                        position,
-                                        0);
+                        double available = effectiveAvailabilityByPosition
+                                        .getOrDefault(
+                                                        position,
+                                                        0.0);
 
-                        int injured = injuredByPosition.getOrDefault(
-                                        position,
-                                        0);
-
-                        /*
-                         * Cada jugador que falta respecto al objetivo
-                         * aporta 25 puntos de necesidad.
-                         */
-                        int missing = Math.max(
-                                        target - current,
-                                        0);
-
-                        int score = missing * 25;
+                        double missing = Math.max(
+                                        target - available,
+                                        0.0);
 
                         /*
-                         * Cada lesionado aumenta temporalmente
-                         * la necesidad en 10 puntos.
+                         * Cada jugador efectivo que falta respecto
+                         * a la profundidad recomendada aporta
+                         * 25 puntos de necesidad.
+                         *
+                         * Un jugador DOUBT cuenta como 0.5,
+                         * por lo que genera aproximadamente
+                         * 12-13 puntos de necesidad.
                          */
-                        score += injured * 10;
+                        int depthScore = (int) Math.round(
+                                        missing * 25);
 
-                        /*
-                         * 0 = posición muy cubierta
-                         * 100 = necesidad máxima
-                         */
+                        PlayerPosition playerPosition = PlayerPosition.valueOf(
+                                        position);
+
+                        int formationScore = calculateFormationNeedScore(
+                                        squadPlayers,
+                                        playerPosition);
+
+                        int score = depthScore
+                                        + formationScore;
+
                         score = Math.min(
                                         score,
                                         100);

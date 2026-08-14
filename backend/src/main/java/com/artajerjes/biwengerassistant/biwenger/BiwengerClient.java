@@ -1,6 +1,10 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -41,12 +45,22 @@ public class BiwengerClient {
                         @Value("${biwenger.language}") String language,
                         @Value("${biwenger.competition}") String competition,
                         @Value("${biwenger.score}") Integer score) {
+                HttpClient httpClient = HttpClient.newBuilder()
+                                .connectTimeout(Duration.ofSeconds(10))
+                                .build();
+
+                JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+
+                requestFactory.setReadTimeout(Duration.ofSeconds(30));
+
                 this.restClient = restClientBuilder
+                                .requestFactory(requestFactory)
                                 .baseUrl(baseUrl)
                                 .build();
 
                 this.cdnRestClient = restClientBuilder
                                 .clone()
+                                .requestFactory(requestFactory)
                                 .baseUrl(cdnBaseUrl)
                                 .build();
 
@@ -182,12 +196,6 @@ public class BiwengerClient {
                                         "Biwenger returned an empty user response");
                 }
 
-                System.out.println("RAW BIWENGER MANAGER RESPONSE:");
-                System.out.println(
-                                new String(
-                                                responseBody,
-                                                java.nio.charset.StandardCharsets.UTF_8));
-
                 try {
                         return objectMapper.readValue(
                                         responseBody,
@@ -223,12 +231,6 @@ public class BiwengerClient {
                         throw new IllegalStateException(
                                         "Biwenger returned an empty current user response");
                 }
-
-                System.out.println("RAW BIWENGER USER RESPONSE:");
-                System.out.println(
-                                new String(
-                                                responseBody,
-                                                java.nio.charset.StandardCharsets.UTF_8));
 
                 try {
                         return objectMapper.readValue(

@@ -15,7 +15,11 @@ type StatusFilter =
   | 'ALL'
   | 'STARTER'
   | 'RESERVE'
+  | 'DOUBT'
   | 'INJURED'
+  | 'SANCTIONED'
+  | 'WARNED'
+  | 'DISCARDED'
   | 'ALERT';
 
 interface SquadData {
@@ -56,7 +60,7 @@ export class Squad {
         return 'Apercibido';
 
       case 'DISCARDED':
-        return 'Descartado';
+        return 'No convocado';
 
       case 'UNKNOWN':
         return 'Estado desconocido';
@@ -64,6 +68,25 @@ export class Squad {
       case 'OK':
       default:
         return 'Disponible';
+    }
+  }
+
+  lineupWarningText(player: Player): string {
+    switch (player.status) {
+      case 'DOUBT':
+        return `${player.name} está en duda y lo tienes de titular.`;
+
+      case 'INJURED':
+        return `${player.name} está lesionado y lo tienes de titular.`;
+
+      case 'SANCTIONED':
+        return `${player.name} está sancionado y lo tienes de titular.`;
+
+      case 'DISCARDED':
+        return `${player.name} no está convocado y lo tienes de titular.`;
+
+      default:
+        return '';
     }
   }
 
@@ -140,9 +163,33 @@ export class Squad {
       );
     }
 
+    if (status === 'DOUBT') {
+      result = result.filter(
+        player => player.status === 'DOUBT'
+      );
+    }
+
     if (status === 'INJURED') {
       result = result.filter(
-        player => player.injured
+        player => player.status === 'INJURED'
+      );
+    }
+
+    if (status === 'SANCTIONED') {
+      result = result.filter(
+        player => player.status === 'SANCTIONED'
+      );
+    }
+
+    if (status === 'WARNED') {
+      result = result.filter(
+        player => player.status === 'WARNED'
+      );
+    }
+
+    if (status === 'DISCARDED') {
+      result = result.filter(
+        player => player.status === 'DISCARDED'
       );
     }
 
@@ -173,12 +220,22 @@ export class Squad {
 
   readonly injuredPlayers = computed(() =>
     this.players().filter(
-      player => player.injured
+      player => player.status === 'INJURED'
     ).length
   );
 
   readonly starters = computed(() =>
     this.players().filter(player => player.starter)
+  );
+
+  readonly lineupWarnings = computed(() =>
+    this.starters().filter(
+      player =>
+        player.status === 'DOUBT' ||
+        player.status === 'INJURED' ||
+        player.status === 'SANCTIONED' ||
+        player.status === 'DISCARDED'
+    )
   );
 
   readonly reserves = computed(() =>
@@ -290,7 +347,11 @@ export class Squad {
       'ALL',
       'STARTER',
       'RESERVE',
+      'DOUBT',
       'INJURED',
+      'SANCTIONED',
+      'WARNED',
+      'DISCARDED',
       'ALERT'
     ].includes(value);
   }

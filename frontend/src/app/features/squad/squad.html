@@ -39,6 +39,43 @@
         </article>
     </div>
 
+    @if (lineupWarnings().length > 0) {
+    <section class="lineup-warnings">
+        <div class="lineup-warnings-heading">
+            <span>⚠️</span>
+
+            <div>
+                <strong>Revisa tu alineación</strong>
+                <p>
+                    Hay jugadores titulares cuyo estado requiere atención.
+                </p>
+            </div>
+        </div>
+
+        <div class="lineup-warning-list">
+            @for (player of lineupWarnings(); track player.id) {
+            <div class="lineup-warning" [class.doubt-warning]="player.status === 'DOUBT'" [class.danger-warning]="
+                player.status === 'INJURED'
+                || player.status === 'SANCTIONED'
+                || player.status === 'DISCARDED'
+            ">
+                <strong>{{ player.name }}</strong>
+
+                <span>
+                    {{ lineupWarningText(player) }}
+                </span>
+
+                <span class="warning-status" [class.doubt]="player.status === 'DOUBT'"
+                    [class.injured]="player.status === 'INJURED'" [class.sanctioned]="player.status === 'SANCTIONED'"
+                    [class.discarded]="player.status === 'DISCARDED'">
+                    {{ statusLabel(player.status) }}
+                </span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
     <section class="lineup-section">
         <div class="section-heading">
             <div>
@@ -61,7 +98,8 @@
             <div class="lineup-row forwards-row">
                 @for (player of forwards(); track player.id) {
                 <div class="lineup-player">
-                    <div class="player-circle" [class.injured]="player.injured">
+                    <div class="player-circle" [class.injured]="player.status === 'INJURED'"
+                        [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
                         {{ player.name.charAt(0) }}
                     </div>
 
@@ -91,7 +129,8 @@
             <div class="lineup-row midfielders-row">
                 @for (player of midfielders(); track player.id) {
                 <div class="lineup-player">
-                    <div class="player-circle" [class.injured]="player.injured">
+                    <div class="player-circle" [class.injured]="player.status === 'INJURED'"
+                        [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
                         {{ player.name.charAt(0) }}
                     </div>
 
@@ -121,7 +160,8 @@
             <div class="lineup-row defenders-row">
                 @for (player of defenders(); track player.id) {
                 <div class="lineup-player">
-                    <div class="player-circle" [class.injured]="player.injured">
+                    <div class="player-circle" [class.injured]="player.status === 'INJURED'"
+                        [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
                         {{ player.name.charAt(0) }}
                     </div>
 
@@ -152,7 +192,8 @@
                 @for (player of goalkeeper(); track player.id) {
                 <div class="lineup-player">
                     <div class="player-circle goalkeeper" [class.captain]="player.captain"
-                        [class.injured]="player.injured">
+                        [class.injured]="player.status === 'INJURED'" [class.doubt]="player.status === 'DOUBT'"
+                        [class.sanctioned]="player.status === 'SANCTIONED'">
                         {{ player.name.charAt(0) }}
                     </div>
 
@@ -300,7 +341,11 @@
                 'ALL',
                 'STARTER',
                 'RESERVE',
+                'DOUBT',
                 'INJURED',
+                'SANCTIONED',
+                'WARNED',
+                'DISCARDED',
                 'ALERT'
                 ];
                 track status
@@ -314,8 +359,16 @@
                     ? 'Titulares'
                     : status === 'RESERVE'
                     ? 'Suplentes'
+                    : status === 'DOUBT'
+                    ? 'Duda'
                     : status === 'INJURED'
                     ? 'Lesionados'
+                    : status === 'SANCTIONED'
+                    ? 'Sancionados'
+                    : status === 'WARNED'
+                    ? 'Apercibidos'
+                    : status === 'DISCARDED'
+                    ? 'No convocados'
                     : 'Alertas'
                     }}
                 </button>
@@ -334,7 +387,7 @@
         player of filteredPlayers();
         track player.id
         ) {
-        <article class="player-card" [class.injured-card]="player.injured">
+        <article class="player-card" [class.injured-card]="player.status === 'INJURED'">
             <div class="player-header">
                 <div>
                     <h2>{{ player.name }}</h2>
@@ -474,7 +527,7 @@
                 </span>
                 } @else {
                 <span class="lineup-status discarded-status">
-                    Descartado
+                    Fuera de alineación
                 </span>
                 }
                 @if (player.captain) {
@@ -507,7 +560,7 @@
         </article>
         } @empty {
         <div class="empty-state">
-            No hay jugadores para esta posición.
+            No hay jugadores que coincidan con los filtros.
         </div>
         }
     </div>

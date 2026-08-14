@@ -1,4 +1,4 @@
-import { AsyncPipe, CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -10,6 +10,14 @@ import { PlayerStatus } from '../../core/models/player.model';
 type RecommendationFilter = 'ALL' | 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL' | 'E';
 type OriginFilter = 'ALL' | 'FREE' | 'MANAGER';
+type StatusFilter =
+  | 'ALL'
+  | 'OK'
+  | 'DOUBT'
+  | 'INJURED'
+  | 'SANCTIONED'
+  | 'WARNED'
+  | 'DISCARDED';
 type SortOption =
   | 'SCORE_DESC'
   | 'PRICE_ASC'
@@ -19,7 +27,7 @@ type SortOption =
 
 @Component({
   selector: 'app-market',
-  imports: [AsyncPipe, CurrencyPipe],
+  imports: [CurrencyPipe, DecimalPipe],
   templateUrl: './market.html',
   styleUrl: './market.scss',
 })
@@ -43,8 +51,12 @@ export class Market {
     signal<PositionFilter>('ALL');
   readonly originFilter =
     signal<OriginFilter>('ALL');
+  readonly statusFilter =
+    signal<StatusFilter>('ALL');
   readonly sortOption =
     signal<SortOption>('SCORE_DESC');
+  readonly expandedScorePlayerId =
+    signal<number | null>(null);
 
   constructor() {
     const params =
@@ -88,6 +100,8 @@ export class Market {
       this.positionFilter();
     const originFilter =
       this.originFilter();
+    const statusFilter =
+      this.statusFilter();
     const sortOption =
       this.sortOption();
 
@@ -124,6 +138,12 @@ export class Market {
       );
     }
 
+    if (statusFilter !== 'ALL') {
+      result = result.filter(
+        player => player.status === statusFilter
+      );
+    }
+
     return result.sort(
       (a, b) =>
         this.comparePlayers(a, b, sortOption)
@@ -152,8 +172,31 @@ export class Market {
     this.originFilter.set(value);
   }
 
+  setStatusFilter(
+    value: StatusFilter
+  ): void {
+    this.statusFilter.set(value);
+  }
+
   setSortOption(value: SortOption): void {
     this.sortOption.set(value);
+  }
+
+  toggleScoreBreakdown(
+    playerId: number
+  ): void {
+    this.expandedScorePlayerId.update(
+      current =>
+        current === playerId
+          ? null
+          : playerId
+    );
+  }
+
+  isScoreBreakdownOpen(
+    playerId: number
+  ): boolean {
+    return this.expandedScorePlayerId() === playerId;
   }
 
   reasonLabel(
@@ -190,6 +233,32 @@ export class Market {
       case 'UNAFFORDABLE':
         return 'Fuera de presupuesto';
     }
+  }
+
+  private readonly reasonPriority: Record<
+    MarketRecommendationReason,
+    number
+  > = {
+      EXCELLENT_RECENT_FORM: 1,
+      VALUE_RISING_FAST: 2,
+      SQUAD_POSITION_NEEDED: 3,
+      GOOD_RECENT_FORM: 4,
+      VALUE_RISING: 5,
+      PRICE_BELOW_MARKET: 6,
+      PRICE_ABOVE_MARKET: 7,
+      VALUE_FALLING: 8,
+      UNAFFORDABLE: 9,
+      INJURED: 10
+    };
+
+  orderedReasons(
+    reasons: MarketRecommendationReason[]
+  ): MarketRecommendationReason[] {
+    return [...reasons].sort(
+      (a, b) =>
+        this.reasonPriority[a] -
+        this.reasonPriority[b]
+    );
   }
 
   statusLabel(

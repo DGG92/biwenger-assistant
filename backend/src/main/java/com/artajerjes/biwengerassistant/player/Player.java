@@ -61,9 +61,6 @@ public class Player {
     @Column(name = "market_value", nullable = false)
     private Long marketValue;
 
-    @Column(nullable = false)
-    private boolean injured;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PlayerStatus status;
@@ -135,7 +132,6 @@ public class Player {
         this.league = league;
 
         this.points = 0;
-        this.injured = false;
         this.status = PlayerStatus.OK;
         this.captain = false;
         this.ram = false;
@@ -175,7 +171,6 @@ public class Player {
         this.teamName = teamName;
         this.marketValue = marketValue;
         this.status = status;
-        this.injured = status == PlayerStatus.INJURED;
         this.captain = captain;
         this.ram = ram;
         this.valueFluctuation = valueFluctuation;
@@ -202,7 +197,6 @@ public class Player {
         this.teamName = teamName;
         this.marketValue = marketValue;
         this.status = status;
-        this.injured = status == PlayerStatus.INJURED;
         this.valueFluctuation = valueFluctuation;
     }
 
@@ -290,10 +284,6 @@ public class Player {
 
     public Long getMarketValue() {
         return marketValue;
-    }
-
-    public boolean isInjured() {
-        return injured;
     }
 
     public PlayerStatus getStatus() {

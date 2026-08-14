@@ -148,7 +148,6 @@ class PlayerServiceTest {
 
                 assertEquals(0, response.points());
                 assertTrue(response.freePlayer());
-                assertFalse(response.injured());
                 assertEquals(PlayerStatus.OK, response.status());
                 assertFalse(response.captain());
                 assertFalse(response.ram());
@@ -346,7 +345,7 @@ class PlayerServiceTest {
                                 42,
                                 "Equipo actualizado",
                                 1_750_000L,
-                                false,
+                                PlayerStatus.OK,
                                 true,
                                 false,
                                 250_000L,
@@ -454,7 +453,7 @@ class PlayerServiceTest {
                                 10,
                                 "Equipo de prueba",
                                 1_400_000L,
-                                false,
+                                PlayerStatus.OK,
                                 false,
                                 false,
                                 -100_000L,
@@ -510,7 +509,7 @@ class PlayerServiceTest {
                                 20,
                                 "Equipo",
                                 2_000_000L,
-                                false,
+                                PlayerStatus.OK,
                                 false,
                                 false,
                                 100_000L,
@@ -563,7 +562,7 @@ class PlayerServiceTest {
                                 20,
                                 "Equipo",
                                 2_000_000L,
-                                false,
+                                PlayerStatus.OK,
                                 false,
                                 false,
                                 100_000L,
@@ -774,7 +773,7 @@ class PlayerServiceTest {
                                 existingPlayer.getValueFluctuation());
 
                 assertEquals(87, existingPlayer.getPoints());
-                assertFalse(existingPlayer.isInjured());
+                assertEquals(PlayerStatus.OK, existingPlayer.getStatus());
 
                 verify(playerRepository, never())
                                 .save(any(Player.class));
@@ -974,8 +973,6 @@ class PlayerServiceTest {
 
                 Player savedPlayer = playerCaptor.getValue();
 
-                assertTrue(savedPlayer.isInjured());
-
                 assertEquals(
                                 PlayerStatus.INJURED,
                                 savedPlayer.getStatus());
@@ -1059,8 +1056,6 @@ class PlayerServiceTest {
                 assertEquals(
                                 PlayerStatus.DOUBT,
                                 savedPlayer.getStatus());
-
-                assertFalse(savedPlayer.isInjured());
         }
 
         @Test

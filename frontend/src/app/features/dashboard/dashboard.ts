@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
 import { combineLatest, map } from 'rxjs';
 
+import { Player } from '../../core/models/player.model'
 import { RecommendationService } from '../../core/services/recommendation';
 import { PlayerService } from '../../core/services/player';
 import { MarketRecommendationReason } from '../../core/models/market-recommendation.model';
@@ -35,8 +36,23 @@ export class Dashboard {
         player => player.ownerId === data.squad.managerId
       );
 
+      const lineupWarnings = squadPlayers.filter(
+        player =>
+          player.starter &&
+          (
+            player.status === 'DOUBT' ||
+            player.status === 'INJURED' ||
+            player.status === 'SANCTIONED' ||
+            player.status === 'DISCARDED'
+          )
+      );
+
       const injuredPlayers = squadPlayers.filter(
-        player => player.injured
+        player => player.status === 'INJURED'
+      );
+
+      const nonStarterInjuredPlayers = injuredPlayers.filter(
+        player => !player.starter
       );
 
       const protectionAlerts = squadPlayers.filter(
@@ -61,7 +77,8 @@ export class Dashboard {
       return {
         ...data,
         squadPlayers,
-        injuredPlayers,
+        lineupWarnings,
+        nonStarterInjuredPlayers,
         protectionAlerts,
         strongBuys,
         strongBuyCount: allStrongBuys.length,
@@ -97,7 +114,7 @@ export class Dashboard {
         return 'Excelente estado de forma';
 
       case 'SQUAD_POSITION_NEEDED':
-        return 'Posición necesaria';
+        return 'Refuerza una posición necesaria';
 
       case 'INJURED':
         return 'Jugador lesionado';
@@ -105,5 +122,72 @@ export class Dashboard {
       case 'UNAFFORDABLE':
         return 'Fuera de presupuesto';
     }
+  }
+
+  lineupWarningTitle(player: Player): string {
+    switch (player.status) {
+      case 'DOUBT':
+        return `${player.name} está en duda`;
+
+      case 'INJURED':
+        return `${player.name} está lesionado`;
+
+      case 'SANCTIONED':
+        return `${player.name} está sancionado`;
+
+      case 'DISCARDED':
+        return `${player.name} no está convocado`;
+
+      default:
+        return player.name;
+    }
+  }
+
+  lineupWarningDescription(player: Player): string {
+    switch (player.status) {
+      case 'DOUBT':
+        return 'Lo tienes de titular · conviene vigilar su estado';
+
+      case 'INJURED':
+        return 'Lo tienes de titular · revisa tu alineación';
+
+      case 'SANCTIONED':
+        return 'Lo tienes de titular · no podrá disputar la jornada';
+
+      case 'DISCARDED':
+        return 'Lo tienes de titular · no está convocado';
+
+      default:
+        return '';
+    }
+  }
+
+  private readonly reasonPriority: Record<
+    MarketRecommendationReason,
+    number
+  > = {
+      EXCELLENT_RECENT_FORM: 1,
+      VALUE_RISING_FAST: 2,
+      SQUAD_POSITION_NEEDED: 3,
+      GOOD_RECENT_FORM: 4,
+      VALUE_RISING: 5,
+      PRICE_BELOW_MARKET: 6,
+      PRICE_ABOVE_MARKET: 7,
+      VALUE_FALLING: 8,
+      UNAFFORDABLE: 9,
+      INJURED: 10
+    };
+
+  topReasons(
+    reasons: MarketRecommendationReason[],
+    limit = 2
+  ): MarketRecommendationReason[] {
+    return [...reasons]
+      .sort(
+        (a, b) =>
+          this.reasonPriority[a] -
+          this.reasonPriority[b]
+      )
+      .slice(0, limit);
   }
 }

@@ -3,7 +3,6 @@ package com.artajerjes.biwengerassistant.biwenger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -16,6 +15,8 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.manager.ManagerService;
+import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
 import com.artajerjes.biwengerassistant.movement.MovementService;
@@ -43,6 +44,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private MovementService movementService;
+
+        @Mock
+        private ManagerService managerService;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
@@ -121,9 +125,13 @@ class BiwengerSyncServiceTest {
 
                 InOrder inOrder = inOrder(
                                 playerService,
+                                managerService,
                                 marketService,
                                 offerService,
                                 movementService);
+
+                inOrder.verify(managerService)
+                                .sync(LEAGUE_ID);
 
                 inOrder.verify(playerService)
                                 .syncCompetitionPlayers(LEAGUE_ID);
@@ -146,6 +154,11 @@ class BiwengerSyncServiceTest {
 
         @Test
         void syncAllShouldReturnResponsesFromEverySync() {
+                ManagerSyncResponse managers = new ManagerSyncResponse(
+                                14,
+                                0,
+                                14);
+
                 PlayerSyncResponse players = new PlayerSyncResponse(
                                 555,
                                 0,
@@ -184,6 +197,9 @@ class BiwengerSyncServiceTest {
                                 17756L,
                                 41088L);
 
+                when(managerService.sync(LEAGUE_ID))
+                                .thenReturn(managers);
+
                 when(
                                 playerService.syncCompetitionPlayers(
                                                 LEAGUE_ID))
@@ -216,6 +232,10 @@ class BiwengerSyncServiceTest {
 
                 BiwengerSyncResponse result = biwengerSyncService.syncAll(
                                 LEAGUE_ID);
+
+                assertSame(
+                                managers,
+                                result.managers());
 
                 assertSame(
                                 players,
@@ -264,6 +284,8 @@ class BiwengerSyncServiceTest {
                 assertEquals(
                                 "4-5-1",
                                 result.lineup().formation());
+
+                assertEquals(14, result.managers().total());
         }
 
         @Test
@@ -345,6 +367,9 @@ class BiwengerSyncServiceTest {
                                 .syncCompetitionPlayers(
                                                 customLeagueId);
 
+                verify(managerService)
+                                .sync(customLeagueId);
+
                 verify(playerService)
                                 .syncPlayerOwnership(
                                                 customLeagueId);
@@ -398,6 +423,9 @@ class BiwengerSyncServiceTest {
                 verify(playerService)
                                 .syncCompetitionPlayers(
                                                 LEAGUE_ID);
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
 
                 verify(playerService)
                                 .syncPlayerOwnership(
@@ -497,6 +525,9 @@ class BiwengerSyncServiceTest {
 
                 verify(playerService)
                                 .syncCompetitionPlayers(LEAGUE_ID);
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
 
                 verify(playerService)
                                 .syncPlayerOwnership(LEAGUE_ID);

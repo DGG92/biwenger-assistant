@@ -170,6 +170,11 @@
     font-weight: 700;
 }
 
+.lineup-attention {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
 .injury-attention {
     border-left: 4px solid #ef4444;
 }
@@ -201,6 +206,7 @@
 .recommendation-card {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 24px;
     padding: 18px 20px;
     border: 1px solid #e5e7eb;
@@ -302,6 +308,7 @@
     display: flex;
     align-items: center;
     gap: 30px;
+    flex-shrink: 0;
 }
 
 .recommendation-values span {

@@ -129,10 +129,6 @@ public class PlayerService {
                                 request.ownerId(),
                                 leagueId);
 
-                PlayerStatus status = Boolean.TRUE.equals(request.injured())
-                                ? PlayerStatus.INJURED
-                                : PlayerStatus.OK;
-
                 player.update(
                                 request.biwengerPlayerId(),
                                 request.name(),
@@ -140,7 +136,7 @@ public class PlayerService {
                                 request.points(),
                                 request.teamName(),
                                 request.marketValue(),
-                                status,
+                                request.status(),
                                 request.captain(),
                                 request.ram(),
                                 request.valueFluctuation(),
@@ -236,7 +232,6 @@ public class PlayerService {
                                 player.getMarketValue(),
                                 player.getPurchasePrice(),
                                 player.getProfitability(),
-                                player.isInjured(),
                                 player.getStatus(),
                                 player.isCaptain(),
                                 player.isRam(),

@@ -22,12 +22,12 @@ public record MarketRecommendationResponse(
                 double priceDifferencePercentage,
                 Long valueFluctuation,
                 int points,
-                boolean injured,
                 PlayerStatus status,
                 boolean affordable,
                 int score,
                 RecommendationType recommendation,
                 Long sellerId,
                 String sellerName,
-                List<MarketRecommendationReason> reasons) {
+                List<MarketRecommendationReason> reasons,
+                MarketScoreBreakdown scoreBreakdown) {
 }

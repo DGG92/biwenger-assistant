@@ -32,7 +32,6 @@ export interface Player {
     points: number;
     teamName: string | null;
     marketValue: number;
-    injured: boolean;
     status: PlayerStatus;
     captain: boolean;
     ram: boolean;

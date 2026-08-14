@@ -11,7 +11,7 @@
     </header>
 
     <section class="filters">
-        <div class="left-filters">
+        <div class="filter-column filter-column-left">
             <div class="search-box">
                 <label for="search">Buscar jugador</label>
 
@@ -48,50 +48,8 @@
                     <span class="select-arrow">⌄</span>
                 </div>
             </div>
-        </div>
 
-        <div class="filter-group recommendation-filter">
-            <span>Recomendación</span>
-
-            <div class="filter-buttons">
-                @for (
-                option of ['ALL', 'STRONG_BUY', 'BUY', 'WATCH', 'AVOID'];
-                track option
-                ) {
-                <button type="button" [class.active]="recommendationFilter() === option"
-                    (click)="setRecommendationFilter($any(option))">
-                    {{
-                    option === 'ALL'
-                    ? 'Todos'
-                    : option === 'STRONG_BUY'
-                    ? 'STRONG BUY'
-                    : option
-                    }}
-                </button>
-                }
-            </div>
-        </div>
-
-        <div class="filter-group position-filter">
-            <span>Posición</span>
-
-            <div class="filter-buttons">
-                @for (
-                option of ['ALL', 'PT', 'DF', 'MC', 'DL', 'E'];
-                track option
-                ) {
-                <button type="button" [class.active]="positionFilter() === option"
-                    (click)="setPositionFilter($any(option))">
-                    {{
-                    option === 'ALL'
-                    ? 'Todas'
-                    : option
-                    }}
-                </button>
-                }
-            </div>
-
-            <div class="origin-filter">
+            <div class="filter-group">
                 <span>Procedencia</span>
 
                 <div class="filter-buttons">
@@ -107,6 +65,90 @@
                         : option === 'FREE'
                         ? 'Libres'
                         : 'Managers'
+                        }}
+                    </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-column filter-column-center">
+            <div class="filter-group recommendation-filter">
+                <span>Recomendación</span>
+
+                <div class="filter-buttons">
+                    @for (
+                    option of ['ALL', 'STRONG_BUY', 'BUY', 'WATCH', 'AVOID'];
+                    track option
+                    ) {
+                    <button type="button" [class.active]="recommendationFilter() === option"
+                        (click)="setRecommendationFilter($any(option))">
+                        {{
+                        option === 'ALL'
+                        ? 'Todos'
+                        : option === 'STRONG_BUY'
+                        ? 'STRONG BUY'
+                        : option
+                        }}
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <div class="filter-group position-filter">
+                <span>Posición</span>
+
+                <div class="filter-buttons">
+                    @for (
+                    option of ['ALL', 'PT', 'DF', 'MC', 'DL', 'E'];
+                    track option
+                    ) {
+                    <button type="button" [class.active]="positionFilter() === option"
+                        (click)="setPositionFilter($any(option))">
+                        {{
+                        option === 'ALL'
+                        ? 'Todas'
+                        : option
+                        }}
+                    </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-column filter-column-status">
+            <div class="filter-group">
+                <span>Estado</span>
+
+                <div class="filter-buttons status-buttons">
+                    @for (
+                    option of [
+                    'ALL',
+                    'OK',
+                    'DOUBT',
+                    'INJURED',
+                    'SANCTIONED',
+                    'WARNED',
+                    'DISCARDED'
+                    ];
+                    track option
+                    ) {
+                    <button type="button" [class.active]="statusFilter() === option"
+                        (click)="setStatusFilter($any(option))">
+                        {{
+                        option === 'ALL'
+                        ? 'Todos'
+                        : option === 'OK'
+                        ? 'Disponibles'
+                        : option === 'DOUBT'
+                        ? 'Duda'
+                        : option === 'INJURED'
+                        ? 'Lesionados'
+                        : option === 'SANCTIONED'
+                        ? 'Sancionados'
+                        : option === 'WARNED'
+                        ? 'Apercibidos'
+                        : 'No convocados'
                         }}
                     </button>
                     }
@@ -205,9 +247,19 @@
                         </strong>
                     </div>
 
-                    <div>
+                    <div class="score-data">
                         <span>Score</span>
+
                         <strong>{{ player.score }}/100</strong>
+
+                        <button type="button" class="score-details-button"
+                            (click)="toggleScoreBreakdown(player.playerId)">
+                            {{
+                            isScoreBreakdownOpen(player.playerId)
+                            ? 'Ocultar desglose'
+                            : 'Ver desglose'
+                            }}
+                        </button>
                     </div>
                 </div>
 
@@ -216,9 +268,107 @@
                         [class.avoid-score]="player.recommendation === 'AVOID'" [style.width.%]="player.score"></div>
                 </div>
 
+                @if (isScoreBreakdownOpen(player.playerId)) {
+                <section class="score-breakdown">
+                    <div class="score-breakdown-header">
+                        <div>
+                            <span>Cómo se calcula</span>
+                            <strong>{{ player.score }}/100</strong>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown-rows">
+                        <div>
+                            <span>Base</span>
+                            <strong>
+                                {{ player.scoreBreakdown.base > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.base | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Precio</span>
+                            <strong [class.positive]="player.scoreBreakdown.price > 0"
+                                [class.negative]="player.scoreBreakdown.price < 0">
+                                {{ player.scoreBreakdown.price > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.price | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Evolución de valor</span>
+                            <strong [class.positive]="player.scoreBreakdown.valueTrend > 0"
+                                [class.negative]="player.scoreBreakdown.valueTrend < 0">
+                                {{ player.scoreBreakdown.valueTrend > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.valueTrend | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Necesidad de posición</span>
+                            <strong [class.positive]="player.scoreBreakdown.squadNeed > 0">
+                                {{ player.scoreBreakdown.squadNeed > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.squadNeed | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Forma reciente</span>
+                            <strong [class.positive]="player.scoreBreakdown.recentForm > 0"
+                                [class.negative]="player.scoreBreakdown.recentForm < 0">
+                                {{ player.scoreBreakdown.recentForm > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.recentForm | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Disponibilidad</span>
+                            <strong [class.negative]="player.scoreBreakdown.status < 0">
+                                {{ player.scoreBreakdown.status > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.status | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown-total">
+                        <span>Score antes de límites</span>
+
+                        <strong>
+                            {{
+                            player.scoreBreakdown.scoreBeforeCaps
+                            | number:'1.0-1':'es-ES'
+                            }}
+                        </strong>
+                    </div>
+
+                    @if (player.scoreBreakdown.affordabilityCapApplied) {
+                    <div class="score-cap-warning">
+                        Fuera de presupuesto: el score se limita a 25.
+                    </div>
+                    }
+
+                    @if (player.scoreBreakdown.auctionBidCapApplied) {
+                    <div class="score-cap-warning">
+                        La puja actual supera la puja máxima recomendada:
+                        el score se limita a 25.
+                    </div>
+                    }
+
+                    @if (
+                    !player.scoreBreakdown.affordabilityCapApplied
+                    && !player.scoreBreakdown.auctionBidCapApplied
+                    ) {
+                    <p class="score-breakdown-note">
+                        El score final coincide con el cálculo anterior,
+                        limitado al rango 0–100.
+                    </p>
+                    }
+                </section>
+                }
+
                 @if (player.reasons.length > 0) {
                 <div class="recommendation-reasons">
-                    @for (reason of player.reasons; track reason) {
+                    @for (reason of orderedReasons(player.reasons); track reason) {
                     <span [class.positive-reason]="
             reason === 'PRICE_BELOW_MARKET'
             || reason === 'VALUE_RISING'

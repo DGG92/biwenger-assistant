@@ -106,7 +106,7 @@ public class PlayerProtectionService {
         /*
          * Una lesión reduce bastante la urgencia de subir cláusula.
          */
-        if (player.isInjured()) {
+        if (player.getStatus() == PlayerStatus.INJURED) {
             score -= 25;
 
             reasons.add(
