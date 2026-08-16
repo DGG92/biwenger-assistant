@@ -2,10 +2,15 @@ package com.artajerjes.biwengerassistant.biwenger;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.TestApiResponse;
@@ -34,6 +39,7 @@ public class BiwengerClient {
         private final String competition;
         private final Integer score;
 
+        @Autowired
         public BiwengerClient(
                         RestClient.Builder restClientBuilder,
                         ObjectMapper objectMapper,
@@ -46,13 +52,8 @@ public class BiwengerClient {
                         @Value("${biwenger.language}") String language,
                         @Value("${biwenger.competition}") String competition,
                         @Value("${biwenger.score}") Integer score) {
-                HttpClient httpClient = HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(10))
-                                .build();
 
-                JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-
-                requestFactory.setReadTimeout(Duration.ofSeconds(30));
+                ClientHttpRequestFactory requestFactory = createDefaultRequestFactory();
 
                 this.restClient = restClientBuilder
                                 .requestFactory(requestFactory)
@@ -75,17 +76,57 @@ public class BiwengerClient {
                 this.score = score;
         }
 
+        BiwengerClient(
+                        RestClient restClient,
+                        RestClient cdnRestClient,
+                        ObjectMapper objectMapper,
+                        String token,
+                        String leagueId,
+                        String userId,
+                        String version,
+                        String language,
+                        String competition,
+                        Integer score) {
+
+                this.restClient = restClient;
+                this.cdnRestClient = cdnRestClient;
+                this.objectMapper = objectMapper;
+                this.token = token;
+                this.leagueId = leagueId;
+                this.userId = userId;
+                this.version = version;
+                this.language = language;
+                this.competition = competition;
+                this.score = score;
+        }
+
+        private static ClientHttpRequestFactory createDefaultRequestFactory() {
+
+                HttpClient httpClient = HttpClient.newBuilder()
+                                .connectTimeout(Duration.ofSeconds(10))
+                                .build();
+
+                JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+
+                requestFactory.setReadTimeout(
+                                Duration.ofSeconds(30));
+
+                return requestFactory;
+        }
+
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerCompetitionResponse getCompetition() {
-                byte[] responseBody = cdnRestClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/api/v2/competitions/{competition}/data")
-                                                .queryParam("lang", language)
-                                                .queryParam("score", score)
-                                                .build(competition))
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> cdnRestClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/competitions/{competition}/data")
+                                                                .queryParam("lang", language)
+                                                                .queryParam("score", score)
+                                                                .build(competition))
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -104,20 +145,23 @@ public class BiwengerClient {
         }
 
         @SuppressWarnings("UseSpecificCatch")
-        public BiwengerPlayerDetailResponse getPlayerDetail(String playerSlug) {
-                byte[] responseBody = cdnRestClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/api/v2/players/{competition}/{playerSlug}")
-                                                .queryParam("lang", language)
-                                                .queryParam(
-                                                                "fields",
-                                                                "*,team,fitness,reports(points,home,events,status(status,statusInfo),match(*,round,home,away),star),prices,competition,seasons,news,threads")
-                                                .build(
-                                                                competition,
-                                                                playerSlug))
-                                .retrieve()
-                                .body(byte[].class);
+        public BiwengerPlayerDetailResponse getPlayerDetail(
+                        String playerSlug) {
+
+                byte[] responseBody = executeWithRetry(
+                                () -> cdnRestClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/players/{competition}/{playerSlug}")
+                                                                .queryParam("lang", language)
+                                                                .queryParam(
+                                                                                "fields",
+                                                                                "*,team,fitness,reports(points,home,events,status(status,statusInfo),match(*,round,home,away),star),prices,competition,seasons,news,threads")
+                                                                .build(
+                                                                                competition,
+                                                                                playerSlug))
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -137,24 +181,36 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerLeagueApiResponse getLeague() {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/api/v2/league")
-                                                .queryParam("include", "all,-lastAccess")
-                                                .queryParam(
-                                                                "fields",
-                                                                "*,standings,tournaments,group,settings(description)")
-                                                .build())
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/league")
+                                                                .queryParam(
+                                                                                "include",
+                                                                                "all,-lastAccess")
+                                                                .queryParam(
+                                                                                "fields",
+                                                                                "*,standings,tournaments,group,settings(description)")
+                                                                .build())
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -174,23 +230,33 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerUserResponse getUser(Long managerId) {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/api/v2/user/{managerId}")
-                                                .queryParam(
-                                                                "fields",
-                                                                "*,account(id),players(id,owner),lineups(round,points,count,position),league(id,name,competition,type,mode,marketMode,scoreID),market,seasons,offers,lastPositions,marketTransactions")
-                                                .build(managerId))
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/user/{managerId}")
+                                                                .queryParam(
+                                                                                "fields",
+                                                                                "*,account(id),players(id,owner),lineups(round,points,count,position),league(id,name,competition,type,mode,marketMode,scoreID),market,seasons,offers,lastPositions,marketTransactions")
+                                                                .build(managerId))
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -210,23 +276,33 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerUserResponse getCurrentUser() {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/api/v2/user")
-                                                .queryParam(
-                                                                "fields",
-                                                                "*,lineup(type,playersID,reservesID,reserves(id,position),captain,striker,coach,date),players(id,owner),market,offers,-trophies")
-                                                .build())
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/user")
+                                                                .queryParam(
+                                                                                "fields",
+                                                                                "*,lineup(type,playersID,reservesID,reserves(id,position),captain,striker,coach,date),players(id,owner),market,offers,-trophies")
+                                                                .build())
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -246,18 +322,28 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerMarketResponse getMarket() {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri("/api/v2/market")
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri("/api/v2/market")
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -277,18 +363,28 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerHomeResponse getHome() {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri("/api/v2/home")
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri("/api/v2/home")
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -307,29 +403,47 @@ public class BiwengerClient {
         }
 
         @SuppressWarnings("UseSpecificCatch")
-        public BiwengerReportResponse getReport(String report, String param) {
-                byte[] responseBody = restClient
-                                .get()
-                                .uri(uriBuilder -> {
-                                        uriBuilder
-                                                        .path("/api/v2/league/current/report/{report}")
-                                                        .queryParam("mode", "total");
+        public BiwengerReportResponse getReport(
+                        String report,
+                        String param) {
 
-                                        if (param != null && !param.isBlank()) {
-                                                uriBuilder.queryParam("param", param);
-                                        }
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri(uriBuilder -> {
+                                                        uriBuilder
+                                                                        .path("/api/v2/league/current/report/{report}")
+                                                                        .queryParam(
+                                                                                        "mode",
+                                                                                        "total");
 
-                                        return uriBuilder.build(report);
-                                })
-                                .headers(headers -> {
-                                        headers.setBearerAuth(token);
-                                        headers.set("x-league", leagueId);
-                                        headers.set("x-user", userId);
-                                        headers.set("x-version", version);
-                                        headers.set("x-lang", language);
-                                })
-                                .retrieve()
-                                .body(byte[].class);
+                                                        if (param != null
+                                                                        && !param.isBlank()) {
+                                                                uriBuilder.queryParam(
+                                                                                "param",
+                                                                                param);
+                                                        }
+
+                                                        return uriBuilder.build(
+                                                                        report);
+                                                })
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
 
                 if (responseBody == null) {
                         throw new IllegalStateException(
@@ -353,5 +467,17 @@ public class BiwengerClient {
                                 .uri("https://jsonplaceholder.typicode.com/todos/1")
                                 .retrieve()
                                 .body(TestApiResponse.class);
+        }
+
+        private <T> T executeWithRetry(Supplier<T> action) {
+
+                try {
+                        return action.get();
+
+                } catch (HttpServerErrorException
+                                | ResourceAccessException firstException) {
+
+                        return action.get();
+                }
         }
 }

@@ -119,4 +119,126 @@ public class BiwengerSyncService {
             leaguesBeingSynced.remove(leagueId);
         }
     }
+
+    public void syncScheduled(Long leagueId) {
+
+        if (!leaguesBeingSynced.add(leagueId)) {
+            log.warn(
+                    "Skipping scheduled Biwenger sync for league {} because another sync is already running",
+                    leagueId);
+            return;
+        }
+
+        long startedAt = System.currentTimeMillis();
+
+        try {
+            log.info(
+                    "Starting scheduled Biwenger sync for league {}",
+                    leagueId);
+
+            /*
+             * Datos base.
+             *
+             * Si cualquiera de estas fases falla, no continuamos.
+             * Las siguientes sincronizaciones dependen de que managers,
+             * jugadores y propietarios estén correctamente actualizados.
+             */
+            managerService.sync(leagueId);
+            log.info(
+                    "Managers synced for league {}",
+                    leagueId);
+
+            playerService.syncCompetitionPlayers(leagueId);
+            log.info(
+                    "Competition players synced for league {}",
+                    leagueId);
+
+            playerService.syncPlayerOwnership(leagueId);
+            log.info(
+                    "Player ownership synced for league {}",
+                    leagueId);
+
+            /*
+             * Datos independientes.
+             *
+             * Un fallo puntual en una de estas fases no debe impedir
+             * que las demás se actualicen.
+             */
+            runScheduledPhase(
+                    leagueId,
+                    "market",
+                    () -> marketService.sync(leagueId));
+
+            runScheduledPhase(
+                    leagueId,
+                    "movements",
+                    () -> movementService.sync(leagueId));
+
+            runScheduledPhase(
+                    leagueId,
+                    "current lineup",
+                    () -> playerService.syncCurrentLineup(leagueId));
+
+            runScheduledPhase(
+                    leagueId,
+                    "offers",
+                    () -> offerService.sync(leagueId));
+
+            long elapsed = System.currentTimeMillis() - startedAt;
+
+            log.info(
+                    "Scheduled Biwenger sync completed for league {} in {} ms",
+                    leagueId,
+                    elapsed);
+
+        } catch (Exception exception) {
+
+            long elapsed = System.currentTimeMillis() - startedAt;
+
+            log.error(
+                    "Scheduled Biwenger sync aborted for league {} during base synchronization after {} ms",
+                    leagueId,
+                    elapsed,
+                    exception);
+
+        } finally {
+            leaguesBeingSynced.remove(leagueId);
+        }
+    }
+
+    private void runScheduledPhase(
+            Long leagueId,
+            String phaseName,
+            Runnable phase) {
+
+        long startedAt = System.currentTimeMillis();
+
+        try {
+            log.info(
+                    "Starting scheduled {} sync for league {}",
+                    phaseName,
+                    leagueId);
+
+            phase.run();
+
+            long elapsed = System.currentTimeMillis() - startedAt;
+
+            log.info(
+                    "Scheduled {} sync completed for league {} in {} ms",
+                    phaseName,
+                    leagueId,
+                    elapsed);
+
+        } catch (Exception exception) {
+
+            long elapsed = System.currentTimeMillis() - startedAt;
+
+            log.error(
+                    "Scheduled {} sync failed for league {} after {} ms. Continuing with remaining phases.",
+                    phaseName,
+                    leagueId,
+                    elapsed,
+                    exception);
+        }
+    }
 }

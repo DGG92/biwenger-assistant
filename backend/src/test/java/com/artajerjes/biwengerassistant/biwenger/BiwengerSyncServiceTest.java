@@ -1,5 +1,6 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -528,6 +529,152 @@ class BiwengerSyncServiceTest {
 
                 verify(managerService)
                                 .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(marketService)
+                                .sync(LEAGUE_ID);
+
+                verify(movementService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCurrentLineup(LEAGUE_ID);
+
+                verify(offerService)
+                                .sync(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldContinueWhenMarketSyncFails() {
+
+                when(marketService.sync(LEAGUE_ID))
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Market temporarily unavailable"));
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCompetitionPlayers(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(marketService)
+                                .sync(LEAGUE_ID);
+
+                verify(movementService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCurrentLineup(LEAGUE_ID);
+
+                verify(offerService)
+                                .sync(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldContinueWhenMovementSyncFails() {
+
+                when(movementService.sync(LEAGUE_ID))
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Movements temporarily unavailable"));
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCompetitionPlayers(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(marketService)
+                                .sync(LEAGUE_ID);
+
+                verify(movementService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCurrentLineup(LEAGUE_ID);
+
+                verify(offerService)
+                                .sync(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldAbortRemainingPhasesWhenPlayerSyncFails() {
+
+                when(playerService.syncCompetitionPlayers(LEAGUE_ID))
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Players unavailable"));
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCompetitionPlayers(LEAGUE_ID);
+
+                verify(
+                                playerService,
+                                never())
+                                .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(
+                                marketService,
+                                never())
+                                .sync(LEAGUE_ID);
+
+                verify(
+                                movementService,
+                                never())
+                                .sync(LEAGUE_ID);
+
+                verify(
+                                playerService,
+                                never())
+                                .syncCurrentLineup(LEAGUE_ID);
+
+                verify(
+                                offerService,
+                                never())
+                                .sync(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldAbsorbOfferFailure() {
+
+                when(offerService.sync(LEAGUE_ID))
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Offers temporarily unavailable"));
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
+
+                verify(playerService)
+                                .syncCompetitionPlayers(LEAGUE_ID);
 
                 verify(playerService)
                                 .syncPlayerOwnership(LEAGUE_ID);

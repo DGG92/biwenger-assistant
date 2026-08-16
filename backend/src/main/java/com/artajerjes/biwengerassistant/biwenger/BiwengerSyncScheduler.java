@@ -10,37 +10,37 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "biwenger.sync.enabled", havingValue = "true")
 public class BiwengerSyncScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(
-            BiwengerSyncScheduler.class);
+        private static final Logger log = LoggerFactory.getLogger(
+                        BiwengerSyncScheduler.class);
 
-    private static final Long DEFAULT_LEAGUE_ID = 1L;
+        private static final Long DEFAULT_LEAGUE_ID = 1L;
 
-    private final BiwengerSyncService biwengerSyncService;
+        private final BiwengerSyncService biwengerSyncService;
 
-    public BiwengerSyncScheduler(
-            BiwengerSyncService biwengerSyncService) {
-        this.biwengerSyncService = biwengerSyncService;
-    }
-
-    @Scheduled(fixedDelayString = "${biwenger.sync.interval-ms:300000}")
-    public void sync() {
-        try {
-            log.info(
-                    "Starting automatic Biwenger sync for league {}",
-                    DEFAULT_LEAGUE_ID);
-
-            biwengerSyncService.syncAll(
-                    DEFAULT_LEAGUE_ID);
-
-            log.info(
-                    "Automatic Biwenger sync completed successfully for league {}",
-                    DEFAULT_LEAGUE_ID);
-
-        } catch (Exception exception) {
-            log.error(
-                    "Automatic Biwenger sync failed for league {}",
-                    DEFAULT_LEAGUE_ID,
-                    exception);
+        public BiwengerSyncScheduler(
+                        BiwengerSyncService biwengerSyncService) {
+                this.biwengerSyncService = biwengerSyncService;
         }
-    }
+
+        @Scheduled(fixedDelayString = "${biwenger.sync.interval-ms:300000}")
+        public void sync() {
+                try {
+                        log.info(
+                                        "Starting automatic Biwenger sync for league {}",
+                                        DEFAULT_LEAGUE_ID);
+
+                        biwengerSyncService.syncScheduled(
+                                        DEFAULT_LEAGUE_ID);
+
+                        log.info(
+                                        "Automatic Biwenger sync completed successfully for league {}",
+                                        DEFAULT_LEAGUE_ID);
+
+                } catch (Exception exception) {
+                        log.error(
+                                        "Automatic Biwenger sync failed for league {}",
+                                        DEFAULT_LEAGUE_ID,
+                                        exception);
+                }
+        }
 }
