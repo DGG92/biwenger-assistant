@@ -14,6 +14,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.home.BiwengerHomeResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.market.BiwengerMarketResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayerDetailResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.report.BiwengerReportResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 
 import tools.jackson.databind.ObjectMapper;
@@ -301,6 +302,47 @@ public class BiwengerClient {
                 } catch (Exception exception) {
                         throw new IllegalStateException(
                                         "Could not deserialize Biwenger home response",
+                                        exception);
+                }
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
+        public BiwengerReportResponse getReport(String report, String param) {
+                byte[] responseBody = restClient
+                                .get()
+                                .uri(uriBuilder -> {
+                                        uriBuilder
+                                                        .path("/api/v2/league/current/report/{report}")
+                                                        .queryParam("mode", "total");
+
+                                        if (param != null && !param.isBlank()) {
+                                                uriBuilder.queryParam("param", param);
+                                        }
+
+                                        return uriBuilder.build(report);
+                                })
+                                .headers(headers -> {
+                                        headers.setBearerAuth(token);
+                                        headers.set("x-league", leagueId);
+                                        headers.set("x-user", userId);
+                                        headers.set("x-version", version);
+                                        headers.set("x-lang", language);
+                                })
+                                .retrieve()
+                                .body(byte[].class);
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty report response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerReportResponse.class);
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger report response",
                                         exception);
                 }
         }

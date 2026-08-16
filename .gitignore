@@ -1,2 +1,5 @@
 .env
 .vscode/
+
+# Local database backups
+backend/biwenger_before*.sql

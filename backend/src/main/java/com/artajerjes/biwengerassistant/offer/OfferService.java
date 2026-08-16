@@ -23,6 +23,7 @@ import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
+import com.artajerjes.biwengerassistant.offer.dto.OfferPlayerResponse;
 import com.artajerjes.biwengerassistant.offer.dto.OfferResponse;
 import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.Player;
@@ -31,265 +32,271 @@ import com.artajerjes.biwengerassistant.player.PlayerRepository;
 @Service
 public class OfferService {
 
-    private final OfferRepository offerRepository;
-    private final LeagueRepository leagueRepository;
-    private final PlayerRepository playerRepository;
-    private final ManagerRepository managerRepository;
-    private final BiwengerClient biwengerClient;
+        private final OfferRepository offerRepository;
+        private final LeagueRepository leagueRepository;
+        private final PlayerRepository playerRepository;
+        private final ManagerRepository managerRepository;
+        private final BiwengerClient biwengerClient;
 
-    @Value("${biwenger.user-id}")
-    private Long biwengerUserId;
+        @Value("${biwenger.user-id}")
+        private Long biwengerUserId;
 
-    public OfferService(
-            OfferRepository offerRepository,
-            LeagueRepository leagueRepository,
-            PlayerRepository playerRepository,
-            ManagerRepository managerRepository,
-            BiwengerClient biwengerClient) {
-        this.offerRepository = offerRepository;
-        this.leagueRepository = leagueRepository;
-        this.playerRepository = playerRepository;
-        this.managerRepository = managerRepository;
-        this.biwengerClient = biwengerClient;
-    }
-
-    @Transactional
-    public OfferSyncResponse sync(Long leagueId) {
-        League league = leagueRepository.findById(leagueId)
-                .orElseThrow(() -> new LeagueNotFoundException(leagueId));
-
-        BiwengerMarketResponse response = biwengerClient.getMarket();
-
-        if (response == null || response.data() == null) {
-            throw new IllegalStateException(
-                    "Biwenger returned an invalid market response");
+        public OfferService(
+                        OfferRepository offerRepository,
+                        LeagueRepository leagueRepository,
+                        PlayerRepository playerRepository,
+                        ManagerRepository managerRepository,
+                        BiwengerClient biwengerClient) {
+                this.offerRepository = offerRepository;
+                this.leagueRepository = leagueRepository;
+                this.playerRepository = playerRepository;
+                this.managerRepository = managerRepository;
+                this.biwengerClient = biwengerClient;
         }
 
-        syncEconomicStatus(
-                leagueId,
-                response);
+        @Transactional
+        public OfferSyncResponse sync(Long leagueId) {
+                League league = leagueRepository.findById(leagueId)
+                                .orElseThrow(() -> new LeagueNotFoundException(leagueId));
 
-        Map<String, Player> playersByBiwengerId = playerRepository.findAllByLeague_Id(leagueId)
-                .stream()
-                .collect(Collectors.toMap(
-                        Player::getBiwengerPlayerId,
-                        Function.identity()));
+                BiwengerMarketResponse response = biwengerClient.getMarket();
 
-        Map<Long, Manager> managersByBiwengerId = managerRepository.findAllByLeague_Id(leagueId)
-                .stream()
-                .collect(Collectors.toMap(
-                        Manager::getBiwengerManagerId,
-                        Function.identity()));
-
-        List<BiwengerMarketOffer> externalOffers = response.data().offers() == null
-                ? List.of()
-                : response.data().offers();
-
-        int created = 0;
-        int updated = 0;
-        int playersNotFound = 0;
-        int managersNotFound = 0;
-
-        List<Long> currentExternalIds = new ArrayList<>();
-
-        for (BiwengerMarketOffer externalOffer : externalOffers) {
-            if (externalOffer == null || externalOffer.id() == null) {
-                continue;
-            }
-
-            currentExternalIds.add(externalOffer.id());
-
-            List<Player> requestedPlayers = new ArrayList<>();
-
-            if (externalOffer.requestedPlayers() != null) {
-                for (Long playerId : externalOffer.requestedPlayers()) {
-                    Player player = playersByBiwengerId.get(
-                            String.valueOf(playerId));
-
-                    if (player == null) {
-                        playersNotFound++;
-                        continue;
-                    }
-
-                    requestedPlayers.add(player);
+                if (response == null || response.data() == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an invalid market response");
                 }
-            }
 
-            Manager fromManager = resolveManager(
-                    externalOffer.from(),
-                    managersByBiwengerId);
+                syncEconomicStatus(
+                                leagueId,
+                                response);
 
-            Manager toManager = resolveManager(
-                    externalOffer.to(),
-                    managersByBiwengerId);
+                Map<String, Player> playersByBiwengerId = playerRepository.findAllByLeague_Id(leagueId)
+                                .stream()
+                                .collect(Collectors.toMap(
+                                                Player::getBiwengerPlayerId,
+                                                Function.identity()));
 
-            if (externalOffer.from() != null
-                    && externalOffer.from().id() != null
-                    && fromManager == null) {
-                managersNotFound++;
-            }
+                Map<Long, Manager> managersByBiwengerId = managerRepository.findAllByLeague_Id(leagueId)
+                                .stream()
+                                .collect(Collectors.toMap(
+                                                Manager::getBiwengerManagerId,
+                                                Function.identity()));
 
-            if (externalOffer.to() != null
-                    && externalOffer.to().id() != null
-                    && toManager == null) {
-                managersNotFound++;
-            }
+                List<BiwengerMarketOffer> externalOffers = response.data().offers() == null
+                                ? List.of()
+                                : response.data().offers();
 
-            Offer existing = offerRepository
-                    .findByBiwengerOfferId(externalOffer.id())
-                    .orElse(null);
+                int created = 0;
+                int updated = 0;
+                int playersNotFound = 0;
+                int managersNotFound = 0;
 
-            if (existing == null) {
-                Offer offer = new Offer(
-                        externalOffer.id(),
-                        externalOffer.amount(),
-                        externalOffer.status(),
-                        externalOffer.type(),
-                        fromManager,
-                        toManager,
-                        toLocalDateTime(externalOffer.created()),
-                        toLocalDateTime(externalOffer.until()),
-                        requestedPlayers,
-                        league);
+                List<Long> currentExternalIds = new ArrayList<>();
 
-                offerRepository.save(offer);
-                created++;
-            } else {
-                existing.update(
-                        externalOffer.amount(),
-                        externalOffer.status(),
-                        externalOffer.type(),
-                        fromManager,
-                        toManager,
-                        toLocalDateTime(externalOffer.created()),
-                        toLocalDateTime(externalOffer.until()),
-                        requestedPlayers);
+                for (BiwengerMarketOffer externalOffer : externalOffers) {
+                        if (externalOffer == null || externalOffer.id() == null) {
+                                continue;
+                        }
 
-                updated++;
-            }
+                        currentExternalIds.add(externalOffer.id());
+
+                        List<Player> requestedPlayers = new ArrayList<>();
+
+                        if (externalOffer.requestedPlayers() != null) {
+                                for (Long playerId : externalOffer.requestedPlayers()) {
+                                        Player player = playersByBiwengerId.get(
+                                                        String.valueOf(playerId));
+
+                                        if (player == null) {
+                                                playersNotFound++;
+                                                continue;
+                                        }
+
+                                        requestedPlayers.add(player);
+                                }
+                        }
+
+                        Manager fromManager = resolveManager(
+                                        externalOffer.from(),
+                                        managersByBiwengerId);
+
+                        Manager toManager = resolveManager(
+                                        externalOffer.to(),
+                                        managersByBiwengerId);
+
+                        if (externalOffer.from() != null
+                                        && externalOffer.from().id() != null
+                                        && fromManager == null) {
+                                managersNotFound++;
+                        }
+
+                        if (externalOffer.to() != null
+                                        && externalOffer.to().id() != null
+                                        && toManager == null) {
+                                managersNotFound++;
+                        }
+
+                        Offer existing = offerRepository
+                                        .findByBiwengerOfferId(externalOffer.id())
+                                        .orElse(null);
+
+                        if (existing == null) {
+                                Offer offer = new Offer(
+                                                externalOffer.id(),
+                                                externalOffer.amount(),
+                                                externalOffer.status(),
+                                                externalOffer.type(),
+                                                fromManager,
+                                                toManager,
+                                                toLocalDateTime(externalOffer.created()),
+                                                toLocalDateTime(externalOffer.until()),
+                                                requestedPlayers,
+                                                league);
+
+                                offerRepository.save(offer);
+                                created++;
+                        } else {
+                                existing.update(
+                                                externalOffer.amount(),
+                                                externalOffer.status(),
+                                                externalOffer.type(),
+                                                fromManager,
+                                                toManager,
+                                                toLocalDateTime(externalOffer.created()),
+                                                toLocalDateTime(externalOffer.until()),
+                                                requestedPlayers);
+
+                                updated++;
+                        }
+                }
+
+                List<Offer> existingOffers = offerRepository.findAllByLeague_Id(leagueId);
+
+                for (Offer existingOffer : existingOffers) {
+                        if (!currentExternalIds.contains(
+                                        existingOffer.getBiwengerOfferId())) {
+                                offerRepository.delete(existingOffer);
+                        }
+                }
+
+                return new OfferSyncResponse(
+                                externalOffers.size(),
+                                created,
+                                updated,
+                                playersNotFound,
+                                managersNotFound);
         }
 
-        List<Offer> existingOffers = offerRepository.findAllByLeague_Id(leagueId);
+        @Transactional(readOnly = true)
+        public List<OfferResponse> findAll(Long leagueId) {
+                if (!leagueRepository.existsById(leagueId)) {
+                        throw new LeagueNotFoundException(leagueId);
+                }
 
-        for (Offer existingOffer : existingOffers) {
-            if (!currentExternalIds.contains(
-                    existingOffer.getBiwengerOfferId())) {
-                offerRepository.delete(existingOffer);
-            }
+                return offerRepository
+                                .findAllByLeague_Id(leagueId)
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
         }
 
-        return new OfferSyncResponse(
-                externalOffers.size(),
-                created,
-                updated,
-                playersNotFound,
-                managersNotFound);
-    }
+        @Transactional(readOnly = true)
+        public EconomicStatusResponse getEconomicStatus(
+                        Long leagueId) {
+                if (!leagueRepository.existsById(leagueId)) {
+                        throw new LeagueNotFoundException(leagueId);
+                }
 
-    @Transactional(readOnly = true)
-    public List<OfferResponse> findAll(Long leagueId) {
-        if (!leagueRepository.existsById(leagueId)) {
-            throw new LeagueNotFoundException(leagueId);
+                Manager manager = managerRepository
+                                .findByBiwengerManagerIdAndLeague_Id(
+                                                biwengerUserId,
+                                                leagueId)
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "Authenticated Biwenger manager not found for league "
+                                                                + leagueId));
+
+                return new EconomicStatusResponse(
+                                manager.getCash(),
+                                manager.getMaximumBid());
         }
 
-        return offerRepository
-                .findAllByLeague_Id(leagueId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
+        private Manager resolveManager(
+                        BiwengerMarketUser externalManager,
+                        Map<Long, Manager> managersByBiwengerId) {
+                if (externalManager == null
+                                || externalManager.id() == null) {
+                        return null;
+                }
 
-    @Transactional(readOnly = true)
-    public EconomicStatusResponse getEconomicStatus(
-            Long leagueId) {
-        if (!leagueRepository.existsById(leagueId)) {
-            throw new LeagueNotFoundException(leagueId);
+                return managersByBiwengerId.get(
+                                externalManager.id());
         }
 
-        Manager manager = managerRepository
-                .findByBiwengerManagerIdAndLeague_Id(
-                        biwengerUserId,
-                        leagueId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Authenticated Biwenger manager not found for league "
-                                + leagueId));
-
-        return new EconomicStatusResponse(
-                manager.getCash(),
-                manager.getMaximumBid());
-    }
-
-    private Manager resolveManager(
-            BiwengerMarketUser externalManager,
-            Map<Long, Manager> managersByBiwengerId) {
-        if (externalManager == null
-                || externalManager.id() == null) {
-            return null;
+        private OfferResponse toResponse(Offer offer) {
+                return new OfferResponse(
+                                offer.getId(),
+                                offer.getBiwengerOfferId(),
+                                offer.getAmount(),
+                                offer.getStatus(),
+                                offer.getType(),
+                                offer.getFromManager() == null
+                                                ? null
+                                                : offer.getFromManager().getId(),
+                                offer.getFromManager() == null
+                                                ? null
+                                                : offer.getFromManager().getName(),
+                                offer.getToManager() == null
+                                                ? null
+                                                : offer.getToManager().getId(),
+                                offer.getToManager() == null
+                                                ? null
+                                                : offer.getToManager().getName(),
+                                offer.getCreatedAt(),
+                                offer.getExpiresAt(),
+                                offer.getRequestedPlayers()
+                                                .stream()
+                                                .map(this::toPlayerResponse)
+                                                .toList());
         }
 
-        return managersByBiwengerId.get(
-                externalManager.id());
-    }
+        private OfferPlayerResponse toPlayerResponse(
+                        Player player) {
 
-    private OfferResponse toResponse(Offer offer) {
-        return new OfferResponse(
-                offer.getId(),
-                offer.getBiwengerOfferId(),
-                offer.getAmount(),
-                offer.getStatus(),
-                offer.getType(),
-                offer.getFromManager() == null
-                        ? null
-                        : offer.getFromManager().getId(),
-                offer.getFromManager() == null
-                        ? null
-                        : offer.getFromManager().getName(),
-                offer.getToManager() == null
-                        ? null
-                        : offer.getToManager().getId(),
-                offer.getToManager() == null
-                        ? null
-                        : offer.getToManager().getName(),
-                offer.getCreatedAt(),
-                offer.getExpiresAt(),
-                offer.getRequestedPlayers()
-                        .stream()
-                        .map(Player::getId)
-                        .toList(),
-                offer.getRequestedPlayers()
-                        .stream()
-                        .map(Player::getName)
-                        .toList());
-    }
-
-    private LocalDateTime toLocalDateTime(Long timestamp) {
-        if (timestamp == null) {
-            return null;
+                return new OfferPlayerResponse(
+                                player.getId(),
+                                player.getName(),
+                                player.getMarketValue(),
+                                player.getPurchasePrice());
         }
 
-        return LocalDateTime.ofInstant(
-                Instant.ofEpochSecond(timestamp),
-                ZoneId.systemDefault());
-    }
+        private LocalDateTime toLocalDateTime(Long timestamp) {
+                if (timestamp == null) {
+                        return null;
+                }
 
-    private void syncEconomicStatus(
-            Long leagueId,
-            BiwengerMarketResponse response) {
-        if (response.data().status() == null) {
-            throw new IllegalStateException(
-                    "Biwenger returned an invalid market status response");
+                return LocalDateTime.ofInstant(
+                                Instant.ofEpochSecond(timestamp),
+                                ZoneId.systemDefault());
         }
 
-        Manager manager = managerRepository
-                .findByBiwengerManagerIdAndLeague_Id(
-                        biwengerUserId,
-                        leagueId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Authenticated Biwenger manager not found for league "
-                                + leagueId));
+        private void syncEconomicStatus(
+                        Long leagueId,
+                        BiwengerMarketResponse response) {
+                if (response.data().status() == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an invalid market status response");
+                }
 
-        manager.updateEconomicStatus(
-                response.data().status().balance(),
-                response.data().status().maximumBid());
-    }
+                Manager manager = managerRepository
+                                .findByBiwengerManagerIdAndLeague_Id(
+                                                biwengerUserId,
+                                                leagueId)
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "Authenticated Biwenger manager not found for league "
+                                                                + leagueId));
+
+                manager.updateEconomicStatus(
+                                response.data().status().balance(),
+                                response.data().status().maximumBid());
+        }
 }

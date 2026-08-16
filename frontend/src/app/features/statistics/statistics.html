@@ -1,0 +1,212 @@
+<section class="statistics-page">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">
+                VII Güenguer
+            </p>
+
+            <h1>Estadísticas</h1>
+
+            <p class="page-description">
+                Rendimiento y actividad de los managers de la liga.
+            </p>
+        </div>
+    </header>
+
+    <nav class="section-tabs">
+        <button type="button" [class.active]="section() === 'rounds'" (click)="setSection('rounds')">
+            Jornadas
+        </button>
+
+        <button type="button" [class.active]="section() === 'league'" (click)="setSection('league')">
+            Liga
+        </button>
+
+        <button type="button" [class.active]="section() === 'market'" (click)="setSection('market')">
+            Mercado
+        </button>
+    </nav>
+
+    <div class="statistics-toolbar">
+        @if (section() === 'rounds') {
+        <nav class="subsection-tabs">
+            <button type="button" [class.active]="roundSection() === 'rounds'" (click)="setRoundSection('rounds')">
+                Posición
+            </button>
+
+            <button type="button" [class.active]="roundSection() === 'roundPoints'"
+                (click)="setRoundSection('roundPoints')">
+                Puntos
+            </button>
+        </nav>
+        }
+
+        @if (section() === 'league') {
+        <nav class="subsection-tabs">
+            <button type="button" [class.active]="leagueSection() === 'standings'"
+                (click)="setLeagueSection('standings')">
+                Clasificación
+            </button>
+
+            <button type="button" [class.active]="leagueSection() === 'points'" (click)="setLeagueSection('points')">
+                Puntos
+            </button>
+        </nav>
+        }
+
+        @if (section() === 'market') {
+        <nav class="subsection-tabs">
+            <button type="button" [class.active]="marketSection() === 'market'" (click)="setMarketSection('market')">
+                Operaciones
+            </button>
+
+            <button type="button" [class.active]="marketSection() === 'purchases'"
+                (click)="setMarketSection('purchases')">
+                Compras
+            </button>
+
+            <button type="button" [class.active]="marketSection() === 'sales'" (click)="setMarketSection('sales')">
+                Ventas
+            </button>
+        </nav>
+        }
+
+        @if (
+        section() === 'market' &&
+        marketSection() !== 'market'
+        ) {
+        <nav class="filter-tabs">
+            <button type="button" [class.active]="marketFilter() === 'all'" (click)="setMarketFilter('all')">
+                Todas
+            </button>
+
+            <button type="button" [class.active]="marketFilter() === 'clause'" (click)="setMarketFilter('clause')">
+                Cláusulas
+            </button>
+
+            <button type="button" [class.active]="marketFilter() === 'bid'" (click)="setMarketFilter('bid')">
+                Subastas
+            </button>
+
+            <button type="button" [class.active]="marketFilter() === 'loan'" (click)="setMarketFilter('loan')">
+                Cesiones
+            </button>
+
+            <button type="button" [class.active]="marketFilter() === 'envelope'" (click)="setMarketFilter('envelope')">
+                Sobres
+            </button>
+
+            <button type="button" [class.active]="marketFilter() === 'autoSale'" (click)="setMarketFilter('autoSale')">
+                Venta automática
+            </button>
+        </nav>
+        }
+    </div>
+
+    <section class="report-context">
+        <div>
+            <span class="context-label">
+                Informe actual
+            </span>
+
+            <h2>
+                {{ contextTitle() }}
+            </h2>
+
+            <p>
+                {{ contextDescription() }}
+            </p>
+        </div>
+    </section>
+
+    @if (loading()) {
+    <div class="loading-state">
+        <span class="loading-spinner"></span>
+        Cargando estadísticas...
+    </div>
+    } @else if (report(); as report) {
+    <section class="statistics-table">
+        <div class="table-header" [style.grid-template-columns]="
+                    gridColumns(report.columns.length)
+                ">
+            @for (
+            column of report.columns;
+            track $index
+            ) {
+            <span [class.numeric-header]="
+                            column.type !== 'user'
+                        ">
+                {{ column.name }}
+            </span>
+            }
+        </div>
+
+        <div class="table-body">
+            @for (
+            row of report.rows;
+            track $index;
+            let rowIndex = $index
+            ) {
+            <div class="table-row" [class.first-place]="rowIndex === 0" [class.second-place]="rowIndex === 1"
+                [class.third-place]="rowIndex === 2" [style.grid-template-columns]="
+                            gridColumns(
+                                report.columns.length
+                            )
+                        ">
+                @for (
+                cell of row;
+                track $index;
+                let cellIndex = $index
+                ) {
+                @if (isUser(cell)) {
+                <div class="user-cell">
+                    <span class="ranking-position" [class.podium]="
+                                            rowIndex < 3
+                                        ">
+                        {{ rowIndex + 1 }}
+                    </span>
+
+                    <div class="user-avatar">
+                        @if (
+                        userIcon(cell);
+                        as icon
+                        ) {
+                        <img [src]="icon" [alt]="cell.name">
+                        } @else {
+                        <span>
+                            {{
+                            userInitials(
+                            cell.name
+                            )
+                            }}
+                        </span>
+                        }
+                    </div>
+
+                    <strong>
+                        {{ cell.name }}
+                    </strong>
+                </div>
+                } @else {
+                <div class="value-cell">
+                    {{
+                    formatValue(
+                    cell,
+                    report
+                    .columns[cellIndex]
+                    .type
+                    )
+                    }}
+                </div>
+                }
+                }
+            </div>
+            } @empty {
+            <div class="empty-state">
+                No hay estadísticas disponibles.
+            </div>
+            }
+        </div>
+    </section>
+    }
+</section>

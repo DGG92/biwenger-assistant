@@ -1,0 +1,458 @@
+.offers-page {
+    display: flex;
+    flex-direction: column;
+
+    gap: 24px;
+
+    min-width: 0;
+}
+
+.page-header {
+    h1 {
+        margin: 4px 0 6px;
+
+        font-size: 32px;
+        line-height: 1.1;
+    }
+}
+
+.eyebrow {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+}
+
+.page-description {
+    margin: 0;
+
+    color: #64748b;
+}
+
+/* ECONOMÍA GENERAL */
+
+.economic-summary {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 14px;
+}
+
+.economic-card {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+
+    padding: 18px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 4px 18px rgba(15, 23, 42, 0.04);
+
+    strong {
+        color: #0f172a;
+
+        font-size: 23px;
+        font-weight: 800;
+
+        font-variant-numeric:
+            tabular-nums;
+    }
+
+    strong.negative {
+        color: #b91c1c;
+    }
+}
+
+.economic-label {
+    color: #64748b;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.05em;
+}
+
+/* PESTAÑAS */
+
+.offer-tabs {
+    display: flex;
+
+    gap: 8px;
+
+    button {
+        display: inline-flex;
+        align-items: center;
+
+        gap: 8px;
+
+        padding: 9px 15px;
+
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+
+        background: #ffffff;
+        color: #475569;
+
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+
+        cursor: pointer;
+
+        &.active {
+            background: #0f172a;
+            border-color: #0f172a;
+
+            color: #ffffff;
+        }
+    }
+}
+
+.tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 20px;
+    height: 20px;
+
+    padding: 0 5px;
+
+    border-radius: 999px;
+
+    background: #e2e8f0;
+    color: #334155;
+
+    font-size: 11px;
+}
+
+.offer-tabs button.active {
+    .tab-count {
+        background: #334155;
+        color: #ffffff;
+    }
+}
+
+/* OFERTAS */
+
+.offers-list {
+    display: flex;
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.offer-card {
+    padding: 18px 20px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 4px 18px rgba(15, 23, 42, 0.04);
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 7px 22px rgba(15, 23, 42, 0.07);
+    }
+}
+
+.offer-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+.offer-player {
+    min-width: 0;
+
+    h2 {
+        margin: 3px 0 4px;
+
+        color: #0f172a;
+
+        font-size: 18px;
+        font-weight: 800;
+    }
+}
+
+.offer-direction {
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.07em;
+
+    text-transform: uppercase;
+}
+
+.counterparty {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 13px;
+
+    strong {
+        color: #334155;
+    }
+}
+
+.offer-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    flex-shrink: 0;
+
+    gap: 2px;
+}
+
+.offer-price-label {
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.06em;
+
+    text-transform: uppercase;
+}
+
+.offer-amount {
+    color: #0f172a;
+
+    font-size: 22px;
+    font-weight: 800;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+/* DATOS ECONÓMICOS DE LA OFERTA */
+
+.offer-economics {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 16px;
+    padding: 12px;
+
+    border: 1px solid #eef2f6;
+    border-radius: 10px;
+
+    background: #f8fafc;
+}
+
+.economic-detail {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    gap: 4px;
+
+    padding: 2px 8px;
+
+    &:not(:first-child) {
+        border-left:
+            1px solid #e2e8f0;
+    }
+}
+
+.detail-label {
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.05em;
+
+    text-transform: uppercase;
+}
+
+.detail-value {
+    color: #334155;
+
+    font-size: 14px;
+    font-weight: 800;
+
+    font-variant-numeric:
+        tabular-nums;
+
+    white-space: nowrap;
+
+    small {
+        margin-left: 3px;
+
+        font-size: 11px;
+        font-weight: 700;
+    }
+}
+
+.variation {
+    &.positive {
+        color: #15803d;
+    }
+
+    &.negative {
+        color: #b91c1c;
+    }
+
+    &.neutral {
+        color: #64748b;
+    }
+}
+
+/* META */
+
+.offer-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 14px;
+
+    margin-top: 14px;
+    padding-top: 14px;
+
+    border-top:
+        1px solid #eef2f6;
+
+    color: #64748b;
+
+    font-size: 12px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    &.waiting {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    &.accepted {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    &.rejected {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    &.expired {
+        background: #f1f5f9;
+        color: #475569;
+    }
+}
+
+.empty-state {
+    padding: 42px 20px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    color: #64748b;
+
+    text-align: center;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+    .offer-economics {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .economic-detail {
+        &:not(:first-child) {
+            border-left: none;
+        }
+
+        &:nth-child(even) {
+            border-left:
+                1px solid #e2e8f0;
+        }
+    }
+}
+
+@media (max-width: 700px) {
+    .economic-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .offer-main {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .offer-price {
+        align-items: flex-start;
+    }
+
+    .offer-amount {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 520px) {
+    .offer-economics {
+        grid-template-columns: 1fr;
+    }
+
+    .economic-detail {
+        padding: 5px 4px;
+
+        &:not(:first-child),
+        &:nth-child(even) {
+            border-left: none;
+            border-top:
+                1px solid #e2e8f0;
+
+            padding-top: 9px;
+        }
+    }
+}

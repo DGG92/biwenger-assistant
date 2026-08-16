@@ -49,6 +49,9 @@ public class Movement {
     @Column(nullable = false)
     private Long amount;
 
+    @Column(name = "rounds")
+    private Integer rounds;
+
     @Column(name = "occurred_at", nullable = false)
     private LocalDateTime occurredAt;
 
@@ -72,6 +75,7 @@ public class Movement {
             Manager fromManager,
             Manager toManager,
             Long amount,
+            Integer rounds,
             LocalDateTime occurredAt,
             League league) {
         this.externalKey = externalKey;
@@ -80,6 +84,7 @@ public class Movement {
         this.fromManager = fromManager;
         this.toManager = toManager;
         this.amount = amount;
+        this.rounds = rounds;
         this.occurredAt = occurredAt;
         this.league = league;
     }
@@ -113,6 +118,10 @@ public class Movement {
         return amount;
     }
 
+    public Integer getRounds() {
+        return rounds;
+    }
+
     public LocalDateTime getOccurredAt() {
         return occurredAt;
     }
@@ -128,4 +137,5 @@ public class Movement {
     public String getExternalKey() {
         return externalKey;
     }
+
 }

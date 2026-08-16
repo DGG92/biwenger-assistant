@@ -1,1 +1,339 @@
-<p>offers works!</p>
+<section class="offers-page">
+
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">
+                VII Güenguer
+            </p>
+
+            <h1>Ofertas</h1>
+
+            <p class="page-description">
+                Gestiona y consulta tus operaciones pendientes.
+            </p>
+        </div>
+    </header>
+
+    @if (
+    economicStatus();
+    as economicStatus
+    ) {
+    <section class="economic-summary">
+
+        <article class="economic-card">
+            <span class="economic-label">
+                Saldo actual
+            </span>
+
+            <strong [class.negative]="
+                        economicStatus.balance < 0
+                    ">
+                {{
+                economicStatus.balance
+                | currency:
+                'EUR':
+                'symbol':
+                '1.0-0'
+                }}
+            </strong>
+        </article>
+
+        <article class="economic-card">
+            <span class="economic-label">
+                Puja máxima
+            </span>
+
+            <strong>
+                {{
+                economicStatus.maximumBid
+                | currency:
+                'EUR':
+                'symbol':
+                '1.0-0'
+                }}
+            </strong>
+        </article>
+
+    </section>
+    }
+
+    <nav class="offer-tabs">
+        <button type="button" [class.active]="
+                activeTab() === 'received'
+            " (click)="
+                setActiveTab('received')
+            ">
+            Recibidas
+
+            <span class="tab-count">
+                {{
+                receivedOffers().length
+                }}
+            </span>
+        </button>
+
+        <button type="button" [class.active]="
+                activeTab() === 'sent'
+            " (click)="
+                setActiveTab('sent')
+            ">
+            Enviadas
+
+            <span class="tab-count">
+                {{
+                sentOffers().length
+                }}
+            </span>
+        </button>
+    </nav>
+
+    <section class="offers-list">
+
+        @for (
+        offer of visibleOffers();
+        track offer.id
+        ) {
+        <article class="offer-card">
+
+            <div class="offer-main">
+
+                <div class="offer-player">
+                    <span class="offer-direction">
+                        {{
+                        offerDirectionLabel()
+                        }}
+                    </span>
+
+                    <h2>
+                        {{
+                        mainPlayerName(
+                        offer
+                        )
+                        }}
+                    </h2>
+
+                    <p class="counterparty">
+                        {{
+                        activeTab() ===
+                        'received'
+                        ? 'De'
+                        : 'Para'
+                        }}
+
+                        <strong>
+                            {{
+                            counterpartyName(
+                            offer
+                            )
+                            }}
+                        </strong>
+                    </p>
+                </div>
+
+                <div class="offer-price">
+                    <span class="offer-price-label">
+                        Oferta
+                    </span>
+
+                    <div class="offer-amount">
+                        {{
+                        offer.amount
+                        | currency:
+                        'EUR':
+                        'symbol':
+                        '1.0-0'
+                        }}
+                    </div>
+                </div>
+
+            </div>
+
+            @if (
+            mainPlayer(offer);
+            as player
+            ) {
+            <div class="offer-economics">
+
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Valor de mercado
+                    </span>
+
+                    <strong class="detail-value">
+                        {{
+                        player.marketValue
+                        | currency:
+                        'EUR':
+                        'symbol':
+                        '1.0-0'
+                        }}
+                    </strong>
+                </div>
+
+                @if (
+                marketDifference(offer);
+                as difference
+                ) {
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Vs. mercado
+                    </span>
+
+                    <strong class="detail-value variation" [class]="
+                                        'detail-value variation ' +
+                                        valueClass(
+                                            difference
+                                        )
+                                    ">
+                        @if (difference > 0) {
+                        ↑
+                        } @else if (
+                        difference < 0 ) { ↓ } {{ difference | currency: 'EUR' : 'symbol' : '1.0-0' }} @if (
+                            marketDifferencePercentage( offer ); as percentage ) { <small>
+                            ({{
+                            percentage
+                            | number:
+                            '1.1-1'
+                            }}%)
+                            </small>
+                            }
+                    </strong>
+                </div>
+                } @else {
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Vs. mercado
+                    </span>
+
+                    <strong class="
+                                        detail-value
+                                        variation
+                                        neutral
+                                    ">
+                        = 0 €
+                    </strong>
+                </div>
+                }
+
+                @if (
+                player.purchasePrice !== null
+                ) {
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Precio de compra
+                    </span>
+
+                    <strong class="detail-value">
+                        {{
+                        player.purchasePrice
+                        | currency:
+                        'EUR':
+                        'symbol':
+                        '1.0-0'
+                        }}
+                    </strong>
+                </div>
+
+                @if (
+                profitability(offer);
+                as profit
+                ) {
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Rentabilidad
+                    </span>
+
+                    <strong [class]="
+                                            'detail-value variation ' +
+                                            valueClass(
+                                                profit
+                                            )
+                                        ">
+                        @if (profit > 0) {
+                        ↑
+                        } @else if (
+                        profit < 0 ) { ↓ } {{ profit | currency: 'EUR' : 'symbol' : '1.0-0' }} @if (
+                            profitabilityPercentage( offer ); as percentage ) { <small>
+                            ({{
+                            percentage
+                            | number:
+                            '1.1-1'
+                            }}%)
+                            </small>
+                            }
+                    </strong>
+                </div>
+                } @else {
+                <div class="economic-detail">
+                    <span class="detail-label">
+                        Rentabilidad
+                    </span>
+
+                    <strong class="
+                                            detail-value
+                                            variation
+                                            neutral
+                                        ">
+                        = 0 €
+                    </strong>
+                </div>
+                }
+                }
+
+            </div>
+            }
+
+            <div class="offer-meta">
+
+                <span class="status-badge" [class]="
+                            'status-badge ' +
+                            statusClass(
+                                offer.status
+                            )
+                        ">
+                    {{
+                    statusLabel(
+                    offer.status
+                    )
+                    }}
+                </span>
+
+                <span>
+                    Creada
+                    {{
+                    offer.createdAt
+                    | date:
+                    'dd/MM/yyyy HH:mm'
+                    }}
+                </span>
+
+                <span>
+                    Caduca
+                    {{
+                    offer.expiresAt
+                    | date:
+                    'dd/MM/yyyy HH:mm'
+                    }}
+                </span>
+
+            </div>
+
+        </article>
+        } @empty {
+
+        <div class="empty-state">
+            No hay ofertas
+            {{
+            activeTab() ===
+            'received'
+            ? 'recibidas'
+            : 'enviadas'
+            }}
+            en este momento.
+        </div>
+
+        }
+
+    </section>
+
+</section>

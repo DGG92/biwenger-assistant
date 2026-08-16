@@ -1,1 +1,245 @@
-<p>movements works!</p>
+<section class="movements-page">
+    <header class="page-header">
+        <div>
+            <span class="page-eyebrow">Actividad de la liga</span>
+
+            <h1>Movimientos</h1>
+
+            <p>
+                Consulta las compras, ventas, traspasos, subastas y cesiones
+                realizadas en la liga.
+            </p>
+        </div>
+
+        <button type="button" class="refresh-button" (click)="loadMovements()" [disabled]="loading()">
+            <span class="refresh-icon">↻</span>
+            Actualizar
+        </button>
+    </header>
+
+    <section class="filters-panel">
+        <div class="type-filters">
+            @for (filter of filters; track filter.value) {
+            <button type="button" class="filter-chip" [class.filter-chip--active]="selectedFilter() === filter.value"
+                (click)="selectFilter(filter.value)">
+                {{ filter.label }}
+            </button>
+            }
+        </div>
+
+        <div class="secondary-filters">
+            <label class="search-box">
+                <span class="search-icon">⌕</span>
+
+                <input type="text" placeholder="Buscar jugador o manager..." [ngModel]="searchTerm()"
+                    (ngModelChange)="onSearchChange($event)" />
+            </label>
+
+            <select class="manager-select" [ngModel]="selectedManagerId() ?? ''"
+                (ngModelChange)="onManagerChange($event)">
+                <option value="">Todos los managers</option>
+
+                @for (manager of managers(); track manager.id) {
+                <option [value]="manager.id">
+                    {{ manager.name }}
+                </option>
+                }
+            </select>
+
+            @if (hasActiveFilters()) {
+            <button type="button" class="clear-button" (click)="clearFilters()">
+                Limpiar filtros
+            </button>
+            }
+        </div>
+    </section>
+
+    @if (loading()) {
+    <div class="state-card">
+        <div class="loader"></div>
+        <strong>Cargando movimientos...</strong>
+        <span>Consultando la actividad de la liga.</span>
+    </div>
+    } @else if (error()) {
+    <div class="state-card state-card--error">
+        <span class="state-icon">!</span>
+
+        <strong>No hemos podido cargar los movimientos</strong>
+
+        <span>{{ error() }}</span>
+
+        <button type="button" class="retry-button" (click)="loadMovements()">
+            Reintentar
+        </button>
+    </div>
+    } @else if (filteredMovements().length === 0) {
+    <div class="state-card">
+        <span class="state-icon">↔</span>
+
+        <strong>No hay movimientos</strong>
+
+        @if (hasActiveFilters()) {
+        <span>
+            Ningún movimiento coincide con los filtros seleccionados.
+        </span>
+
+        <button type="button" class="retry-button" (click)="clearFilters()">
+            Ver todos
+        </button>
+        } @else {
+        <span>
+            Todavía no hay movimientos registrados en la liga.
+        </span>
+        }
+    </div>
+    } @else {
+    <div class="results-summary">
+        <strong>{{ filteredMovements().length }}</strong>
+
+        <span>
+            {{
+            filteredMovements().length === 1
+            ? 'movimiento'
+            : 'movimientos'
+            }}
+        </span>
+    </div>
+
+    <div class="movement-list">
+        @for (
+        movement of filteredMovements();
+        track movement.id
+        ) {
+        <article class="movement-card" [ngClass]="movementTypeClass(movement.type)">
+            <div class="movement-accent"></div>
+
+            <div class="movement-content">
+                <div class="movement-top">
+                    <div class="movement-type">
+                        <span class="movement-type-icon">
+                            {{ movementTypeIcon(movement.type) }}
+                        </span>
+
+                        <span>
+                            {{ movementTypeLabel(movement.type) }}
+                        </span>
+                    </div>
+
+                    <time class="movement-date">
+                        {{
+                        movement.occurredAt
+                        | date: 'd MMM, HH:mm' : '' : 'es'
+                        }}
+                    </time>
+                </div>
+
+                <div class="movement-main">
+                    <div class="player-block">
+                        <span class="player-label">Jugador</span>
+
+                        <strong class="player-name">
+                            {{ movement.playerName }}
+                        </strong>
+                    </div>
+
+                    <div class="amount-block">
+                        <span class="amount-label">Importe</span>
+
+                        <strong class="movement-amount">
+                            {{ formatMoney(movement.amount) }}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="movement-route">
+                    <div class="route-side">
+                        <span class="route-label">Origen</span>
+
+                        <strong>
+                            {{ fromLabel(movement) }}
+                        </strong>
+                    </div>
+
+                    <div class="route-arrow">
+                        <span class="route-line"></span>
+                        <span class="route-arrowhead">›</span>
+                    </div>
+
+                    <div class="route-side route-side--destination">
+                        <span class="route-label">Destino</span>
+
+                        <strong>
+                            {{ toLabel(movement) }}
+                        </strong>
+                    </div>
+                </div>
+
+                @if (movement.type === 'LOAN') {
+                <div class="loan-details">
+                    <div class="loan-detail-icon">↔</div>
+
+                    <div>
+                        <span class="loan-detail-label">
+                            Duración de la cesión
+                        </span>
+
+                        <strong>
+                            {{ loanRoundsLabel(movement.rounds) }}
+                        </strong>
+                    </div>
+                </div>
+                }
+
+                @if (hasBids(movement)) {
+                <div class="bids-section">
+                    <button type="button" class="bids-toggle" (click)="toggleBids(movement.id)">
+                        <span>
+                            {{ bidsCountLabel(movement) }}
+                        </span>
+
+                        <span class="toggle-arrow" [class.toggle-arrow--expanded]="
+                      isExpanded(movement.id)
+                    ">
+                            ▾
+                        </span>
+                    </button>
+
+                    @if (isExpanded(movement.id)) {
+                    <div class="bids-list">
+                        <div class="bids-header">
+                            <span>Manager</span>
+                            <span>Puja</span>
+                        </div>
+
+                        @for (
+                        bid of sortedBids(movement);
+                        track bid.managerId
+                        ) {
+                        <div class="bid-row">
+                            <div class="bid-manager">
+                                <span class="bid-avatar">
+                                    {{
+                                    bid.managerName
+                                    .charAt(0)
+                                    .toUpperCase()
+                                    }}
+                                </span>
+
+                                <span>{{ bid.managerName }}</span>
+                            </div>
+
+                            <strong>
+                                {{ formatMoney(bid.amount) }}
+                            </strong>
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </article>
+        }
+    </div>
+    }
+</section>

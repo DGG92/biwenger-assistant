@@ -1,0 +1,2 @@
+ALTER TABLE movements
+ADD COLUMN rounds INTEGER;

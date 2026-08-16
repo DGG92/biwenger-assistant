@@ -16,6 +16,7 @@ public record MovementResponse(
         Long toManagerId,
         String toManagerName,
         Long amount,
+        Integer rounds,
         LocalDateTime occurredAt,
         List<MovementBidResponse> bids) {
 }

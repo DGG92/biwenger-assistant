@@ -1,0 +1,110 @@
+<section class="standings-page">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">VII Güenguer</p>
+            <h1>Clasificación</h1>
+            <p class="page-description">
+                Posición actual de todos los managers de la liga.
+            </p>
+        </div>
+    </header>
+
+    <section class="standings-table">
+        <div class="table-header">
+            <span class="position-column">Pos.</span>
+            <span>Manager</span>
+            <span class="numeric-column">Puntos</span>
+            <span class="numeric-column">Distancia</span>
+            <span class="numeric-column">Jugadores</span>
+            <span class="numeric-column">Valor</span>
+            <span class="numeric-column">Evolución</span>
+        </div>
+
+        <div class="table-body">
+            @for (
+            manager of managers();
+            track manager.id;
+            let index = $index
+            ) {
+            <div class="table-row" [class.first-place]="manager.position === 1"
+                [class.second-place]="manager.position === 2" [class.third-place]="manager.position === 3">
+                <div class="position-column">
+                    <span class="position-number" [class.podium]="manager.position <= 3">
+                        {{ manager.position }}
+                    </span>
+                </div>
+
+                <div class="manager-cell">
+                    <div class="manager-avatar">
+                        @if (managerIcon(manager); as icon) {
+                        <img [src]="icon" [alt]="manager.name">
+                        } @else {
+                        <span>
+                            {{ managerInitials(manager.name) }}
+                        </span>
+                        }
+                    </div>
+
+                    <strong class="manager-name">
+                        {{ manager.name }}
+                    </strong>
+                </div>
+
+                <div class="numeric-column points">
+                    {{ manager.points }}
+                </div>
+
+                <div class="numeric-column">
+                    @if (
+                    gapToPrevious(index) !== null &&
+                    gapToPrevious(index)! > 0
+                    ) {
+                    <span class="gap">
+                        <span class="gap-arrow">▲</span>
+                        {{ gapToPrevious(index) }}
+                    </span>
+                    } @else {
+                    <span class="neutral-value">—</span>
+                    }
+                </div>
+
+                <div class="numeric-column">
+                    {{ manager.teamSize }}
+                </div>
+
+                <div class="numeric-column team-value">
+                    {{
+                    manager.teamValue
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </div>
+
+                <div class="numeric-column">
+                    @if (manager.teamValueInc > 0) {
+                    <span class="variation positive">
+                        <span>▲</span>
+                        {{
+                        manager.teamValueInc
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                    </span>
+                    } @else if (manager.teamValueInc < 0) { <span class="variation negative">
+                        <span>▼</span>
+                        {{
+                        manager.teamValueInc
+                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                        }}
+                        </span>
+                        } @else {
+                        <span class="neutral-value">—</span>
+                        }
+                </div>
+            </div>
+            } @empty {
+            <div class="empty-state">
+                No hay datos de clasificación disponibles.
+            </div>
+            }
+        </div>
+    </section>
+</section>
