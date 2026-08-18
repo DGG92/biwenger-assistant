@@ -1,13 +1,13 @@
 package com.artajerjes.biwengerassistant.player;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -507,57 +507,6 @@ public class PlayerService {
                                 ZoneId.systemDefault());
         }
 
-        private List<PlayerPosition> buildLineupPositions(String formation) {
-                if (formation == null || formation.isBlank()) {
-                        return List.of();
-                }
-
-                String[] lines = formation.split("-");
-
-                if (lines.length < 2) {
-                        throw new IllegalArgumentException(
-                                        "Invalid Biwenger formation: " + formation);
-                }
-
-                List<Integer> counts = new ArrayList<>();
-
-                for (String line : lines) {
-                        try {
-                                counts.add(Integer.valueOf(line));
-                        } catch (NumberFormatException exception) {
-                                throw new IllegalArgumentException(
-                                                "Invalid Biwenger formation: " + formation,
-                                                exception);
-                        }
-                }
-
-                List<PlayerPosition> positions = new ArrayList<>();
-
-                // Siempre hay un portero.
-                positions.add(PlayerPosition.PT);
-
-                // Primera línea de la formación: defensas.
-                for (int i = 0; i < counts.get(0); i++) {
-                        positions.add(PlayerPosition.DF);
-                }
-
-                // Todas las líneas intermedias se consideran centrocampistas.
-                for (int lineIndex = 1; lineIndex < counts.size() - 1; lineIndex++) {
-                        for (int i = 0; i < counts.get(lineIndex); i++) {
-                                positions.add(PlayerPosition.MC);
-                        }
-                }
-
-                // Última línea: delanteros.
-                int forwards = counts.get(counts.size() - 1);
-
-                for (int i = 0; i < forwards; i++) {
-                        positions.add(PlayerPosition.DL);
-                }
-
-                return positions;
-        }
-
         private Map<Long, PlayerPosition> buildBenchPositions(
                         List<BiwengerLineupReserve> reserves) {
 
@@ -652,7 +601,7 @@ public class PlayerService {
 
                 Map<Long, PlayerPosition> benchPositionByPlayerId = buildBenchPositions(lineup.reserves());
 
-                List<PlayerPosition> lineupPositions = buildLineupPositions(lineup.type());
+                List<PlayerPosition> lineupPositions = LineupPositionResolver.resolve(lineup.type());
 
                 if (starterIds.size() != lineupPositions.size()) {
                         throw new IllegalStateException(
