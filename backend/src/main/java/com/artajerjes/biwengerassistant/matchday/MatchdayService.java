@@ -25,16 +25,21 @@ import com.artajerjes.biwengerassistant.matchday.dto.MatchdayPlayerResponse;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayResponse;
 import com.artajerjes.biwengerassistant.player.LineupPositionResolver;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 
 @Service
 public class MatchdayService {
 
         private final BiwengerClient biwengerClient;
+        private final PlayerMatchReportRepository playerMatchReportRepository;
 
         public MatchdayService(
-                        BiwengerClient biwengerClient) {
+                        BiwengerClient biwengerClient,
+                        PlayerMatchReportRepository playerMatchReportRepository) {
 
                 this.biwengerClient = biwengerClient;
+                this.playerMatchReportRepository = playerMatchReportRepository;
         }
 
         public MatchdayResponse getCurrentMatchday() {
@@ -198,6 +203,10 @@ public class MatchdayService {
                                         coach,
                                         lineupPositions);
 
+                        Integer points = resolvePoints(
+                                        playerId,
+                                        round.id());
+
                         players.add(
                                         new MatchdayPlayerResponse(
                                                         playerId,
@@ -220,7 +229,8 @@ public class MatchdayService {
                                                         coach,
                                                         gameStatus,
                                                         locked,
-                                                        modifiable));
+                                                        modifiable,
+                                                        points));
                 }
 
                 return new MatchdayResponse(
@@ -509,6 +519,24 @@ public class MatchdayService {
                  * No inventamos el comportamiento de otras configuraciones.
                  */
                 return false;
+        }
+
+        private Integer resolvePoints(
+                        Long biwengerPlayerId,
+                        Long biwengerRoundId) {
+
+                if (biwengerPlayerId == null
+                                || biwengerRoundId == null) {
+
+                        return null;
+                }
+
+                return playerMatchReportRepository
+                                .findByPlayer_BiwengerPlayerIdAndBiwengerRoundId(
+                                                biwengerPlayerId.toString(),
+                                                biwengerRoundId)
+                                .map(PlayerMatchReport::getPoints)
+                                .orElse(null);
         }
 
         private void validateResponses(

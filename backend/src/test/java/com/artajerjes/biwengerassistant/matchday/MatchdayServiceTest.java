@@ -1,7 +1,9 @@
 package com.artajerjes.biwengerassistant.matchday;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,20 +36,27 @@ import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupPlayerRe
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayGameStatus;
+import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 
 class MatchdayServiceTest {
 
         private BiwengerClient biwengerClient;
+        private PlayerMatchReportRepository playerMatchReportRepository;
         private MatchdayService matchdayService;
 
         @BeforeEach
         void setUp() {
 
                 biwengerClient = mock(BiwengerClient.class);
+                playerMatchReportRepository = mock(
+                                PlayerMatchReportRepository.class);
 
                 matchdayService = new MatchdayService(
-                                biwengerClient);
+                                biwengerClient,
+                                playerMatchReportRepository);
         }
 
         @Test
@@ -301,6 +310,26 @@ class MatchdayServiceTest {
                 when(biwengerClient.getCurrentUser())
                                 .thenReturn(userResponse);
 
+                Player reportPlayer = mock(Player.class);
+
+                PlayerMatchReport finishedReport = new PlayerMatchReport(
+                                reportPlayer,
+                                5001L,
+                                4899L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.now(),
+                                "2026-2027",
+                                true,
+                                null,
+                                3);
+
+                when(playerMatchReportRepository
+                                .findByPlayer_BiwengerPlayerIdAndBiwengerRoundId(
+                                                finishedPlayerId.toString(),
+                                                4899L))
+                                .thenReturn(Optional.of(finishedReport));
+
                 var response = matchdayService.getCurrentMatchday();
 
                 /*
@@ -406,6 +435,10 @@ class MatchdayServiceTest {
                 assertFalse(
                                 finished.modifiable());
 
+                assertEquals(
+                                3,
+                                finished.points());
+
                 /*
                  * Segundo jugador:
                  * tramo 2, partido todavía pendiente.
@@ -456,6 +489,10 @@ class MatchdayServiceTest {
 
                 assertTrue(
                                 pending.modifiable());
+
+                assertEquals(
+                                null,
+                                pending.points());
 
                 /*
                  * Tercer elemento:
