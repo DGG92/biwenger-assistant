@@ -139,7 +139,7 @@ public class PlayerMatchReportService {
                                         : report.match().round().shortName();
 
                         PlayerMatchReport entity = playerMatchReportRepository
-                                        .findByPlayer_IdAndBiwengerMatchId(
+                                        .findByPlayerIdAndBiwengerMatchId(
                                                         player.getId(),
                                                         report.match().id())
                                         .orElse(null);

@@ -4,13 +4,21 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface PlayerMatchReportRepository
                 extends JpaRepository<PlayerMatchReport, Long> {
 
-        Optional<PlayerMatchReport> findByPlayer_IdAndBiwengerMatchId(
-                        Long playerId,
-                        Long biwengerMatchId);
+        @Query("""
+                        SELECT report
+                        FROM PlayerMatchReport report
+                        WHERE report.player.id = :playerId
+                          AND report.biwengerMatchId = :biwengerMatchId
+                        """)
+        Optional<PlayerMatchReport> findByPlayerIdAndBiwengerMatchId(
+                        @Param("playerId") Long playerId,
+                        @Param("biwengerMatchId") Long biwengerMatchId);
 
         Optional<PlayerMatchReport> findByPlayer_BiwengerPlayerIdAndBiwengerRoundId(
                         String biwengerPlayerId,

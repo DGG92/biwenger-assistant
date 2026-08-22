@@ -1,0 +1,689 @@
+<section class="matchday-page">
+    @if (matchday(); as matchday) {
+
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">VII Güenguer</p>
+
+                <h1>Jornada</h1>
+
+                <p>
+                    Alineación efectiva de
+                    <strong>{{ matchday.roundName }}</strong>
+                </p>
+            </div>
+
+            <div class="round-header-info">
+                <span class="round-badge">
+                    {{ matchday.roundShortName }}
+                </span>
+
+                <span class="formation-badge">
+                    {{ matchday.formation ?? 'Sin formación' }}
+                </span>
+            </div>
+        </header>
+
+        <section class="summary-grid">
+            <article class="summary-card">
+                <span>Jornada</span>
+                <strong>{{ matchday.roundName }}</strong>
+            </article>
+
+            <article class="summary-card">
+                <span>Formación</span>
+                <strong>{{ matchday.formation ?? '—' }}</strong>
+            </article>
+
+            <article class="summary-card">
+                <span>Puntos actuales</span>
+                <strong>{{ totalPoints() }}</strong>
+
+                <small>
+                    {{ playersWithPoints() }}
+                    jugadores con puntuación
+                </small>
+            </article>
+
+            <article class="summary-card">
+                <span>Bloqueados</span>
+                <strong>{{ lockedPlayers() }}</strong>
+            </article>
+
+            <article class="summary-card">
+                <span>Modificables</span>
+                <strong>{{ modifiablePlayers() }}</strong>
+            </article>
+        </section>
+
+        <section class="matchday-context">
+            <div>
+                <span class="context-label">
+                    Estado
+                </span>
+
+                <strong>
+                    {{ matchday.roundStatus ?? 'Desconocido' }}
+                </strong>
+            </div>
+
+            <div>
+                <span class="context-label">
+                    Tipo de bloqueo
+                </span>
+
+                <strong>
+                    {{ matchday.splitRound ?? '—' }}
+                </strong>
+            </div>
+
+            <div>
+                <span class="context-label">
+                    Cambios de entrada
+                </span>
+
+                <strong>
+                    {{ matchday.lineupRoundChangesIn ?? '—' }}
+                </strong>
+            </div>
+
+            @if (matchday.roundPart !== null) {
+                <div>
+                    <span class="context-label">
+                        Tramo
+                    </span>
+
+                    <strong>
+                        {{ matchday.roundPart }}
+                    </strong>
+                </div>
+            }
+        </section>
+
+        <section class="legend">
+            <div>
+                <span class="legend-icon locked-example">
+                    🔒
+                </span>
+
+                <span>Jugador bloqueado</span>
+            </div>
+
+            <div>
+                <span class="modifiable-dot"></span>
+
+                <span>Jugador todavía modificable</span>
+            </div>
+
+            <div>
+                <span class="captain-example">C</span>
+
+                <span>Capitán</span>
+            </div>
+
+            <div>
+                <span class="striker-example">👟</span>
+
+                <span>Ariete</span>
+            </div>
+        </section>
+
+        <section class="lineup-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">
+                        Alineación efectiva
+                    </p>
+
+                    <h2>Once de la jornada</h2>
+                </div>
+
+                <span class="formation">
+                    {{ matchday.formation ?? '—' }}
+                </span>
+            </div>
+
+            <div class="football-pitch">
+                <div class="pitch-line center-line"></div>
+                <div class="center-circle"></div>
+
+                <div
+                    class="penalty-area penalty-area-top">
+                </div>
+
+                <div
+                    class="penalty-area penalty-area-bottom">
+                </div>
+
+                <div class="lineup-row forwards-row">
+                    @for (
+                        player of forwards();
+                        track player.biwengerPlayerId
+                    ) {
+                        <article
+                            class="lineup-player"
+                            [class.player-locked]="player.locked"
+                            [class.player-modifiable]="player.modifiable">
+
+                            <div class="player-visual">
+                                <div class="player-circle">
+                                    {{ playerInitial(player) }}
+                                </div>
+
+                                @if (player.points !== null) {
+                                    <span
+                                        class="points-badge"
+                                        [class]="pointsClass(player.points)">
+                                        {{ player.points }}
+                                    </span>
+                                } @else {
+                                    <span
+                                        class="points-badge"
+                                        [class]="pointsClass(null)">
+                                        —
+                                    </span>
+                                }
+
+                                @if (player.locked) {
+                                    <span
+                                        class="lock-badge"
+                                        title="Jugador bloqueado">
+                                        🔒
+                                    </span>
+                                }
+
+                                @if (player.modifiable) {
+                                    <span
+                                        class="modifiable-indicator"
+                                        title="Todavía modificable">
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="lineup-name">
+                                <strong>
+                                    {{ player.name }}
+                                </strong>
+
+                                @if (player.captain) {
+                                    <span
+                                        class="role-icon captain-icon"
+                                        title="Capitán">
+                                        C
+                                    </span>
+                                }
+
+                                @if (player.ram) {
+                                    <span
+                                        class="role-icon ram-icon"
+                                        title="Ariete">
+                                        👟
+                                    </span>
+                                }
+                            </div>
+
+                            <span class="team-name">
+                                {{ player.teamName }}
+                            </span>
+
+                            <span
+                                class="game-status"
+                                [class]="gameStatusClass(player.gameStatus)">
+                                {{ gameStatusLabel(player.gameStatus) }}
+                            </span>
+                        </article>
+                    }
+                </div>
+
+                <div class="lineup-row midfielders-row">
+                    @for (
+                        player of midfielders();
+                        track player.biwengerPlayerId
+                    ) {
+                        <article
+                            class="lineup-player"
+                            [class.player-locked]="player.locked"
+                            [class.player-modifiable]="player.modifiable">
+
+                            <div class="player-visual">
+                                <div class="player-circle">
+                                    {{ playerInitial(player) }}
+                                </div>
+
+                                <span
+                                    class="points-badge"
+                                    [class]="pointsClass(player.points)">
+                                    {{
+                                        player.points !== null
+                                            ? player.points
+                                            : '—'
+                                    }}
+                                </span>
+
+                                @if (player.locked) {
+                                    <span
+                                        class="lock-badge"
+                                        title="Jugador bloqueado">
+                                        🔒
+                                    </span>
+                                }
+
+                                @if (player.modifiable) {
+                                    <span
+                                        class="modifiable-indicator"
+                                        title="Todavía modificable">
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="lineup-name">
+                                <strong>
+                                    {{ player.name }}
+                                </strong>
+
+                                @if (player.captain) {
+                                    <span
+                                        class="role-icon captain-icon"
+                                        title="Capitán">
+                                        C
+                                    </span>
+                                }
+
+                                @if (player.ram) {
+                                    <span
+                                        class="role-icon ram-icon"
+                                        title="Ariete">
+                                        👟
+                                    </span>
+                                }
+                            </div>
+
+                            <span class="team-name">
+                                {{ player.teamName }}
+                            </span>
+
+                            <span
+                                class="game-status"
+                                [class]="gameStatusClass(player.gameStatus)">
+                                {{ gameStatusLabel(player.gameStatus) }}
+                            </span>
+                        </article>
+                    }
+                </div>
+
+                <div class="lineup-row defenders-row">
+                    @for (
+                        player of defenders();
+                        track player.biwengerPlayerId
+                    ) {
+                        <article
+                            class="lineup-player"
+                            [class.player-locked]="player.locked"
+                            [class.player-modifiable]="player.modifiable">
+
+                            <div class="player-visual">
+                                <div class="player-circle">
+                                    {{ playerInitial(player) }}
+                                </div>
+
+                                <span
+                                    class="points-badge"
+                                    [class]="pointsClass(player.points)">
+                                    {{
+                                        player.points !== null
+                                            ? player.points
+                                            : '—'
+                                    }}
+                                </span>
+
+                                @if (player.locked) {
+                                    <span
+                                        class="lock-badge"
+                                        title="Jugador bloqueado">
+                                        🔒
+                                    </span>
+                                }
+
+                                @if (player.modifiable) {
+                                    <span
+                                        class="modifiable-indicator"
+                                        title="Todavía modificable">
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="lineup-name">
+                                <strong>
+                                    {{ player.name }}
+                                </strong>
+
+                                @if (player.captain) {
+                                    <span
+                                        class="role-icon captain-icon"
+                                        title="Capitán">
+                                        C
+                                    </span>
+                                }
+
+                                @if (player.ram) {
+                                    <span
+                                        class="role-icon ram-icon"
+                                        title="Ariete">
+                                        👟
+                                    </span>
+                                }
+                            </div>
+
+                            <span class="team-name">
+                                {{ player.teamName }}
+                            </span>
+
+                            <span
+                                class="game-status"
+                                [class]="gameStatusClass(player.gameStatus)">
+                                {{ gameStatusLabel(player.gameStatus) }}
+                            </span>
+                        </article>
+                    }
+                </div>
+
+                <div class="lineup-row goalkeeper-row">
+                    @for (
+                        player of goalkeeper();
+                        track player.biwengerPlayerId
+                    ) {
+                        <article
+                            class="lineup-player"
+                            [class.player-locked]="player.locked"
+                            [class.player-modifiable]="player.modifiable">
+
+                            <div class="player-visual">
+                                <div
+                                    class="player-circle goalkeeper-circle">
+                                    {{ playerInitial(player) }}
+                                </div>
+
+                                <span
+                                    class="points-badge"
+                                    [class]="pointsClass(player.points)">
+                                    {{
+                                        player.points !== null
+                                            ? player.points
+                                            : '—'
+                                    }}
+                                </span>
+
+                                @if (player.locked) {
+                                    <span
+                                        class="lock-badge"
+                                        title="Jugador bloqueado">
+                                        🔒
+                                    </span>
+                                }
+
+                                @if (player.modifiable) {
+                                    <span
+                                        class="modifiable-indicator"
+                                        title="Todavía modificable">
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="lineup-name">
+                                <strong>
+                                    {{ player.name }}
+                                </strong>
+
+                                @if (player.captain) {
+                                    <span
+                                        class="role-icon captain-icon"
+                                        title="Capitán">
+                                        C
+                                    </span>
+                                }
+
+                                @if (player.ram) {
+                                    <span
+                                        class="role-icon ram-icon"
+                                        title="Ariete">
+                                        👟
+                                    </span>
+                                }
+                            </div>
+
+                            <span class="team-name">
+                                {{ player.teamName }}
+                            </span>
+
+                            <span
+                                class="game-status"
+                                [class]="gameStatusClass(player.gameStatus)">
+                                {{ gameStatusLabel(player.gameStatus) }}
+                            </span>
+                        </article>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="secondary-grid">
+
+            <article class="secondary-panel coach-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Cuerpo técnico</p>
+                        <h3>Entrenador</h3>
+                    </div>
+                </div>
+
+                @if (coach(); as player) {
+                    <div
+                        class="secondary-player"
+                        [class.locked-secondary]="player.locked"
+                        [class.modifiable-secondary]="player.modifiable">
+
+                        <div class="secondary-player-main">
+                            <div class="secondary-avatar coach-avatar">
+                                E
+                            </div>
+
+                            <div>
+                                <strong>{{ player.name }}</strong>
+                                <span>{{ player.teamName }}</span>
+                            </div>
+                        </div>
+
+                        <div class="secondary-player-meta">
+                            <span
+                                class="points-badge panel-points"
+                                [class]="pointsClass(player.points)">
+                                {{
+                                    player.points !== null
+                                        ? player.points
+                                        : '—'
+                                }}
+                            </span>
+
+                            @if (player.locked) {
+                                <span title="Bloqueado">
+                                    🔒
+                                </span>
+                            }
+
+                            <span
+                                class="game-status"
+                                [class]="gameStatusClass(player.gameStatus)">
+                                {{ gameStatusLabel(player.gameStatus) }}
+                            </span>
+                        </div>
+                    </div>
+                } @else {
+                    <p class="empty-message">
+                        No hay entrenador registrado para esta jornada.
+                    </p>
+                }
+            </article>
+
+            <article class="secondary-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Banquillo</p>
+                        <h3>Reservas</h3>
+                    </div>
+
+                    <span>{{ reserves().length }}</span>
+                </div>
+
+                @if (reserves().length > 0) {
+                    <div class="secondary-player-list">
+                        @for (
+                            player of reserves();
+                            track player.biwengerPlayerId
+                        ) {
+                            <div
+                                class="secondary-player"
+                                [class.locked-secondary]="player.locked"
+                                [class.modifiable-secondary]="player.modifiable">
+
+                                <div class="secondary-player-main">
+                                    <div class="secondary-avatar">
+                                        {{ playerInitial(player) }}
+                                    </div>
+
+                                    <div>
+                                        <strong>{{ player.name }}</strong>
+
+                                        <span>
+                                            {{ player.teamName }}
+                                            ·
+                                            {{ player.lineupPosition ?? '—' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="secondary-player-meta">
+                                    <span
+                                        class="points-badge panel-points"
+                                        [class]="pointsClass(player.points)">
+                                        {{
+                                            player.points !== null
+                                                ? player.points
+                                                : '—'
+                                        }}
+                                    </span>
+
+                                    @if (player.locked) {
+                                        <span title="Bloqueado">
+                                            🔒
+                                        </span>
+                                    }
+
+                                    @if (player.modifiable) {
+                                        <span
+                                            class="small-modifiable-dot"
+                                            title="Modificable">
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                } @else {
+                    <p class="empty-message">
+                        No hay reservas registradas para esta jornada.
+                    </p>
+                }
+            </article>
+
+            <article class="secondary-panel discarded-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Fuera del once</p>
+                        <h3>Descartados</h3>
+                    </div>
+
+                    <span>{{ discarded().length }}</span>
+                </div>
+
+                @if (discarded().length > 0) {
+                    <div class="secondary-player-list">
+                        @for (
+                            player of discarded();
+                            track player.biwengerPlayerId
+                        ) {
+                            <div
+                                class="secondary-player"
+                                [class.locked-secondary]="player.locked"
+                                [class.modifiable-secondary]="player.modifiable">
+
+                                <div class="secondary-player-main">
+                                    <div class="secondary-avatar discarded-avatar">
+                                        {{ playerInitial(player) }}
+                                    </div>
+
+                                    <div>
+                                        <strong>{{ player.name }}</strong>
+
+                                        <span>
+                                            {{ player.teamName }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="secondary-player-meta">
+                                    <span
+                                        class="points-badge panel-points"
+                                        [class]="pointsClass(player.points)">
+                                        {{
+                                            player.points !== null
+                                                ? player.points
+                                                : '—'
+                                        }}
+                                    </span>
+
+                                    @if (player.locked) {
+                                        <span title="Bloqueado">
+                                            🔒
+                                        </span>
+                                    }
+
+                                    @if (player.modifiable) {
+                                        <span
+                                            class="small-modifiable-dot"
+                                            title="Modificable">
+                                        </span>
+                                    }
+
+                                    <span
+                                        class="game-status"
+                                        [class]="gameStatusClass(player.gameStatus)">
+                                        {{ gameStatusLabel(player.gameStatus) }}
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                } @else {
+                    <p class="empty-message">
+                        No hay jugadores descartados en esta jornada.
+                    </p>
+                }
+            </article>
+
+        </section>
+
+    } @else {
+
+        <section class="loading-state">
+            <div class="loading-ball">⚽</div>
+
+            <h2>Cargando jornada</h2>
+
+            <p>
+                Recuperando la alineación efectiva y el estado
+                de los partidos.
+            </p>
+        </section>
+
+    }
+</section>
