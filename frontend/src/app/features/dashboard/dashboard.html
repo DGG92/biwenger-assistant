@@ -263,13 +263,15 @@
             || reason === 'VALUE_RISING_FAST'
             || reason === 'GOOD_RECENT_FORM'
             || reason === 'EXCELLENT_RECENT_FORM'
+            || reason === 'STRONG_HISTORICAL_PERFORMANCE'
             || reason === 'SQUAD_POSITION_NEEDED'
-        " [class.negative]="
-            reason === 'PRICE_ABOVE_MARKET'
-            || reason === 'VALUE_FALLING'
-            || reason === 'INJURED'
-            || reason === 'UNAFFORDABLE'
-        ">
+                    " [class.negative]="
+                reason === 'PRICE_ABOVE_MARKET'
+                || reason === 'VALUE_FALLING'
+                || reason === 'POOR_HISTORICAL_PERFORMANCE'
+                || reason === 'INJURED'
+                || reason === 'UNAFFORDABLE'
+            ">
                         {{ reasonLabel(reason) }}
                     </span>
                     }
