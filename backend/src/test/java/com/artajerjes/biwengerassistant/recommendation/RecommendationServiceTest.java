@@ -8,14 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -69,7 +67,7 @@ class RecommendationServiceTest {
                 lenient()
                                 .when(
                                                 playerMatchReportRepository
-                                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(anyLong()))
+                                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(anyLong()))
                                 .thenReturn(List.of());
                 ReflectionTestUtils.setField(
                                 recommendationService,
@@ -840,7 +838,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(70L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(70L))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -906,7 +904,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(71L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(71L))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -972,7 +970,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(72L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(72L))
                                 .thenReturn(List.of(
                                                 latestReport,
                                                 previousReport));
@@ -1037,7 +1035,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(73L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(73L))
                                 .thenReturn(List.of(
                                                 latestReport,
                                                 previousReport));
@@ -1900,6 +1898,369 @@ class RecommendationServiceTest {
         }
 
         @Test
+        void marketRecommendationShouldIgnoreRecentFormWhenRoundsAreNotConsecutive() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                74L,
+                                "704",
+                                "Jugador sin continuidad",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerMatchReport latestReport = new PlayerMatchReport(
+                                player,
+                                9301L,
+                                4908L,
+                                "Jornada 9",
+                                "J9",
+                                LocalDateTime.of(2026, 10, 11, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                15);
+
+                PlayerMatchReport previousReport = new PlayerMatchReport(
+                                player,
+                                9300L,
+                                4900L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(2026, 8, 16, 21, 0),
+                                "2026-2027",
+                                true,
+                                null,
+                                15);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(74L))
+                                .thenReturn(
+                                                List.of(
+                                                                latestReport,
+                                                                previousReport));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                /*
+                 * J1 y J9 pertenecen a la misma temporada,
+                 * pero no forman una racha consecutiva.
+                 *
+                 * Por tanto, esos 15 + 15 no deben aportar
+                 * bonus de forma reciente.
+                 */
+                assertEquals(
+                                50,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.WATCH,
+                                result.recommendation());
+
+                assertEquals(
+                                0,
+                                result.scoreBreakdown().recentFormSampleSize());
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().recentForm());
+        }
+
+        @Test
+        void marketRecommendationShouldExposeHistoricalPerformanceWithoutChangingScore() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                79L,
+                                "709",
+                                "Jugador con histórico",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> historicalReports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                9805L,
+                                                4955L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9804L,
+                                                4954L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                6),
+                                new PlayerMatchReport(
+                                                player,
+                                                9803L,
+                                                4953L,
+                                                "Jornada 3",
+                                                "J3",
+                                                LocalDateTime.of(2026, 9, 6, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                4),
+                                new PlayerMatchReport(
+                                                player,
+                                                9802L,
+                                                4952L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 30, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                2));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                                79L))
+                                .thenReturn(historicalReports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                5.0,
+                                result.scoreBreakdown().historicalAveragePoints());
+
+                assertEquals(
+                                4,
+                                result.scoreBreakdown().historicalSampleSize());
+
+                /*
+                 * El histórico todavía es informativo.
+                 * No debe modificar el score.
+                 */
+                assertEquals(
+                                50,
+                                result.score());
+        }
+
+        @Test
+        void marketRecommendationShouldExposeZeroHistoricalPerformanceWhenNoReportsExist() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                80L,
+                                "710",
+                                "Jugador sin histórico",
+                                List.of(PlayerPosition.DF),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                                80L))
+                                .thenReturn(List.of());
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().historicalAveragePoints());
+
+                assertEquals(
+                                0,
+                                result.scoreBreakdown().historicalSampleSize());
+
+                assertEquals(
+                                50,
+                                result.score());
+        }
+
+        @Test
+        void marketRecommendationShouldIgnoreHistoricalPerformanceForCoach() {
+                League league = createLeague();
+
+                Player coach = createPlayer(
+                                81L,
+                                "711",
+                                "Entrenador",
+                                List.of(PlayerPosition.E),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                coach,
+                                1_000_000L,
+                                null,
+                                league);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().historicalAveragePoints());
+
+                assertEquals(
+                                0,
+                                result.scoreBreakdown().historicalSampleSize());
+
+                assertEquals(
+                                50,
+                                result.score());
+        }
+
+        @Test
+        void marketRecommendationShouldRewardStrongHistoricalPerformanceWithEnoughSample() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                82L,
+                                "712",
+                                "Jugador histórico fuerte",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> historicalReports = List.of(
+                                new PlayerMatchReport(
+                                                player, 10001L, 5001L,
+                                                "Jornada 10", "J10",
+                                                LocalDateTime.of(2026, 5, 10, 21, 0),
+                                                "2025-2026",
+                                                true, null, 7),
+                                new PlayerMatchReport(
+                                                player, 10002L, 5002L,
+                                                "Jornada 9", "J9",
+                                                LocalDateTime.of(2026, 5, 3, 21, 0),
+                                                "2025-2026",
+                                                true, null, 6),
+                                new PlayerMatchReport(
+                                                player, 10003L, 5003L,
+                                                "Jornada 8", "J8",
+                                                LocalDateTime.of(2026, 4, 26, 21, 0),
+                                                "2025-2026",
+                                                true, null, 7),
+                                new PlayerMatchReport(
+                                                player, 10004L, 5004L,
+                                                "Jornada 7", "J7",
+                                                LocalDateTime.of(2026, 4, 19, 21, 0),
+                                                "2025-2026",
+                                                true, null, 6),
+                                new PlayerMatchReport(
+                                                player, 10005L, 5005L,
+                                                "Jornada 6", "J6",
+                                                LocalDateTime.of(2026, 4, 12, 21, 0),
+                                                "2025-2026",
+                                                true, null, 6));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                                82L))
+                                .thenReturn(historicalReports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                6.4,
+                                result.scoreBreakdown().historicalAveragePoints());
+
+                assertEquals(
+                                5,
+                                result.scoreBreakdown().historicalSampleSize());
+
+                /*
+                 * Un histórico >= 6 con muestra suficiente
+                 * deberá aportar +10.
+                 *
+                 * Actualmente todavía no aporta nada,
+                 * por lo que este test debe fallar primero.
+                 */
+                assertEquals(
+                                60,
+                                result.score());
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.STRONG_HISTORICAL_PERFORMANCE));
+
+                assertEquals(
+                                10,
+                                result.scoreBreakdown().historicalPerformance());
+        }
+
+        @Test
         void shouldIncludePriceBelowMarketReason() {
                 League league = createLeague();
 
@@ -2041,7 +2402,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(63L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(63L))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -2106,7 +2467,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop2ByPlayer_IdOrderByMatchDateDesc(64L))
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(64L))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -2126,6 +2487,401 @@ class RecommendationServiceTest {
                 MarketRecommendationResponse result = recommendationService
                                 .getMarketRecommendations(LEAGUE_ID)
                                 .get(0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.GOOD_RECENT_FORM));
+        }
+
+        @Test
+        void marketRecommendationShouldStopRecentFormStreakAtMissingRound() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                76L,
+                                "706",
+                                "Jugador con hueco",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> reports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                9505L,
+                                                4922L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9504L,
+                                                4921L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9502L,
+                                                4919L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 30, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                1),
+                                new PlayerMatchReport(
+                                                player,
+                                                9501L,
+                                                4918L,
+                                                "Jornada 1",
+                                                "J1",
+                                                LocalDateTime.of(2026, 8, 23, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                1));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(76L))
+                                .thenReturn(reports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                65,
+                                result.score());
+        }
+
+        @Test
+        void marketRecommendationShouldStopRecentFormStreakAtNonParticipation() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                77L,
+                                "707",
+                                "Jugador con ausencia",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> reports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                9605L,
+                                                4932L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9604L,
+                                                4931L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9603L,
+                                                4930L,
+                                                "Jornada 3",
+                                                "J3",
+                                                LocalDateTime.of(2026, 9, 6, 21, 0),
+                                                "2026-2027",
+                                                false,
+                                                "injured",
+                                                null),
+                                new PlayerMatchReport(
+                                                player,
+                                                9602L,
+                                                4929L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 30, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                1),
+                                new PlayerMatchReport(
+                                                player,
+                                                9601L,
+                                                4928L,
+                                                "Jornada 1",
+                                                "J1",
+                                                LocalDateTime.of(2026, 8, 23, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                1));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(77L))
+                                .thenReturn(reports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                65,
+                                result.score());
+        }
+
+        @Test
+        void marketRecommendationShouldUseUpToFiveConsecutiveReportsForRecentForm() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                75L,
+                                "705",
+                                "Jugador en racha",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> reports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                9405L,
+                                                4912L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9404L,
+                                                4911L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9403L,
+                                                4910L,
+                                                "Jornada 3",
+                                                "J3",
+                                                LocalDateTime.of(2026, 9, 6, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9402L,
+                                                4909L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 30, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9401L,
+                                                4908L,
+                                                "Jornada 1",
+                                                "J1",
+                                                LocalDateTime.of(2026, 8, 23, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(75L))
+                                .thenReturn(reports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                65,
+                                result.score());
+
+                assertEquals(
+                                RecommendationType.BUY,
+                                result.recommendation());
+
+                assertEquals(
+                                5,
+                                result.scoreBreakdown().recentFormSampleSize());
+
+                assertEquals(
+                                15.0,
+                                result.scoreBreakdown().recentForm());
+        }
+
+        @Test
+        void marketRecommendationShouldGiveMoreWeightToMostRecentMatches() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                78L,
+                                "708",
+                                "Jugador mejorando",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> reports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                9705L,
+                                                4945L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 20, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9704L,
+                                                4944L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 9, 13, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                8),
+                                new PlayerMatchReport(
+                                                player,
+                                                9703L,
+                                                4943L,
+                                                "Jornada 3",
+                                                "J3",
+                                                LocalDateTime.of(2026, 9, 6, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                2),
+                                new PlayerMatchReport(
+                                                player,
+                                                9702L,
+                                                4942L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 30, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                2),
+                                new PlayerMatchReport(
+                                                player,
+                                                9701L,
+                                                4941L,
+                                                "Jornada 1",
+                                                "J1",
+                                                LocalDateTime.of(2026, 8, 23, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                2));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(78L))
+                                .thenReturn(reports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                /*
+                 * Media simple:
+                 * (8 + 8 + 2 + 2 + 2) / 5 = 4.4
+                 * -> no daría bonus.
+                 *
+                 * Media ponderada por recencia:
+                 * (8*5 + 8*4 + 2*3 + 2*2 + 2*1) / 15
+                 * = 5.6
+                 * -> GOOD_RECENT_FORM, +5.
+                 */
+                assertEquals(
+                                55,
+                                result.score());
 
                 assertTrue(
                                 result.reasons().contains(

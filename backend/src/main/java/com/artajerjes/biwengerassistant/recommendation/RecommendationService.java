@@ -20,8 +20,8 @@ import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
-import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
@@ -36,6 +36,16 @@ public class RecommendationService {
                         int defenders,
                         int midfielders,
                         int forwards) {
+        }
+
+        private record RecentFormAnalysis(
+                        int score,
+                        int sampleSize) {
+        }
+
+        private record HistoricalPerformanceAnalysis(
+                        double averagePoints,
+                        int sampleSize) {
         }
 
         private static final List<Formation> VALID_FORMATIONS = List.of(
@@ -159,13 +169,24 @@ public class RecommendationService {
                                 player,
                                 needScoreByPosition);
 
-                int recentFormScore = calculateRecentFormScore(player);
+                RecentFormAnalysis recentForm = calculateRecentForm(player);
+
+                int recentFormScore = recentForm.score();
+
+                HistoricalPerformanceAnalysis historicalPerformance = calculateHistoricalPerformance(player);
+
+                int historicalPerformanceScore = calculateHistoricalPerformanceScore(
+                                historicalPerformance);
 
                 MarketScoreBreakdown scoreBreakdown = calculateScoreBreakdown(
                                 player,
                                 differencePercentage,
                                 squadNeedScore,
-                                recentFormScore);
+                                recentFormScore,
+                                recentForm.sampleSize(),
+                                historicalPerformance.averagePoints(),
+                                historicalPerformance.sampleSize(),
+                                historicalPerformanceScore);
 
                 int score = calculateScore(
                                 scoreBreakdown,
@@ -185,7 +206,8 @@ public class RecommendationService {
                                 differencePercentage,
                                 affordable,
                                 squadNeedScore,
-                                recentFormScore);
+                                recentFormScore,
+                                historicalPerformanceScore);
 
                 /*
                  * En una subasta que ya ha superado nuestro límite
@@ -206,6 +228,10 @@ public class RecommendationService {
                                 scoreBreakdown.valueTrend(),
                                 scoreBreakdown.squadNeed(),
                                 scoreBreakdown.recentForm(),
+                                scoreBreakdown.recentFormSampleSize(),
+                                scoreBreakdown.historicalAveragePoints(),
+                                scoreBreakdown.historicalSampleSize(),
+                                scoreBreakdown.historicalPerformance(),
                                 scoreBreakdown.status(),
                                 scoreBreakdown.scoreBeforeCaps(),
                                 affordabilityCapApplied,
@@ -244,7 +270,8 @@ public class RecommendationService {
                         double differencePercentage,
                         boolean affordable,
                         int squadNeedScore,
-                        int recentFormScore) {
+                        int recentFormScore,
+                        int historicalPerformanceScore) {
 
                 List<MarketRecommendationReason> reasons = new java.util.ArrayList<>();
 
@@ -289,6 +316,16 @@ public class RecommendationService {
                 } else if (recentFormScore >= 5) {
                         reasons.add(
                                         MarketRecommendationReason.GOOD_RECENT_FORM);
+                }
+
+                if (historicalPerformanceScore >= 5) {
+                        reasons.add(
+                                        MarketRecommendationReason.STRONG_HISTORICAL_PERFORMANCE);
+                }
+
+                if (historicalPerformanceScore <= -5) {
+                        reasons.add(
+                                        MarketRecommendationReason.POOR_HISTORICAL_PERFORMANCE);
                 }
 
                 if (player.getStatus() == PlayerStatus.INJURED) {
@@ -382,7 +419,11 @@ public class RecommendationService {
                         Player player,
                         double differencePercentage,
                         int squadNeedScore,
-                        int recentFormScore) {
+                        int recentFormScore,
+                        int recentFormSampleSize,
+                        double historicalAveragePoints,
+                        int historicalSampleSize,
+                        int historicalPerformanceScore) {
 
                 double baseScore = 50;
 
@@ -419,6 +460,7 @@ public class RecommendationService {
                                 + valueTrendScore
                                 + squadNeedContribution
                                 + recentFormScore
+                                + historicalPerformanceScore
                                 + statusPenalty;
 
                 return new MarketScoreBreakdown(
@@ -427,6 +469,10 @@ public class RecommendationService {
                                 valueTrendScore,
                                 squadNeedContribution,
                                 recentFormScore,
+                                recentFormSampleSize,
+                                historicalAveragePoints,
+                                historicalSampleSize,
+                                historicalPerformanceScore,
                                 statusPenalty,
                                 scoreBeforeCaps,
                                 false,
@@ -521,75 +567,137 @@ public class RecommendationService {
                 return highestNeed;
         }
 
-        private int calculateRecentFormScore(Player player) {
+        private RecentFormAnalysis calculateRecentForm(Player player) {
                 List<PlayerMatchReport> recentReports = playerMatchReportRepository
-                                .findTop2ByPlayer_IdOrderByMatchDateDesc(
+                                .findTop5ByPlayer_IdOrderByMatchDateDesc(
                                                 player.getId());
 
                 if (recentReports == null
                                 || recentReports.size() < 2) {
-                        return 0;
+                        return new RecentFormAnalysis(
+                                        0,
+                                        0);
                 }
 
-                PlayerMatchReport latest = recentReports.get(0);
+                List<PlayerMatchReport> streak = buildCurrentConsecutiveStreak(
+                                recentReports);
 
-                PlayerMatchReport previous = recentReports.get(1);
-
-                /*
-                 * Necesitamos conocer la temporada de ambos partidos.
-                 */
-                if (latest.getSeason() == null
-                                || previous.getSeason() == null) {
-                        return 0;
+                if (streak.size() < 2) {
+                        return new RecentFormAnalysis(
+                                        0,
+                                        0);
                 }
 
-                /*
-                 * Solo aceptamos partidos de la temporada actualmente en curso.
-                 *
-                 * Esto evita:
-                 * - usar J38 + J37 de la temporada pasada antes de empezar esta;
-                 * - mezclar J1 de esta temporada con J38 de la anterior.
-                 */
-                String currentSeason = getCurrentSeason();
+                double weightedPoints = 0;
+                int totalWeight = 0;
 
-                if (!currentSeason.equals(latest.getSeason())
-                                || !currentSeason.equals(previous.getSeason())) {
-                        return 0;
+                for (int i = 0; i < streak.size(); i++) {
+                        PlayerMatchReport report = streak.get(i);
+
+                        /*
+                         * Los reports vienen ordenados del más reciente
+                         * al más antiguo.
+                         *
+                         * Para una racha de 5:
+                         * J5 -> peso 5
+                         * J4 -> peso 4
+                         * J3 -> peso 3
+                         * J2 -> peso 2
+                         * J1 -> peso 1
+                         */
+                        int weight = streak.size() - i;
+
+                        weightedPoints += report.getPoints() * weight;
+                        totalWeight += weight;
                 }
 
-                /*
-                 * Una jornada sin participar rompe completamente la racha.
-                 *
-                 * Da igual que fuera por lesión, sanción, no convocatoria,
-                 * suplencia sin minutos, etc.
-                 */
-                if (!latest.isParticipated()
-                                || !previous.isParticipated()) {
-                        return 0;
-                }
+                double average = totalWeight == 0
+                                ? 0
+                                : weightedPoints / totalWeight;
 
-                /*
-                 * Si participó necesitamos puntuación.
-                 *
-                 * 0 es una puntuación válida.
-                 * null significa que no tenemos una puntuación válida.
-                 */
-                if (latest.getPoints() == null
-                                || previous.getPoints() == null) {
-                        return 0;
-                }
+                boolean allExcellent = streak.stream()
+                                .allMatch(report -> report.getPoints() >= 8);
 
-                int firstPoints = latest.getPoints();
-                int secondPoints = previous.getPoints();
+                int sampleSize = streak.size();
 
-                double average = (firstPoints + secondPoints) / 2.0;
-
-                if (firstPoints >= 8
-                                && secondPoints >= 8) {
-                        return 15;
+                if (allExcellent) {
+                        return new RecentFormAnalysis(
+                                        15,
+                                        sampleSize);
                 }
 
                 if (average >= 7) {
+                        return new RecentFormAnalysis(
+                                        10,
+                                        sampleSize);
+                }
+
+                if (average >= 5) {
+                        return new RecentFormAnalysis(
+                                        5,
+                                        sampleSize);
+                }
+
+                if (average >= 3) {
+                        return new RecentFormAnalysis(
+                                        0,
+                                        sampleSize);
+                }
+
+                if (average >= 1) {
+                        return new RecentFormAnalysis(
+                                        -5,
+                                        sampleSize);
+                }
+
+                return new RecentFormAnalysis(
+                                -10,
+                                sampleSize);
+        }
+
+        private HistoricalPerformanceAnalysis calculateHistoricalPerformance(
+                        Player player) {
+
+                if (player.getPositions() != null
+                                && player.getPositions().contains(PlayerPosition.E)) {
+                        return new HistoricalPerformanceAnalysis(
+                                        0,
+                                        0);
+                }
+
+                List<PlayerMatchReport> reports = playerMatchReportRepository
+                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                player.getId());
+
+                if (reports == null
+                                || reports.isEmpty()) {
+                        return new HistoricalPerformanceAnalysis(
+                                        0,
+                                        0);
+                }
+
+                double averagePoints = reports.stream()
+                                .map(PlayerMatchReport::getPoints)
+                                .mapToInt(Integer::intValue)
+                                .average()
+                                .orElse(0);
+
+                return new HistoricalPerformanceAnalysis(
+                                averagePoints,
+                                reports.size());
+        }
+
+        private int calculateHistoricalPerformanceScore(
+                        HistoricalPerformanceAnalysis historicalPerformance) {
+
+                if (historicalPerformance == null
+                                || historicalPerformance.sampleSize() < 5) {
+                        return 0;
+                }
+
+                double average = historicalPerformance.averagePoints();
+
+                if (average >= 6) {
                         return 10;
                 }
 
@@ -601,7 +709,7 @@ public class RecommendationService {
                         return 0;
                 }
 
-                if (average >= 1) {
+                if (average >= 2) {
                         return -5;
                 }
 
@@ -1059,6 +1167,70 @@ public class RecommendationService {
 
         private double round(double value) {
                 return Math.round(value * 100.0) / 100.0;
+        }
+
+        private Integer extractRoundNumber(String roundShort) {
+                if (roundShort == null) {
+                        return null;
+                }
+
+                String normalized = roundShort
+                                .trim()
+                                .toUpperCase();
+
+                if (!normalized.matches("J\\d+")) {
+                        return null;
+                }
+
+                return Integer.parseInt(
+                                normalized.substring(1));
+        }
+
+        private List<PlayerMatchReport> buildCurrentConsecutiveStreak(
+                        List<PlayerMatchReport> recentReports) {
+
+                if (recentReports == null
+                                || recentReports.isEmpty()) {
+                        return List.of();
+                }
+
+                String currentSeason = getCurrentSeason();
+
+                List<PlayerMatchReport> streak = new java.util.ArrayList<>();
+
+                Integer expectedRoundNumber = null;
+
+                for (PlayerMatchReport report : recentReports) {
+
+                        if (report.getSeason() == null
+                                        || !currentSeason.equals(
+                                                        report.getSeason())) {
+                                break;
+                        }
+
+                        if (!report.isParticipated()
+                                        || report.getPoints() == null) {
+                                break;
+                        }
+
+                        Integer roundNumber = extractRoundNumber(
+                                        report.getRoundShort());
+
+                        if (roundNumber == null) {
+                                break;
+                        }
+
+                        if (expectedRoundNumber != null
+                                        && roundNumber != expectedRoundNumber) {
+                                break;
+                        }
+
+                        streak.add(report);
+
+                        expectedRoundNumber = roundNumber - 1;
+                }
+
+                return List.copyOf(streak);
         }
 
         private String getCurrentSeason() {
