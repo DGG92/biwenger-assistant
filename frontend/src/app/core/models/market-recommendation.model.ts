@@ -8,6 +8,8 @@ export type MarketRecommendationReason =
     | 'VALUE_FALLING'
     | 'GOOD_RECENT_FORM'
     | 'EXCELLENT_RECENT_FORM'
+    | 'STRONG_HISTORICAL_PERFORMANCE'
+    | 'POOR_HISTORICAL_PERFORMANCE'
     | 'SQUAD_POSITION_NEEDED'
     | 'INJURED'
     | 'UNAFFORDABLE';
@@ -17,7 +19,14 @@ export interface MarketScoreBreakdown {
     price: number;
     valueTrend: number;
     squadNeed: number;
+
     recentForm: number;
+    recentFormSampleSize: number;
+
+    historicalAveragePoints: number;
+    historicalSampleSize: number;
+    historicalPerformance: number;
+
     status: number;
     scoreBeforeCaps: number;
     affordabilityCapApplied: boolean;

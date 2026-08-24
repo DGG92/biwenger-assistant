@@ -313,11 +313,49 @@
                         </div>
 
                         <div>
-                            <span>Forma reciente</span>
+                            <span>
+                                Forma reciente
+                                (
+                                {{ player.scoreBreakdown.recentFormSampleSize }}
+                                {{ player.scoreBreakdown.recentFormSampleSize === 1 ? 'partido' : 'partidos' }}
+                                )
+                            </span>
+
                             <strong [class.positive]="player.scoreBreakdown.recentForm > 0"
                                 [class.negative]="player.scoreBreakdown.recentForm < 0">
                                 {{ player.scoreBreakdown.recentForm > 0 ? '+' : '' }}
                                 {{ player.scoreBreakdown.recentForm | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                Media histórica
+                                (
+                                {{ player.scoreBreakdown.historicalSampleSize }}
+                                {{ player.scoreBreakdown.historicalSampleSize === 1 ? 'partido' : 'partidos' }}
+                                )
+                            </span>
+
+                            <strong>
+                                {{
+                                player.scoreBreakdown.historicalAveragePoints
+                                | number:'1.0-2':'es-ES'
+                                }}
+                                pts
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Aportación por rendimiento histórico</span>
+
+                            <strong [class.positive]="player.scoreBreakdown.historicalPerformance > 0"
+                                [class.negative]="player.scoreBreakdown.historicalPerformance < 0">
+                                {{ player.scoreBreakdown.historicalPerformance > 0 ? '+' : '' }}
+                                {{
+                                player.scoreBreakdown.historicalPerformance
+                                | number:'1.0-1':'es-ES'
+                                }}
                             </strong>
                         </div>
 
@@ -370,18 +408,20 @@
                 <div class="recommendation-reasons">
                     @for (reason of orderedReasons(player.reasons); track reason) {
                     <span [class.positive-reason]="
-            reason === 'PRICE_BELOW_MARKET'
-            || reason === 'VALUE_RISING'
-            || reason === 'VALUE_RISING_FAST'
-            || reason === 'GOOD_RECENT_FORM'
-            || reason === 'EXCELLENT_RECENT_FORM'
-            || reason === 'SQUAD_POSITION_NEEDED'
+    reason === 'PRICE_BELOW_MARKET'
+    || reason === 'VALUE_RISING'
+    || reason === 'VALUE_RISING_FAST'
+    || reason === 'GOOD_RECENT_FORM'
+    || reason === 'EXCELLENT_RECENT_FORM'
+    || reason === 'STRONG_HISTORICAL_PERFORMANCE'
+    || reason === 'SQUAD_POSITION_NEEDED'
         " [class.negative-reason]="
-            reason === 'PRICE_ABOVE_MARKET'
-            || reason === 'VALUE_FALLING'
-            || reason === 'INJURED'
-            || reason === 'UNAFFORDABLE'
-        ">
+    reason === 'PRICE_ABOVE_MARKET'
+    || reason === 'VALUE_FALLING'
+    || reason === 'POOR_HISTORICAL_PERFORMANCE'
+    || reason === 'INJURED'
+    || reason === 'UNAFFORDABLE'
+">
                         {{ reasonLabel(reason) }}
                     </span>
                     }

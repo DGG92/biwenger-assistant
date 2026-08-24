@@ -224,6 +224,12 @@ export class Market {
       case 'EXCELLENT_RECENT_FORM':
         return 'Excelente estado de forma';
 
+      case 'STRONG_HISTORICAL_PERFORMANCE':
+        return 'Rendimiento histórico sólido';
+
+      case 'POOR_HISTORICAL_PERFORMANCE':
+        return 'Rendimiento histórico bajo';
+
       case 'SQUAD_POSITION_NEEDED':
         return 'Refuerza una posición necesaria';
 
@@ -240,15 +246,17 @@ export class Market {
     number
   > = {
       EXCELLENT_RECENT_FORM: 1,
-      VALUE_RISING_FAST: 2,
-      SQUAD_POSITION_NEEDED: 3,
-      GOOD_RECENT_FORM: 4,
-      VALUE_RISING: 5,
-      PRICE_BELOW_MARKET: 6,
-      PRICE_ABOVE_MARKET: 7,
-      VALUE_FALLING: 8,
-      UNAFFORDABLE: 9,
-      INJURED: 10
+      STRONG_HISTORICAL_PERFORMANCE: 2,
+      VALUE_RISING_FAST: 3,
+      SQUAD_POSITION_NEEDED: 4,
+      GOOD_RECENT_FORM: 5,
+      VALUE_RISING: 6,
+      PRICE_BELOW_MARKET: 7,
+      PRICE_ABOVE_MARKET: 8,
+      VALUE_FALLING: 9,
+      POOR_HISTORICAL_PERFORMANCE: 10,
+      UNAFFORDABLE: 11,
+      INJURED: 12
     };
 
   orderedReasons(
