@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.anyLong;
-import org.mockito.InjectMocks;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -37,6 +37,8 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
 @ExtendWith(MockitoExtension.class)
 class RecommendationServiceTest {
@@ -59,16 +61,28 @@ class RecommendationServiceTest {
         @Mock
         private PlayerMatchReportRepository playerMatchReportRepository;
 
-        @InjectMocks
         private RecommendationService recommendationService;
 
         @BeforeEach
         void setUp() {
+
                 lenient()
                                 .when(
                                                 playerMatchReportRepository
                                                                 .findTop5ByPlayer_IdOrderByMatchDateDesc(anyLong()))
                                 .thenReturn(List.of());
+
+                PlayerPerformanceSignalService playerPerformanceSignalService = new PlayerPerformanceSignalService(
+                                playerMatchReportRepository);
+
+                recommendationService = new RecommendationService(
+                                leagueRepository,
+                                marketListingRepository,
+                                offerService,
+                                playerRepository,
+                                playerMatchReportRepository,
+                                playerPerformanceSignalService);
+
                 ReflectionTestUtils.setField(
                                 recommendationService,
                                 "biwengerUserId",

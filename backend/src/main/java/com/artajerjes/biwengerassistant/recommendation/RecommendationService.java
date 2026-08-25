@@ -28,6 +28,8 @@ import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationR
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketScoreBreakdown;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
 @Service
 public class RecommendationService {
@@ -69,6 +71,7 @@ public class RecommendationService {
         private final OfferService offerService;
         private final PlayerRepository playerRepository;
         private final PlayerMatchReportRepository playerMatchReportRepository;
+        private final PlayerPerformanceSignalService playerPerformanceSignalService;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -78,12 +81,15 @@ public class RecommendationService {
                         MarketListingRepository marketListingRepository,
                         OfferService offerService,
                         PlayerRepository playerRepository,
-                        PlayerMatchReportRepository playerMatchReportRepository) {
+                        PlayerMatchReportRepository playerMatchReportRepository,
+                        PlayerPerformanceSignalService playerPerformanceSignalService) {
+
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
                 this.offerService = offerService;
                 this.playerRepository = playerRepository;
                 this.playerMatchReportRepository = playerMatchReportRepository;
+                this.playerPerformanceSignalService = playerPerformanceSignalService;
         }
 
         private double clampDouble(
@@ -169,23 +175,20 @@ public class RecommendationService {
                                 player,
                                 needScoreByPosition);
 
-                RecentFormAnalysis recentForm = calculateRecentForm(player);
+                PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
 
-                int recentFormScore = recentForm.score();
+                int recentFormScore = calculateRecentFormScore(performance);
 
-                HistoricalPerformanceAnalysis historicalPerformance = calculateHistoricalPerformance(player);
-
-                int historicalPerformanceScore = calculateHistoricalPerformanceScore(
-                                historicalPerformance);
+                int historicalPerformanceScore = calculateHistoricalPerformanceScore(performance);
 
                 MarketScoreBreakdown scoreBreakdown = calculateScoreBreakdown(
                                 player,
                                 differencePercentage,
                                 squadNeedScore,
                                 recentFormScore,
-                                recentForm.sampleSize(),
-                                historicalPerformance.averagePoints(),
-                                historicalPerformance.sampleSize(),
+                                performance.recentSampleSize(),
+                                performance.historicalAveragePoints(),
+                                performance.historicalSampleSize(),
                                 historicalPerformanceScore);
 
                 int score = calculateScore(
@@ -567,6 +570,39 @@ public class RecommendationService {
                 return highestNeed;
         }
 
+        private int calculateRecentFormScore(
+                        PlayerPerformanceSignals performance) {
+
+                if (performance == null
+                                || performance.recentSampleSize() < 2) {
+                        return 0;
+                }
+
+                if (performance.allRecentMatchesExcellent()) {
+                        return 15;
+                }
+
+                double average = performance.recentWeightedAverage();
+
+                if (average >= 7) {
+                        return 10;
+                }
+
+                if (average >= 5) {
+                        return 5;
+                }
+
+                if (average >= 3) {
+                        return 0;
+                }
+
+                if (average >= 1) {
+                        return -5;
+                }
+
+                return -10;
+        }
+
         private RecentFormAnalysis calculateRecentForm(Player player) {
                 List<PlayerMatchReport> recentReports = playerMatchReportRepository
                                 .findTop5ByPlayer_IdOrderByMatchDateDesc(
@@ -685,6 +721,35 @@ public class RecommendationService {
                 return new HistoricalPerformanceAnalysis(
                                 averagePoints,
                                 reports.size());
+        }
+
+        private int calculateHistoricalPerformanceScore(
+                        PlayerPerformanceSignals performance) {
+
+                if (performance == null
+                                || performance.historicalSampleSize() < 5) {
+                        return 0;
+                }
+
+                double average = performance.historicalAveragePoints();
+
+                if (average >= 6) {
+                        return 10;
+                }
+
+                if (average >= 5) {
+                        return 5;
+                }
+
+                if (average >= 3) {
+                        return 0;
+                }
+
+                if (average >= 2) {
+                        return -5;
+                }
+
+                return -10;
         }
 
         private int calculateHistoricalPerformanceScore(

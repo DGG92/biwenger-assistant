@@ -1,6 +1,5 @@
 package com.artajerjes.biwengerassistant.player;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,17 +8,18 @@ import org.springframework.stereotype.Service;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionReason;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
 @Service
 public class PlayerProtectionService {
 
-    private final PlayerMatchReportRepository playerMatchReportRepository;
+    private final PlayerPerformanceSignalService playerPerformanceSignalService;
 
     public PlayerProtectionService(
-            PlayerMatchReportRepository playerMatchReportRepository) {
-        this.playerMatchReportRepository = playerMatchReportRepository;
+            PlayerPerformanceSignalService playerPerformanceSignalService) {
+
+        this.playerPerformanceSignalService = playerPerformanceSignalService;
     }
 
     public PlayerProtectionAlert calculate(Player player) {
@@ -55,32 +55,32 @@ public class PlayerProtectionService {
         }
 
         /*
-         * Estado de forma de la temporada actual.
+         * Estado de forma reciente.
+         *
+         * Utilizamos la señal común de rendimiento para que
+         * PROTECT respete las mismas reglas que el motor
+         * general de recomendaciones:
+         *
+         * - temporada actual
+         * - jornadas consecutivas
+         * - participación real
+         * - mínimo 2 partidos
          */
-        List<PlayerMatchReport> recentReports = playerMatchReportRepository
-                .findTop2ByPlayer_IdOrderByMatchDateDesc(
-                        player.getId());
+        PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
 
-        if (hasValidRecentForm(recentReports)) {
-            int latestPoints = recentReports.get(0).getPoints();
+        if (performance.recentSampleSize() >= 2) {
 
-            int previousPoints = recentReports.get(1).getPoints();
-
-            if (latestPoints >= 8
-                    && previousPoints >= 8) {
+            if (performance.allRecentMatchesExcellent()) {
                 score += 30;
 
                 reasons.add(
                         PlayerProtectionReason.EXCELLENT_RECENT_FORM);
-            } else {
-                double average = (latestPoints + previousPoints) / 2.0;
 
-                if (average >= 7) {
-                    score += 15;
+            } else if (performance.recentWeightedAverage() >= 7) {
+                score += 15;
 
-                    reasons.add(
-                            PlayerProtectionReason.GOOD_RECENT_FORM);
-                }
+                reasons.add(
+                        PlayerProtectionReason.GOOD_RECENT_FORM);
             }
         }
 
@@ -131,50 +131,6 @@ public class PlayerProtectionService {
                 level,
                 score,
                 List.copyOf(reasons));
-    }
-
-    private boolean hasValidRecentForm(
-            List<PlayerMatchReport> reports) {
-
-        if (reports == null
-                || reports.size() < 2) {
-            return false;
-        }
-
-        PlayerMatchReport latest = reports.get(0);
-        PlayerMatchReport previous = reports.get(1);
-
-        if (latest.getSeason() == null
-                || previous.getSeason() == null) {
-            return false;
-        }
-
-        String currentSeason = getCurrentSeason();
-
-        if (!currentSeason.equals(latest.getSeason())
-                || !currentSeason.equals(previous.getSeason())) {
-            return false;
-        }
-
-        if (!latest.isParticipated()
-                || !previous.isParticipated()) {
-            return false;
-        }
-
-        return latest.getPoints() != null
-                && previous.getPoints() != null;
-    }
-
-    private String getCurrentSeason() {
-        LocalDate today = LocalDate.now();
-
-        int year = today.getYear();
-
-        if (today.getMonthValue() >= 7) {
-            return year + "-" + (year + 1);
-        }
-
-        return (year - 1) + "-" + year;
     }
 
     private PlayerProtectionAlert emptyAlert() {

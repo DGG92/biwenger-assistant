@@ -1,15 +1,13 @@
 package com.artajerjes.biwengerassistant.player;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
-
-import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -18,14 +16,14 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionReason;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
 @ExtendWith(MockitoExtension.class)
 class PlayerProtectionServiceTest {
 
         @Mock
-        private PlayerMatchReportRepository playerMatchReportRepository;
+        private PlayerPerformanceSignalService playerPerformanceSignalService;
 
         @InjectMocks
         private PlayerProtectionService playerProtectionService;
@@ -38,21 +36,14 @@ class PlayerProtectionServiceTest {
                                 120_000L,
                                 false);
 
-                when(playerMatchReportRepository
-                                .findTop2ByPlayer_IdOrderByMatchDateDesc(10L))
-                                .thenReturn(List.of(
-                                                createReport(
-                                                                player,
-                                                                1002L,
-                                                                "J2",
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                10.33,
+                                                                2,
                                                                 true,
-                                                                11),
-                                                createReport(
-                                                                player,
-                                                                1001L,
-                                                                "J1",
-                                                                true,
-                                                                9)));
+                                                                0,
+                                                                0));
 
                 PlayerProtectionAlert result = playerProtectionService.calculate(player);
 
@@ -77,9 +68,14 @@ class PlayerProtectionServiceTest {
                                 60_000L,
                                 false);
 
-                when(playerMatchReportRepository
-                                .findTop2ByPlayer_IdOrderByMatchDateDesc(11L))
-                                .thenReturn(List.of());
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                0,
+                                                                0,
+                                                                false,
+                                                                0,
+                                                                0));
 
                 PlayerProtectionAlert result = playerProtectionService.calculate(player);
 
@@ -102,21 +98,14 @@ class PlayerProtectionServiceTest {
                                 0L,
                                 false);
 
-                when(playerMatchReportRepository
-                                .findTop2ByPlayer_IdOrderByMatchDateDesc(12L))
-                                .thenReturn(List.of(
-                                                createReport(
-                                                                player,
-                                                                1202L,
-                                                                "J2",
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                0,
+                                                                0,
                                                                 false,
-                                                                null),
-                                                createReport(
-                                                                player,
-                                                                1201L,
-                                                                "J1",
-                                                                true,
-                                                                15)));
+                                                                0,
+                                                                0));
 
                 PlayerProtectionAlert result = playerProtectionService.calculate(player);
 
@@ -135,9 +124,14 @@ class PlayerProtectionServiceTest {
                                 120_000L,
                                 true);
 
-                when(playerMatchReportRepository
-                                .findTop2ByPlayer_IdOrderByMatchDateDesc(13L))
-                                .thenReturn(List.of());
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                0,
+                                                                0,
+                                                                false,
+                                                                0,
+                                                                0));
 
                 PlayerProtectionAlert result = playerProtectionService.calculate(player);
 
@@ -239,30 +233,5 @@ class PlayerProtectionServiceTest {
                                                 : PlayerStatus.OK);
 
                 return player;
-        }
-
-        private PlayerMatchReport createReport(
-                        Player player,
-                        Long matchId,
-                        String roundShort,
-                        boolean participated,
-                        Integer points) {
-
-                return new PlayerMatchReport(
-                                player,
-                                matchId,
-                                matchId,
-                                "Jornada",
-                                roundShort,
-                                LocalDateTime.of(
-                                                2026,
-                                                8,
-                                                10,
-                                                21,
-                                                0),
-                                "2026-2027",
-                                participated,
-                                participated ? null : "injured",
-                                points);
         }
 }
