@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
+import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
@@ -17,7 +18,9 @@ import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
+import com.artajerjes.biwengerassistant.recommendation.RecommendationType;
 import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -93,6 +96,75 @@ public class ActionRecommendationService {
                                                 Comparator.comparing(
                                                                 ActionCandidate::priority))
                                 .toList();
+        }
+
+        @Transactional(readOnly = true)
+        public List<ActionCandidate> getMarketActions(
+                        Long leagueId) {
+
+                return recommendationService
+                                .getMarketRecommendations(leagueId)
+                                .stream()
+                                .map(this::evaluateMarketAction)
+                                .filter(java.util.Objects::nonNull)
+                                .sorted(
+                                                Comparator.comparing(
+                                                                ActionCandidate::priority))
+                                .toList();
+        }
+
+        private ActionCandidate evaluateMarketAction(
+                        MarketRecommendationResponse recommendation) {
+
+                if (recommendation.recommendation() != RecommendationType.STRONG_BUY
+                                && recommendation.recommendation() != RecommendationType.BUY) {
+
+                        return null;
+                }
+
+                ActionType actionType = recommendation.marketType() == MarketListingType.AUCTION
+                                ? ActionType.BID
+                                : ActionType.BUY;
+
+                ActionPriority priority = recommendation.recommendation() == RecommendationType.STRONG_BUY
+                                ? ActionPriority.HIGH
+                                : ActionPriority.MEDIUM;
+
+                Long suggestedAmount = actionType == ActionType.BID
+                                ? recommendation.maximumRecommendedBid()
+                                : recommendation.askingPrice();
+
+                String title = actionType == ActionType.BID
+                                ? "Puja por "
+                                                + recommendation.playerName()
+                                : "Valora comprar a "
+                                                + recommendation.playerName();
+
+                String explanation = actionType == ActionType.BID
+                                ? "Es una oportunidad de mercado con una puntuación de "
+                                                + recommendation.score()
+                                                + "/100. La puja máxima recomendada es "
+                                                + suggestedAmount
+                                                + " €."
+                                : "Es una oportunidad de mercado con una puntuación de "
+                                                + recommendation.score()
+                                                + "/100 y un precio de "
+                                                + recommendation.askingPrice()
+                                                + " €.";
+
+                return new ActionCandidate(
+                                actionType,
+                                priority,
+                                recommendation.playerId(),
+                                recommendation.playerName(),
+                                title,
+                                explanation,
+                                recommendation.score(),
+                                suggestedAmount,
+                                recommendation.reasons()
+                                                .stream()
+                                                .map(Enum::name)
+                                                .toList());
         }
 
         private ActionCandidate evaluateFormationChange(

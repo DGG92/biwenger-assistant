@@ -26,4 +26,12 @@ public class ActionRecommendationController {
         return actionRecommendationService
                 .getSquadActions(leagueId);
     }
+
+    @GetMapping("/market")
+    public List<ActionCandidate> getMarketActions(
+            @PathVariable Long leagueId) {
+
+        return actionRecommendationService
+                .getMarketActions(leagueId);
+    }
 }

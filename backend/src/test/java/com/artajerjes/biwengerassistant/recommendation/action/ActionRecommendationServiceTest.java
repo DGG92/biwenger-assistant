@@ -18,6 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.manager.Manager;
+import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
@@ -26,7 +27,9 @@ import com.artajerjes.biwengerassistant.player.PlayerStatus;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
+import com.artajerjes.biwengerassistant.recommendation.RecommendationType;
 import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -76,7 +79,8 @@ class ActionRecommendationServiceTest {
                                 "biwengerUserId",
                                 BIWENGER_USER_ID);
 
-                when(leagueRepository.existsById(LEAGUE_ID))
+                lenient()
+                                .when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
         }
 
@@ -923,6 +927,136 @@ class ActionRecommendationServiceTest {
 
                 assertTrue(
                                 result.isEmpty());
+        }
+
+        @Test
+        void shouldCreateHighPriorityBidForStrongBuyAuction() {
+
+                MarketRecommendationResponse recommendation = new MarketRecommendationResponse(
+                                515L,
+                                "515",
+                                "Tete Morente",
+                                "Elche",
+                                List.of(PlayerPosition.MC),
+                                MarketListingType.AUCTION,
+                                350_000L,
+                                350_000L,
+                                360_000L,
+                                385_000L,
+                                -10_000L,
+                                -2.86,
+                                10_000L,
+                                0,
+                                PlayerStatus.OK,
+                                true,
+                                81,
+                                RecommendationType.STRONG_BUY,
+                                null,
+                                null,
+                                List.of(),
+                                null);
+
+                when(
+                                recommendationService
+                                                .getMarketRecommendations(1L))
+                                .thenReturn(
+                                                List.of(recommendation));
+
+                List<ActionCandidate> actions = actionRecommendationService
+                                .getMarketActions(1L);
+
+                assertEquals(1, actions.size());
+
+                ActionCandidate action = actions.get(0);
+
+                assertEquals(
+                                ActionType.BID,
+                                action.type());
+
+                assertEquals(
+                                ActionPriority.HIGH,
+                                action.priority());
+
+                assertEquals(
+                                515L,
+                                action.playerId());
+
+                assertEquals(
+                                "Tete Morente",
+                                action.playerName());
+
+                assertEquals(
+                                385_000L,
+                                action.suggestedAmount());
+
+                assertEquals(
+                                81,
+                                action.confidence());
+        }
+
+        @Test
+        void shouldCreateMediumPriorityBuyForBuySale() {
+
+                MarketRecommendationResponse recommendation = new MarketRecommendationResponse(
+                                485L,
+                                "485",
+                                "Sazonov",
+                                "Torino",
+                                List.of(PlayerPosition.DF),
+                                MarketListingType.SALE,
+                                360_000L,
+                                340_000L,
+                                null,
+                                null,
+                                20_000L,
+                                5.56,
+                                10_000L,
+                                0,
+                                PlayerStatus.OK,
+                                true,
+                                75,
+                                RecommendationType.BUY,
+                                null,
+                                null,
+                                List.of(),
+                                null);
+
+                when(
+                                recommendationService
+                                                .getMarketRecommendations(1L))
+                                .thenReturn(
+                                                List.of(recommendation));
+
+                List<ActionCandidate> actions = actionRecommendationService
+                                .getMarketActions(1L);
+
+                assertEquals(1, actions.size());
+
+                ActionCandidate action = actions.get(0);
+
+                assertEquals(
+                                ActionType.BUY,
+                                action.type());
+
+                assertEquals(
+                                ActionPriority.MEDIUM,
+                                action.priority());
+
+                assertEquals(
+                                485L,
+                                action.playerId());
+
+                assertEquals(
+                                "Sazonov",
+                                action.playerName());
+
+                assertEquals(
+                                340_000L,
+                                action.suggestedAmount());
+
+                assertEquals(
+                                75,
+                                action.confidence());
         }
 
         private Player createOwnedPlayer(
