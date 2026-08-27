@@ -11,133 +11,133 @@ import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayer
 
 class PlayerMatchReportServiceTest {
 
-    private PlayerMatchReportService service;
+        private PlayerMatchReportService service;
 
-    @BeforeEach
-    void setUp() {
+        @BeforeEach
+        void setUp() {
 
-        service = new PlayerMatchReportService(
-                null,
-                null,
-                null,
-                new CustomScoreEvaluator());
-    }
+                service = new PlayerMatchReportService(
+                                null,
+                                null,
+                                new CustomScoreEvaluator(),
+                                null);
+        }
 
-    @Test
-    void resolveLeaguePointsShouldUseCustomScoreForScoreId100() {
+        @Test
+        void resolveLeaguePointsShouldUseCustomScoreForScoreId100() {
 
-        String customScore = """
-                (score2 * 0.5) + (score3 * 0.5)
-                +savedPenalties * 3
-                +penaltyMissed * -1
-                +ownGoals * -1
-                +if((pos1 or pos2), assists * 2)
-                +if((pos3 or pos4), assists * 1)
-                +if(pos1 and minutesPlayed > 70, 1)
-                +if(pos2 and minutesPlayed > 70, 1)
-                +if(pos3 and minutesPlayed > 70, 1)
-                +if(pos4 and minutesPlayed > 70, 1)
-                +if(homeScore == 0 and away and pos2, 1)
-                +if(homeScore == 0 and away and pos1, 2)
-                +if(goals > 0 and minutesPlayed < 31, 2)
-                """;
+                String customScore = """
+                                (score2 * 0.5) + (score3 * 0.5)
+                                +savedPenalties * 3
+                                +penaltyMissed * -1
+                                +ownGoals * -1
+                                +if((pos1 or pos2), assists * 2)
+                                +if((pos3 or pos4), assists * 1)
+                                +if(pos1 and minutesPlayed > 70, 1)
+                                +if(pos2 and minutesPlayed > 70, 1)
+                                +if(pos3 and minutesPlayed > 70, 1)
+                                +if(pos4 and minutesPlayed > 70, 1)
+                                +if(homeScore == 0 and away and pos2, 1)
+                                +if(homeScore == 0 and away and pos1, 2)
+                                +if(goals > 0 and minutesPlayed < 31, 2)
+                                """;
 
-        BiwengerPlayerReport report = new BiwengerPlayerReport(
-                false,
-                null,
-                Map.of(
-                        "1", 6,
-                        "2", 3,
-                        "3", 0),
-                Map.of(
-                        "pos1", true,
-                        "score2", 3,
-                        "score3", 0,
-                        "away", true,
-                        "homeScore", 3,
-                        "awayScore", 0,
-                        "minutesPlayed", 90),
-                null);
+                BiwengerPlayerReport report = new BiwengerPlayerReport(
+                                false,
+                                null,
+                                Map.of(
+                                                "1", 6,
+                                                "2", 3,
+                                                "3", 0),
+                                Map.of(
+                                                "pos1", true,
+                                                "score2", 3,
+                                                "score3", 0,
+                                                "away", true,
+                                                "homeScore", 3,
+                                                "awayScore", 0,
+                                                "minutesPlayed", 90),
+                                null);
 
-        assertEquals(
-                3,
-                service.resolveLeaguePoints(
-                        100,
-                        customScore,
-                        report));
-    }
+                assertEquals(
+                                3,
+                                service.resolveLeaguePoints(
+                                                100,
+                                                customScore,
+                                                report));
+        }
 
-    @Test
-    void resolveLeaguePointsShouldUseBiwengerPointsForStandardScore() {
+        @Test
+        void resolveLeaguePointsShouldUseBiwengerPointsForStandardScore() {
 
-        BiwengerPlayerReport report = new BiwengerPlayerReport(
-                false,
-                null,
-                Map.of(
-                        "1", 6,
-                        "2", 3,
-                        "3", 0,
-                        "7", 2),
-                Map.of(),
-                null);
+                BiwengerPlayerReport report = new BiwengerPlayerReport(
+                                false,
+                                null,
+                                Map.of(
+                                                "1", 6,
+                                                "2", 3,
+                                                "3", 0,
+                                                "7", 2),
+                                Map.of(),
+                                null);
 
-        assertEquals(
-                3,
-                service.resolveLeaguePoints(
-                        2,
-                        null,
-                        report));
+                assertEquals(
+                                3,
+                                service.resolveLeaguePoints(
+                                                2,
+                                                null,
+                                                report));
 
-        assertEquals(
-                6,
-                service.resolveLeaguePoints(
-                        1,
-                        null,
-                        report));
+                assertEquals(
+                                6,
+                                service.resolveLeaguePoints(
+                                                1,
+                                                null,
+                                                report));
 
-        assertEquals(
-                2,
-                service.resolveLeaguePoints(
-                        7,
-                        null,
-                        report));
-    }
+                assertEquals(
+                                2,
+                                service.resolveLeaguePoints(
+                                                7,
+                                                null,
+                                                report));
+        }
 
-    @Test
-    void resolveLeaguePointsShouldReturnNullWhenCustomRawStatsAreMissing() {
+        @Test
+        void resolveLeaguePointsShouldReturnNullWhenCustomRawStatsAreMissing() {
 
-        BiwengerPlayerReport report = new BiwengerPlayerReport(
-                false,
-                null,
-                Map.of(
-                        "2", 3,
-                        "3", 0),
-                null,
-                null);
+                BiwengerPlayerReport report = new BiwengerPlayerReport(
+                                false,
+                                null,
+                                Map.of(
+                                                "2", 3,
+                                                "3", 0),
+                                null,
+                                null);
 
-        assertNull(
-                service.resolveLeaguePoints(
-                        100,
-                        "score2 + score3",
-                        report));
-    }
+                assertNull(
+                                service.resolveLeaguePoints(
+                                                100,
+                                                "score2 + score3",
+                                                report));
+        }
 
-    @Test
-    void resolveLeaguePointsShouldReturnNullWhenConfiguredStandardScoreIsMissing() {
+        @Test
+        void resolveLeaguePointsShouldReturnNullWhenConfiguredStandardScoreIsMissing() {
 
-        BiwengerPlayerReport report = new BiwengerPlayerReport(
-                false,
-                null,
-                Map.of(
-                        "2", 3,
-                        "3", 0),
-                Map.of(),
-                null);
+                BiwengerPlayerReport report = new BiwengerPlayerReport(
+                                false,
+                                null,
+                                Map.of(
+                                                "2", 3,
+                                                "3", 0),
+                                Map.of(),
+                                null);
 
-        assertNull(
-                service.resolveLeaguePoints(
-                        8,
-                        null,
-                        report));
-    }
+                assertNull(
+                                service.resolveLeaguePoints(
+                                                8,
+                                                null,
+                                                report));
+        }
 }

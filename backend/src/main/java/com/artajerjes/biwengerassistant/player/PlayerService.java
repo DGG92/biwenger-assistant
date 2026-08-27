@@ -34,6 +34,7 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
+import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @Service
 public class PlayerService {
@@ -175,8 +176,7 @@ public class PlayerService {
                                 .syncPlayerReports(player);
         }
 
-        @Transactional
-        public int syncLeagueReports(Long leagueId) {
+        public PlayerReportSyncResponse syncLeagueReports(Long leagueId) {
                 if (!leagueRepository.existsById(leagueId)) {
                         throw new LeagueNotFoundException(leagueId);
                 }

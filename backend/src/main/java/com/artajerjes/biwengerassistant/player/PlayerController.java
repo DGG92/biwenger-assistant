@@ -19,6 +19,7 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
+import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 import jakarta.validation.Valid;
 
@@ -105,7 +106,7 @@ public class PlayerController {
         }
 
         @PostMapping("/reports/sync")
-        public int syncLeagueReports(
+        public PlayerReportSyncResponse syncLeagueReports(
                         @PathVariable Long leagueId) {
 
                 return playerService

@@ -1,12 +1,12 @@
 package com.artajerjes.biwengerassistant.playerreport;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
@@ -14,6 +14,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayer
 import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayerReport;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @Service
 public class PlayerMatchReportService {
@@ -21,20 +22,20 @@ public class PlayerMatchReportService {
         private static final int CUSTOM_SCORE_ID = 100;
 
         private final BiwengerClient biwengerClient;
-        private final PlayerMatchReportRepository playerMatchReportRepository;
         private final PlayerRepository playerRepository;
         private final CustomScoreEvaluator customScoreEvaluator;
+        private final PlayerMatchReportPersistenceService playerMatchReportPersistenceService;
 
         public PlayerMatchReportService(
                         BiwengerClient biwengerClient,
-                        PlayerMatchReportRepository playerMatchReportRepository,
                         PlayerRepository playerRepository,
-                        CustomScoreEvaluator customScoreEvaluator) {
+                        CustomScoreEvaluator customScoreEvaluator,
+                        PlayerMatchReportPersistenceService playerMatchReportPersistenceService) {
 
                 this.biwengerClient = biwengerClient;
-                this.playerMatchReportRepository = playerMatchReportRepository;
                 this.playerRepository = playerRepository;
                 this.customScoreEvaluator = customScoreEvaluator;
+                this.playerMatchReportPersistenceService = playerMatchReportPersistenceService;
         }
 
         @Transactional
@@ -111,93 +112,53 @@ public class PlayerMatchReportService {
                                 }
                         }
 
-                        String absenceStatus = participated
-                                        || report.status() == null
-                                                        ? null
-                                                        : report.status().status();
-
-                        LocalDateTime matchDate = report.match().date() == null
-                                        ? null
-                                        : LocalDateTime.ofInstant(
-                                                        Instant.ofEpochSecond(
-                                                                        report.match().date()),
-                                                        ZoneId.systemDefault());
-
-                        String season = resolveSeason(
-                                        matchDate);
-
-                        Long roundId = report.match().round() == null
-                                        ? null
-                                        : report.match().round().id();
-
-                        String roundName = report.match().round() == null
-                                        ? null
-                                        : report.match().round().name();
-
-                        String roundShort = report.match().round() == null
-                                        ? null
-                                        : report.match().round().shortName();
-
-                        PlayerMatchReport entity = playerMatchReportRepository
-                                        .findByPlayerIdAndBiwengerMatchId(
-                                                        player.getId(),
-                                                        report.match().id())
-                                        .orElse(null);
-
-                        if (entity == null) {
-
-                                entity = new PlayerMatchReport(
-                                                player,
-                                                report.match().id(),
-                                                roundId,
-                                                roundName,
-                                                roundShort,
-                                                matchDate,
-                                                season,
-                                                participated,
-                                                absenceStatus,
-                                                leaguePoints);
-
-                        } else {
-
-                                entity.update(
-                                                roundId,
-                                                roundName,
-                                                roundShort,
-                                                matchDate,
-                                                season,
-                                                participated,
-                                                absenceStatus,
-                                                leaguePoints);
-                        }
-
-                        playerMatchReportRepository.save(
-                                        entity);
-
-                        processed++;
+                        processed += playerMatchReportPersistenceService
+                                        .persistReport(
+                                                        player,
+                                                        report,
+                                                        leaguePoints);
                 }
 
                 return processed;
         }
 
-        @Transactional
-        public int syncLeagueReports(
+        public PlayerReportSyncResponse syncLeagueReports(
                         Long leagueId) {
 
                 /*
-                 * La configuración se consulta UNA sola vez para toda
-                 * la sincronización.
-                 *
-                 * Así todos los jugadores utilizan exactamente la misma
-                 * versión del algoritmo y evitamos una petición de liga
-                 * por jugador.
+                 * La configuración se consulta una sola vez
+                 * para toda la sincronización.
                  */
                 LeagueScoreConfig scoreConfig = loadLeagueScoreConfig();
 
                 List<Player> players = playerRepository.findAllByLeague_Id(
                                 leagueId);
 
-                int processed = 0;
+                players = players.stream()
+                                .sorted(
+                                                Comparator
+                                                                .comparing(
+                                                                                Player::getReportsLastSyncAttemptAt,
+                                                                                Comparator.nullsFirst(
+                                                                                                Comparator.naturalOrder()))
+                                                                .thenComparing(
+                                                                                Player::getId))
+                                .toList();
+
+                int playersEligible = (int) players.stream()
+                                .filter(player -> player.getSlug() != null
+                                                && !player.getSlug().isBlank())
+                                .count();
+
+                int playersAttempted = 0;
+                int playersCompleted = 0;
+                int reportsProcessed = 0;
+
+                Long lastCompletedPlayerId = null;
+                Long rateLimitedPlayerId = null;
+
+                boolean completed = true;
+                String stopReason = null;
 
                 for (Player player : players) {
 
@@ -207,12 +168,56 @@ public class PlayerMatchReportService {
                                 continue;
                         }
 
-                        processed += syncPlayerReports(
-                                        player,
-                                        scoreConfig);
+                        playersAttempted++;
+
+                        LocalDateTime attemptTime = LocalDateTime.now();
+
+                        player.markReportsSyncAttempt(
+                                        attemptTime);
+
+                        playerRepository.save(player);
+
+                        try {
+
+                                reportsProcessed += syncPlayerReports(
+                                                player,
+                                                scoreConfig);
+
+                                player.markReportsSyncSuccess(
+                                                LocalDateTime.now());
+
+                                playerRepository.save(player);
+
+                                playersCompleted++;
+                                lastCompletedPlayerId = player.getId();
+
+                        } catch (HttpClientErrorException.TooManyRequests exception) {
+
+                                completed = false;
+                                stopReason = "RATE_LIMIT";
+                                rateLimitedPlayerId = player.getId();
+
+                                /*
+                                 * Paramos inmediatamente.
+                                 *
+                                 * Los reports de jugadores anteriores
+                                 * ya están persistidos mediante
+                                 * transacciones independientes.
+                                 */
+                                break;
+                        }
                 }
 
-                return processed;
+                return new PlayerReportSyncResponse(
+                                players.size(),
+                                playersEligible,
+                                playersAttempted,
+                                playersCompleted,
+                                reportsProcessed,
+                                completed,
+                                stopReason,
+                                lastCompletedPlayerId,
+                                rateLimitedPlayerId);
         }
 
         Integer resolveLeaguePoints(
@@ -296,23 +301,6 @@ public class PlayerMatchReportService {
                 return new LeagueScoreConfig(
                                 scoreId,
                                 customScore);
-        }
-
-        private String resolveSeason(
-                        LocalDateTime matchDate) {
-
-                if (matchDate == null) {
-                        return null;
-                }
-
-                int year = matchDate.getYear();
-                int month = matchDate.getMonthValue();
-
-                if (month >= 7) {
-                        return year + "-" + (year + 1);
-                }
-
-                return (year - 1) + "-" + year;
         }
 
         private record LeagueScoreConfig(

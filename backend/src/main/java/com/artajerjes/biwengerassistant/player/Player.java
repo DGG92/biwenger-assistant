@@ -114,6 +114,12 @@ public class Player {
     @Column(name = "purchase_price")
     private Long purchasePrice;
 
+    @Column(name = "reports_last_sync_attempt_at")
+    private LocalDateTime reportsLastSyncAttemptAt;
+
+    @Column(name = "reports_last_sync_success_at")
+    private LocalDateTime reportsLastSyncSuccessAt;
+
     protected Player() {
     }
 
@@ -247,6 +253,18 @@ public class Player {
         this.benchPosition = null;
     }
 
+    public void markReportsSyncAttempt(
+            LocalDateTime attemptedAt) {
+
+        this.reportsLastSyncAttemptAt = attemptedAt;
+    }
+
+    public void markReportsSyncSuccess(
+            LocalDateTime successfulAt) {
+
+        this.reportsLastSyncSuccessAt = successfulAt;
+    }
+
     @PrePersist
     private void prePersist() {
         if (createdAt == null) {
@@ -365,5 +383,13 @@ public class Player {
         }
 
         return marketValue - purchasePrice;
+    }
+
+    public LocalDateTime getReportsLastSyncAttemptAt() {
+        return reportsLastSyncAttemptAt;
+    }
+
+    public LocalDateTime getReportsLastSyncSuccessAt() {
+        return reportsLastSyncSuccessAt;
     }
 }
