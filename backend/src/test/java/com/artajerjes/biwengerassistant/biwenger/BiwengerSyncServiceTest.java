@@ -28,6 +28,8 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
+import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @ExtendWith(MockitoExtension.class)
 class BiwengerSyncServiceTest {
@@ -48,6 +50,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private ManagerService managerService;
+
+        @Mock
+        private PlayerMatchReportService playerMatchReportService;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
@@ -578,6 +583,9 @@ class BiwengerSyncServiceTest {
 
                 verify(offerService)
                                 .sync(LEAGUE_ID);
+
+                verify(playerMatchReportService)
+                                .syncLeagueReports(LEAGUE_ID);
         }
 
         @Test
@@ -612,6 +620,9 @@ class BiwengerSyncServiceTest {
 
                 verify(offerService)
                                 .sync(LEAGUE_ID);
+
+                verify(playerMatchReportService)
+                                .syncLeagueReports(LEAGUE_ID);
         }
 
         @Test
@@ -656,6 +667,11 @@ class BiwengerSyncServiceTest {
                                 offerService,
                                 never())
                                 .sync(LEAGUE_ID);
+
+                verify(
+                                playerMatchReportService,
+                                never())
+                                .syncLeagueReports(LEAGUE_ID);
         }
 
         @Test
@@ -690,6 +706,59 @@ class BiwengerSyncServiceTest {
 
                 verify(offerService)
                                 .sync(LEAGUE_ID);
+
+                verify(playerMatchReportService)
+                                .syncLeagueReports(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldExecutePlayerReportsBatch() {
+
+                PlayerReportSyncResponse reports = new PlayerReportSyncResponse(
+                                587,
+                                586,
+                                25,
+                                25,
+                                40,
+                                true,
+                                null,
+                                29L,
+                                null);
+
+                when(playerMatchReportService.syncLeagueReports(LEAGUE_ID))
+                                .thenReturn(reports);
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(playerMatchReportService)
+                                .syncLeagueReports(LEAGUE_ID);
+        }
+
+        @Test
+        void syncScheduledShouldContinueWhenPlayerReportsHitRateLimit() {
+
+                PlayerReportSyncResponse reports = new PlayerReportSyncResponse(
+                                587,
+                                586,
+                                4,
+                                3,
+                                12,
+                                false,
+                                "RATE_LIMIT",
+                                28L,
+                                29L);
+
+                when(playerMatchReportService.syncLeagueReports(LEAGUE_ID))
+                                .thenReturn(reports);
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(playerMatchReportService)
+                                .syncLeagueReports(LEAGUE_ID);
         }
 
 }

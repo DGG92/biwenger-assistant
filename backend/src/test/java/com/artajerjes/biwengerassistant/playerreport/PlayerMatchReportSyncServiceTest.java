@@ -53,6 +53,11 @@ class PlayerMatchReportSyncServiceTest {
                 new CustomScoreEvaluator(),
                 persistenceService);
 
+        ReflectionTestUtils.setField(
+                service,
+                "reportsSyncBatchSize",
+                25);
+
         when(
                 biwengerClient
                         .getLeague()
@@ -231,6 +236,79 @@ class PlayerMatchReportSyncServiceTest {
          * el InOrder/verifyNoMoreInteractions posterior
          * nos descubriría el problema.
          */
+    }
+
+    @Test
+    void leagueSyncShouldRespectConfiguredBatchSize() {
+
+        Player first = createPlayer(
+                10L,
+                "first");
+
+        Player second = createPlayer(
+                20L,
+                "second");
+
+        Player third = createPlayer(
+                30L,
+                "third");
+
+        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                .thenReturn(
+                        List.of(
+                                first,
+                                second,
+                                third));
+
+        when(biwengerClient.getPlayerDetail("first"))
+                .thenReturn(null);
+
+        when(biwengerClient.getPlayerDetail("second"))
+                .thenReturn(null);
+
+        /*
+         * Para este test reducimos el lote a 2.
+         */
+        ReflectionTestUtils.setField(
+                service,
+                "reportsSyncBatchSize",
+                2);
+
+        PlayerReportSyncResponse result = service.syncLeagueReports(
+                LEAGUE_ID);
+
+        assertEquals(
+                3,
+                result.playersTotal());
+
+        assertEquals(
+                3,
+                result.playersEligible());
+
+        assertEquals(
+                2,
+                result.playersAttempted());
+
+        assertEquals(
+                2,
+                result.playersCompleted());
+
+        assertEquals(
+                true,
+                result.completed());
+
+        verify(
+                biwengerClient)
+                .getPlayerDetail("first");
+
+        verify(
+                biwengerClient)
+                .getPlayerDetail("second");
+
+        verify(
+                biwengerClient,
+                never())
+                .getPlayerDetail("third");
     }
 
     private Player createPlayer(

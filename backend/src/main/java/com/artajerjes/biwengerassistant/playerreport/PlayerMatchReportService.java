@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
@@ -25,6 +26,9 @@ public class PlayerMatchReportService {
         private final PlayerRepository playerRepository;
         private final CustomScoreEvaluator customScoreEvaluator;
         private final PlayerMatchReportPersistenceService playerMatchReportPersistenceService;
+
+        @Value("${biwenger.reports-sync.batch-size:25}")
+        private int reportsSyncBatchSize;
 
         public PlayerMatchReportService(
                         BiwengerClient biwengerClient,
@@ -145,10 +149,16 @@ public class PlayerMatchReportService {
                                                                                 Player::getId))
                                 .toList();
 
-                int playersEligible = (int) players.stream()
+                List<Player> eligiblePlayers = players.stream()
                                 .filter(player -> player.getSlug() != null
                                                 && !player.getSlug().isBlank())
-                                .count();
+                                .toList();
+
+                int playersEligible = eligiblePlayers.size();
+
+                List<Player> playersToProcess = eligiblePlayers.stream()
+                                .limit(reportsSyncBatchSize)
+                                .toList();
 
                 int playersAttempted = 0;
                 int playersCompleted = 0;
@@ -160,13 +170,7 @@ public class PlayerMatchReportService {
                 boolean completed = true;
                 String stopReason = null;
 
-                for (Player player : players) {
-
-                        if (player.getSlug() == null
-                                        || player.getSlug().isBlank()) {
-
-                                continue;
-                        }
+                for (Player player : playersToProcess) {
 
                         playersAttempted++;
 

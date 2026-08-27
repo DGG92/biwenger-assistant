@@ -20,225 +20,276 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
+import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @Service
 public class BiwengerSyncService {
 
-    private static final Logger log = LoggerFactory.getLogger(BiwengerSyncService.class);
+        private static final Logger log = LoggerFactory.getLogger(BiwengerSyncService.class);
 
-    private final Set<Long> leaguesBeingSynced = ConcurrentHashMap.newKeySet();
+        private final Set<Long> leaguesBeingSynced = ConcurrentHashMap.newKeySet();
 
-    private final PlayerService playerService;
-    private final MarketService marketService;
-    private final OfferService offerService;
-    private final MovementService movementService;
-    private final ManagerService managerService;
+        private final PlayerService playerService;
+        private final MarketService marketService;
+        private final OfferService offerService;
+        private final MovementService movementService;
+        private final ManagerService managerService;
+        private final PlayerMatchReportService playerMatchReportService;
 
-    public BiwengerSyncService(
-            PlayerService playerService,
-            MarketService marketService,
-            OfferService offerService,
-            MovementService movementService,
-            ManagerService managerService) {
+        public BiwengerSyncService(
+                        PlayerService playerService,
+                        MarketService marketService,
+                        OfferService offerService,
+                        MovementService movementService,
+                        ManagerService managerService,
+                        PlayerMatchReportService playerMatchReportService) {
 
-        this.playerService = playerService;
-        this.marketService = marketService;
-        this.offerService = offerService;
-        this.movementService = movementService;
-        this.managerService = managerService;
-    }
-
-    public BiwengerSyncResponse syncAll(Long leagueId) {
-
-        if (!leaguesBeingSynced.add(leagueId)) {
-            throw new IllegalStateException(
-                    "League " + leagueId + " is already being synchronized");
+                this.playerService = playerService;
+                this.marketService = marketService;
+                this.offerService = offerService;
+                this.movementService = movementService;
+                this.managerService = managerService;
+                this.playerMatchReportService = playerMatchReportService;
         }
 
-        long startedAt = System.currentTimeMillis();
+        public BiwengerSyncResponse syncAll(Long leagueId) {
 
-        try {
-            log.info("Starting Biwenger sync for league {}", leagueId);
+                if (!leaguesBeingSynced.add(leagueId)) {
+                        throw new IllegalStateException(
+                                        "League " + leagueId + " is already being synchronized");
+                }
 
-            ManagerSyncResponse managers = managerService.sync(leagueId);
-            log.info("Managers synced for league {}", leagueId);
+                long startedAt = System.currentTimeMillis();
 
-            log.info("Syncing competition players for league {}", leagueId);
-            PlayerSyncResponse players = playerService.syncCompetitionPlayers(leagueId);
-            log.info("Competition players synced for league {}", leagueId);
+                try {
+                        log.info("Starting Biwenger sync for league {}", leagueId);
 
-            log.info("Syncing player ownership for league {}", leagueId);
-            PlayerOwnershipSyncResponse ownership = playerService.syncPlayerOwnership(leagueId);
-            log.info("Player ownership synced for league {}", leagueId);
+                        ManagerSyncResponse managers = managerService.sync(leagueId);
+                        log.info("Managers synced for league {}", leagueId);
 
-            log.info("Syncing market for league {}", leagueId);
-            MarketSyncResponse market = marketService.sync(leagueId);
-            log.info("Market synced for league {}", leagueId);
+                        log.info("Syncing competition players for league {}", leagueId);
+                        PlayerSyncResponse players = playerService.syncCompetitionPlayers(leagueId);
+                        log.info("Competition players synced for league {}", leagueId);
 
-            log.info("Syncing movements for league {}", leagueId);
-            MovementSyncResponse movements = movementService.sync(leagueId);
-            log.info("Movements synced for league {}", leagueId);
+                        log.info("Syncing player ownership for league {}", leagueId);
+                        PlayerOwnershipSyncResponse ownership = playerService.syncPlayerOwnership(leagueId);
+                        log.info("Player ownership synced for league {}", leagueId);
 
-            log.info("Syncing current lineup for league {}", leagueId);
-            PlayerLineupSyncResponse lineup = playerService.syncCurrentLineup(leagueId);
-            log.info("Current lineup synced for league {}", leagueId);
+                        log.info("Syncing market for league {}", leagueId);
+                        MarketSyncResponse market = marketService.sync(leagueId);
+                        log.info("Market synced for league {}", leagueId);
 
-            log.info("Syncing offers for league {}", leagueId);
-            OfferSyncResponse offers = offerService.sync(leagueId);
-            log.info("Offers synced for league {}", leagueId);
+                        log.info("Syncing movements for league {}", leagueId);
+                        MovementSyncResponse movements = movementService.sync(leagueId);
+                        log.info("Movements synced for league {}", leagueId);
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        log.info("Syncing current lineup for league {}", leagueId);
+                        PlayerLineupSyncResponse lineup = playerService.syncCurrentLineup(leagueId);
+                        log.info("Current lineup synced for league {}", leagueId);
 
-            log.info(
-                    "Biwenger sync completed for league {} in {} ms",
-                    leagueId,
-                    elapsed);
+                        log.info("Syncing offers for league {}", leagueId);
+                        OfferSyncResponse offers = offerService.sync(leagueId);
+                        log.info("Offers synced for league {}", leagueId);
 
-            return new BiwengerSyncResponse(
-                    managers,
-                    players,
-                    ownership,
-                    market,
-                    offers,
-                    movements,
-                    lineup);
+                        long elapsed = System.currentTimeMillis() - startedAt;
 
-        } catch (Exception exception) {
+                        log.info(
+                                        "Biwenger sync completed for league {} in {} ms",
+                                        leagueId,
+                                        elapsed);
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        return new BiwengerSyncResponse(
+                                        managers,
+                                        players,
+                                        ownership,
+                                        market,
+                                        offers,
+                                        movements,
+                                        lineup);
 
-            log.error(
-                    "Biwenger sync failed for league {} after {} ms",
-                    leagueId,
-                    elapsed,
-                    exception);
+                } catch (Exception exception) {
 
-            throw exception;
+                        long elapsed = System.currentTimeMillis() - startedAt;
 
-        } finally {
-            leaguesBeingSynced.remove(leagueId);
-        }
-    }
+                        log.error(
+                                        "Biwenger sync failed for league {} after {} ms",
+                                        leagueId,
+                                        elapsed,
+                                        exception);
 
-    public void syncScheduled(Long leagueId) {
+                        throw exception;
 
-        if (!leaguesBeingSynced.add(leagueId)) {
-            log.warn(
-                    "Skipping scheduled Biwenger sync for league {} because another sync is already running",
-                    leagueId);
-            return;
+                } finally {
+                        leaguesBeingSynced.remove(leagueId);
+                }
         }
 
-        long startedAt = System.currentTimeMillis();
+        public void syncScheduled(Long leagueId) {
 
-        try {
-            log.info(
-                    "Starting scheduled Biwenger sync for league {}",
-                    leagueId);
+                if (!leaguesBeingSynced.add(leagueId)) {
+                        log.warn(
+                                        "Skipping scheduled Biwenger sync for league {} because another sync is already running",
+                                        leagueId);
+                        return;
+                }
 
-            /*
-             * Datos base.
-             *
-             * Si cualquiera de estas fases falla, no continuamos.
-             * Las siguientes sincronizaciones dependen de que managers,
-             * jugadores y propietarios estén correctamente actualizados.
-             */
-            managerService.sync(leagueId);
-            log.info(
-                    "Managers synced for league {}",
-                    leagueId);
+                long startedAt = System.currentTimeMillis();
 
-            playerService.syncCompetitionPlayers(leagueId);
-            log.info(
-                    "Competition players synced for league {}",
-                    leagueId);
+                try {
+                        log.info(
+                                        "Starting scheduled Biwenger sync for league {}",
+                                        leagueId);
 
-            playerService.syncPlayerOwnership(leagueId);
-            log.info(
-                    "Player ownership synced for league {}",
-                    leagueId);
+                        /*
+                         * Datos base.
+                         *
+                         * Si cualquiera de estas fases falla, no continuamos.
+                         * Las siguientes sincronizaciones dependen de que managers,
+                         * jugadores y propietarios estén correctamente actualizados.
+                         */
+                        managerService.sync(leagueId);
+                        log.info(
+                                        "Managers synced for league {}",
+                                        leagueId);
 
-            /*
-             * Datos independientes.
-             *
-             * Un fallo puntual en una de estas fases no debe impedir
-             * que las demás se actualicen.
-             */
-            runScheduledPhase(
-                    leagueId,
-                    "market",
-                    () -> marketService.sync(leagueId));
+                        playerService.syncCompetitionPlayers(leagueId);
+                        log.info(
+                                        "Competition players synced for league {}",
+                                        leagueId);
 
-            runScheduledPhase(
-                    leagueId,
-                    "movements",
-                    () -> movementService.sync(leagueId));
+                        playerService.syncPlayerOwnership(leagueId);
+                        log.info(
+                                        "Player ownership synced for league {}",
+                                        leagueId);
 
-            runScheduledPhase(
-                    leagueId,
-                    "current lineup",
-                    () -> playerService.syncCurrentLineup(leagueId));
+                        /*
+                         * Datos independientes.
+                         *
+                         * Un fallo puntual en una de estas fases no debe impedir
+                         * que las demás se actualicen.
+                         */
+                        runScheduledPhase(
+                                        leagueId,
+                                        "market",
+                                        () -> marketService.sync(leagueId));
 
-            runScheduledPhase(
-                    leagueId,
-                    "offers",
-                    () -> offerService.sync(leagueId));
+                        runScheduledPhase(
+                                        leagueId,
+                                        "movements",
+                                        () -> movementService.sync(leagueId));
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        runScheduledPhase(
+                                        leagueId,
+                                        "current lineup",
+                                        () -> playerService.syncCurrentLineup(leagueId));
 
-            log.info(
-                    "Scheduled Biwenger sync completed for league {} in {} ms",
-                    leagueId,
-                    elapsed);
+                        runScheduledPhase(
+                                        leagueId,
+                                        "offers",
+                                        () -> offerService.sync(leagueId));
 
-        } catch (Exception exception) {
+                        runScheduledPhase(
+                                        leagueId,
+                                        "player reports",
+                                        () -> syncPlayerReportsBatch(leagueId));
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        long elapsed = System.currentTimeMillis() - startedAt;
 
-            log.error(
-                    "Scheduled Biwenger sync aborted for league {} during base synchronization after {} ms",
-                    leagueId,
-                    elapsed,
-                    exception);
+                        log.info(
+                                        "Scheduled Biwenger sync completed for league {} in {} ms",
+                                        leagueId,
+                                        elapsed);
 
-        } finally {
-            leaguesBeingSynced.remove(leagueId);
+                } catch (Exception exception) {
+
+                        long elapsed = System.currentTimeMillis() - startedAt;
+
+                        log.error(
+                                        "Scheduled Biwenger sync aborted for league {} during base synchronization after {} ms",
+                                        leagueId,
+                                        elapsed,
+                                        exception);
+
+                } finally {
+                        leaguesBeingSynced.remove(leagueId);
+                }
         }
-    }
 
-    private void runScheduledPhase(
-            Long leagueId,
-            String phaseName,
-            Runnable phase) {
+        private void runScheduledPhase(
+                        Long leagueId,
+                        String phaseName,
+                        Runnable phase) {
 
-        long startedAt = System.currentTimeMillis();
+                long startedAt = System.currentTimeMillis();
 
-        try {
-            log.info(
-                    "Starting scheduled {} sync for league {}",
-                    phaseName,
-                    leagueId);
+                try {
+                        log.info(
+                                        "Starting scheduled {} sync for league {}",
+                                        phaseName,
+                                        leagueId);
 
-            phase.run();
+                        phase.run();
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        long elapsed = System.currentTimeMillis() - startedAt;
 
-            log.info(
-                    "Scheduled {} sync completed for league {} in {} ms",
-                    phaseName,
-                    leagueId,
-                    elapsed);
+                        log.info(
+                                        "Scheduled {} sync completed for league {} in {} ms",
+                                        phaseName,
+                                        leagueId,
+                                        elapsed);
 
-        } catch (Exception exception) {
+                } catch (Exception exception) {
 
-            long elapsed = System.currentTimeMillis() - startedAt;
+                        long elapsed = System.currentTimeMillis() - startedAt;
 
-            log.error(
-                    "Scheduled {} sync failed for league {} after {} ms. Continuing with remaining phases.",
-                    phaseName,
-                    leagueId,
-                    elapsed,
-                    exception);
+                        log.error(
+                                        "Scheduled {} sync failed for league {} after {} ms. Continuing with remaining phases.",
+                                        phaseName,
+                                        leagueId,
+                                        elapsed,
+                                        exception);
+                }
         }
-    }
+
+        private void syncPlayerReportsBatch(
+                        Long leagueId) {
+
+                PlayerReportSyncResponse result = playerMatchReportService
+                                .syncLeagueReports(leagueId);
+
+                if (result.completed()) {
+
+                        log.info(
+                                        "Player reports batch completed for league {}: attempted={}, completed={}, reportsProcessed={}, eligible={}",
+                                        leagueId,
+                                        result.playersAttempted(),
+                                        result.playersCompleted(),
+                                        result.reportsProcessed(),
+                                        result.playersEligible());
+
+                        return;
+                }
+
+                if ("RATE_LIMIT".equals(result.stopReason())) {
+
+                        log.warn(
+                                        "Player reports batch stopped by Biwenger rate limit for league {}: attempted={}, completed={}, reportsProcessed={}, rateLimitedPlayerId={}",
+                                        leagueId,
+                                        result.playersAttempted(),
+                                        result.playersCompleted(),
+                                        result.reportsProcessed(),
+                                        result.rateLimitedPlayerId());
+
+                        return;
+                }
+
+                log.warn(
+                                "Player reports batch finished partially for league {}: attempted={}, completed={}, reportsProcessed={}, stopReason={}",
+                                leagueId,
+                                result.playersAttempted(),
+                                result.playersCompleted(),
+                                result.reportsProcessed(),
+                                result.stopReason());
+        }
 }
