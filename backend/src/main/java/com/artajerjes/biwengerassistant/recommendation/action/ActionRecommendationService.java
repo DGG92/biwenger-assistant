@@ -17,6 +17,9 @@ import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
+import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 
 @Service
 public class ActionRecommendationService {
@@ -25,6 +28,7 @@ public class ActionRecommendationService {
     private final PlayerRepository playerRepository;
     private final RecommendationService recommendationService;
     private final PlayerPerformanceSignalService playerPerformanceSignalService;
+    private final PlayerProtectionService playerProtectionService;
 
     @Value("${biwenger.user-id}")
     private Long biwengerUserId;
@@ -33,12 +37,14 @@ public class ActionRecommendationService {
             LeagueRepository leagueRepository,
             PlayerRepository playerRepository,
             RecommendationService recommendationService,
-            PlayerPerformanceSignalService playerPerformanceSignalService) {
+            PlayerPerformanceSignalService playerPerformanceSignalService,
+            PlayerProtectionService playerProtectionService) {
 
         this.leagueRepository = leagueRepository;
         this.playerRepository = playerRepository;
         this.recommendationService = recommendationService;
         this.playerPerformanceSignalService = playerPerformanceSignalService;
+        this.playerProtectionService = playerProtectionService;
     }
 
     @Transactional(readOnly = true)
@@ -63,14 +69,16 @@ public class ActionRecommendationService {
         SquadNeedsResponse squadNeeds = recommendationService.getSquadNeeds(leagueId);
 
         for (Player player : squadPlayers) {
-            ActionCandidate action = evaluatePlayer(
-                    player,
-                    squadNeeds);
 
-            if (action != null) {
-                actions.add(action);
-            }
+            actions.addAll(
+                    evaluatePlayerActions(
+                            player,
+                            squadNeeds));
         }
+
+        actions.addAll(
+                evaluateStarterReplacementActions(
+                        squadPlayers));
 
         return actions.stream()
                 .sorted(
@@ -79,9 +87,11 @@ public class ActionRecommendationService {
                 .toList();
     }
 
-    private ActionCandidate evaluatePlayer(
+    private List<ActionCandidate> evaluatePlayerActions(
             Player player,
             SquadNeedsResponse squadNeeds) {
+
+        List<ActionCandidate> actions = new ArrayList<>();
 
         PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
 
@@ -258,62 +268,285 @@ public class ActionRecommendationService {
         if (sellPressure >= 5
                 && difference <= -2) {
 
-            return new ActionCandidate(
-                    ActionType.SELL,
-                    sellPressure >= 8
-                            ? ActionPriority.HIGH
-                            : ActionPriority.MEDIUM,
-                    player.getId(),
-                    player.getName(),
-                    "Valora vender a " + player.getName(),
-                    buildSellExplanation(
-                            profit,
-                            dailyChange,
-                            performance,
-                            positionNeed),
-                    calculateConfidence(
-                            performance,
-                            Math.abs(difference)),
-                    null,
-                    List.copyOf(signals));
+            actions.add(
+                    new ActionCandidate(
+                            ActionType.SELL,
+                            sellPressure >= 8
+                                    ? ActionPriority.HIGH
+                                    : ActionPriority.MEDIUM,
+                            player.getId(),
+                            player.getName(),
+                            "Valora vender a " + player.getName(),
+                            buildSellExplanation(
+                                    profit,
+                                    dailyChange,
+                                    performance,
+                                    positionNeed),
+                            calculateConfidence(
+                                    performance,
+                                    Math.abs(difference)),
+                            null,
+                            List.copyOf(signals)));
         }
 
         if (holdPressure >= 5
                 && difference >= 2) {
 
-            return new ActionCandidate(
-                    ActionType.HOLD,
-                    holdPressure >= 8
-                            ? ActionPriority.HIGH
-                            : ActionPriority.MEDIUM,
-                    player.getId(),
-                    player.getName(),
-                    "Mantén a " + player.getName(),
-                    buildHoldExplanation(
-                            profit,
-                            dailyChange,
-                            performance,
-                            positionNeed),
-                    calculateConfidence(
-                            performance,
-                            Math.abs(difference)),
-                    null,
-                    List.copyOf(signals));
+            actions.add(
+                    new ActionCandidate(
+                            ActionType.HOLD,
+                            holdPressure >= 8
+                                    ? ActionPriority.HIGH
+                                    : ActionPriority.MEDIUM,
+                            player.getId(),
+                            player.getName(),
+                            "Mantén a " + player.getName(),
+                            buildHoldExplanation(
+                                    profit,
+                                    dailyChange,
+                                    performance,
+                                    positionNeed),
+                            calculateConfidence(
+                                    performance,
+                                    Math.abs(difference)),
+                            null,
+                            List.copyOf(signals)));
         }
 
-        return new ActionCandidate(
-                ActionType.WATCH,
-                ActionPriority.LOW,
-                player.getId(),
-                player.getName(),
-                "Sigue de cerca a " + player.getName(),
-                "Las señales económicas, deportivas y de plantilla "
-                        + "todavía no justifican una decisión clara.",
-                calculateConfidence(
-                        performance,
-                        Math.abs(difference)),
-                null,
-                List.copyOf(signals));
+        PlayerProtectionAlert protectionAlert = playerProtectionService.calculate(player);
+
+        boolean hasSellAction = actions.stream()
+                .anyMatch(action -> action.type() == ActionType.SELL);
+
+        if (!hasSellAction
+                && protectionAlert.level() == PlayerProtectionAlertLevel.PROTECT) {
+
+            actions.add(
+                    new ActionCandidate(
+                            ActionType.PROTECT,
+                            protectionAlert.score() >= 80
+                                    ? ActionPriority.HIGH
+                                    : ActionPriority.MEDIUM,
+                            player.getId(),
+                            player.getName(),
+                            "Protege a " + player.getName(),
+                            "Su evolución económica y deportiva justifica "
+                                    + "revisar al alza su cláusula.",
+                            protectionAlert.score(),
+                            null,
+                            protectionAlert.reasons()
+                                    .stream()
+                                    .map(Enum::name)
+                                    .toList()));
+        }
+
+        if (actions.isEmpty()) {
+
+            actions.add(
+                    new ActionCandidate(
+                            ActionType.WATCH,
+                            ActionPriority.LOW,
+                            player.getId(),
+                            player.getName(),
+                            "Sigue de cerca a " + player.getName(),
+                            "Las señales económicas, deportivas y de plantilla "
+                                    + "todavía no justifican una decisión clara.",
+                            calculateConfidence(
+                                    performance,
+                                    Math.abs(difference)),
+                            null,
+                            List.copyOf(signals)));
+        }
+
+        return actions;
+
+    }
+
+    private List<ActionCandidate> evaluateStarterReplacementActions(
+            List<Player> squadPlayers) {
+
+        List<ActionCandidate> actions = new ArrayList<>();
+
+        List<Player> starters = squadPlayers.stream()
+                .filter(Player::isStarter)
+                .toList();
+
+        List<Player> reserves = squadPlayers.stream()
+                .filter(Player::isReserve)
+                .filter(this::isAvailableForLineup)
+                .toList();
+
+        for (Player starter : starters) {
+
+            PlayerPerformanceSignals starterPerformance = playerPerformanceSignalService
+                    .analyze(starter);
+
+            /*
+             * No queremos recomendar cambios de once
+             * con una muestra demasiado pequeña.
+             */
+            if (starterPerformance.recentSampleSize() < 2) {
+                continue;
+            }
+
+            Player bestReserve = null;
+            PlayerPerformanceSignals bestReservePerformance = null;
+
+            for (Player reserve : reserves) {
+
+                if (!canReplaceStarter(
+                        starter,
+                        reserve)) {
+
+                    continue;
+                }
+
+                PlayerPerformanceSignals reservePerformance = playerPerformanceSignalService
+                        .analyze(reserve);
+
+                if (reservePerformance.recentSampleSize() < 2) {
+                    continue;
+                }
+
+                double improvement = reservePerformance.recentWeightedAverage()
+                        - starterPerformance.recentWeightedAverage();
+
+                /*
+                 * Exigimos una ventaja clara.
+                 * Dos puntos de media reciente evita
+                 * recomendaciones por diferencias pequeñas.
+                 */
+                if (improvement < 2.0) {
+                    continue;
+                }
+
+                /*
+                 * Si tenemos histórico suficiente de ambos jugadores,
+                 * evitamos cambiar el once por una racha corta cuando
+                 * el suplente ha rendido claramente peor a largo plazo.
+                 *
+                 * Una ventaja reciente muy grande (>= 4 puntos)
+                 * sí puede imponerse al histórico.
+                 */
+                boolean enoughHistoricalData = starterPerformance.historicalSampleSize() >= 5
+                        && reservePerformance.historicalSampleSize() >= 5;
+
+                if (enoughHistoricalData) {
+
+                    double historicalDifference = reservePerformance.historicalAveragePoints()
+                            - starterPerformance.historicalAveragePoints();
+
+                    if (historicalDifference <= -2.0
+                            && improvement < 4.0) {
+
+                        continue;
+                    }
+                }
+
+                if (bestReserve == null
+                        || reservePerformance.recentWeightedAverage() > bestReservePerformance
+                                .recentWeightedAverage()) {
+
+                    bestReserve = reserve;
+                    bestReservePerformance = reservePerformance;
+                }
+            }
+
+            if (bestReserve == null) {
+                continue;
+            }
+
+            double improvement = bestReservePerformance
+                    .recentWeightedAverage()
+                    - starterPerformance
+                            .recentWeightedAverage();
+
+            actions.add(
+                    new ActionCandidate(
+                            ActionType.REPLACE_STARTER,
+                            improvement >= 4.0
+                                    ? ActionPriority.HIGH
+                                    : ActionPriority.MEDIUM,
+                            starter.getId(),
+                            starter.getName(),
+                            "Replantea la titularidad de "
+                                    + starter.getName(),
+                            bestReserve.getName()
+                                    + " está rindiendo mejor recientemente: "
+                                    + round(
+                                            bestReservePerformance
+                                                    .recentWeightedAverage())
+                                    + " puntos de media frente a "
+                                    + round(
+                                            starterPerformance
+                                                    .recentWeightedAverage())
+                                    + ".",
+                            calculateLineupChangeConfidence(
+                                    starterPerformance,
+                                    bestReservePerformance,
+                                    improvement),
+                            null,
+                            List.of(
+                                    "STARTER_UNDERPERFORMING",
+                                    "RESERVE_OUTPERFORMING",
+                                    "SAME_POSITION")));
+        }
+
+        return actions;
+    }
+
+    private boolean canReplaceStarter(
+            Player starter,
+            Player reserve) {
+
+        if (starter.getLineupPosition() != null
+                && reserve.getBenchPosition() != null) {
+
+            return starter.getLineupPosition() == reserve.getBenchPosition();
+        }
+
+        return starter.getPositions()
+                .stream()
+                .anyMatch(
+                        reserve.getPositions()::contains);
+    }
+
+    private boolean isAvailableForLineup(
+            Player player) {
+
+        PlayerStatus status = player.getStatus();
+
+        return status != PlayerStatus.INJURED
+                && status != PlayerStatus.SANCTIONED
+                && status != PlayerStatus.DISCARDED;
+    }
+
+    private int calculateLineupChangeConfidence(
+            PlayerPerformanceSignals starterPerformance,
+            PlayerPerformanceSignals reservePerformance,
+            double improvement) {
+
+        int confidence = 40;
+
+        if (starterPerformance.recentSampleSize() >= 3
+                && reservePerformance.recentSampleSize() >= 3) {
+
+            confidence += 20;
+        }
+
+        if (starterPerformance.historicalSampleSize() >= 5
+                && reservePerformance.historicalSampleSize() >= 5) {
+
+            confidence += 15;
+        }
+
+        confidence += Math.min(
+                (int) Math.round(improvement * 5),
+                25);
+
+        return Math.min(
+                confidence,
+                100);
     }
 
     private int calculateConfidence(

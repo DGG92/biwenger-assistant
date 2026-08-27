@@ -22,6 +22,9 @@ import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.player.PlayerStatus;
+import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
+import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
@@ -30,360 +33,892 @@ import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceS
 @ExtendWith(MockitoExtension.class)
 class ActionRecommendationServiceTest {
 
-    private static final Long LEAGUE_ID = 1L;
-    private static final Long BIWENGER_USER_ID = 11_467_137L;
+        private static final Long LEAGUE_ID = 1L;
+        private static final Long BIWENGER_USER_ID = 11_467_137L;
 
-    @Mock
-    private LeagueRepository leagueRepository;
+        @Mock
+        private LeagueRepository leagueRepository;
 
-    @Mock
-    private PlayerRepository playerRepository;
+        @Mock
+        private PlayerRepository playerRepository;
 
-    @Mock
-    private RecommendationService recommendationService;
+        @Mock
+        private RecommendationService recommendationService;
 
-    @Mock
-    private PlayerPerformanceSignalService playerPerformanceSignalService;
+        @Mock
+        private PlayerPerformanceSignalService playerPerformanceSignalService;
 
-    @Mock
-    private Manager manager;
+        @Mock
+        private Manager manager;
 
-    private ActionRecommendationService actionRecommendationService;
+        @Mock
+        private PlayerProtectionService playerProtectionService;
 
-    @BeforeEach
-    void setUp() {
+        private ActionRecommendationService actionRecommendationService;
 
-        when(manager.getBiwengerManagerId())
-                .thenReturn(BIWENGER_USER_ID);
+        @BeforeEach
+        void setUp() {
 
-        actionRecommendationService = new ActionRecommendationService(
-                leagueRepository,
-                playerRepository,
-                recommendationService,
-                playerPerformanceSignalService);
+                when(manager.getBiwengerManagerId())
+                                .thenReturn(BIWENGER_USER_ID);
 
-        ReflectionTestUtils.setField(
-                actionRecommendationService,
-                "biwengerUserId",
-                BIWENGER_USER_ID);
+                actionRecommendationService = new ActionRecommendationService(
+                                leagueRepository,
+                                playerRepository,
+                                recommendationService,
+                                playerPerformanceSignalService,
+                                playerProtectionService);
 
-        when(leagueRepository.existsById(LEAGUE_ID))
-                .thenReturn(true);
-    }
+                ReflectionTestUtils.setField(
+                                actionRecommendationService,
+                                "biwengerUserId",
+                                BIWENGER_USER_ID);
 
-    @Test
-    void shouldHoldProfitableRisingStarterWithStrongPerformance() {
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+        }
 
-        Player player = createOwnedPlayer(
-                480L,
-                "2184",
-                "Ryan",
-                PlayerPosition.PT,
-                4_110_000L,
-                3_270_000L,
-                40_000L,
-                PlayerStatus.OK,
-                true);
+        @Test
+        void shouldHoldProfitableRisingStarterWithStrongPerformance() {
 
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(List.of(player));
+                Player player = createOwnedPlayer(
+                                480L,
+                                "2184",
+                                "Ryan",
+                                PlayerPosition.PT,
+                                4_110_000L,
+                                3_270_000L,
+                                40_000L,
+                                PlayerStatus.OK,
+                                true);
 
-        when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                .thenReturn(
-                        createSquadNeeds(
-                                Map.of(
-                                        "PT", 25,
-                                        "DF", 0,
-                                        "MC", 0,
-                                        "DL", 0)));
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
 
-        when(playerPerformanceSignalService.analyze(player))
-                .thenReturn(
-                        new PlayerPerformanceSignals(
-                                9.0,
-                                2,
-                                true,
-                                5.5,
-                                10));
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 25,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
 
-        List<ActionCandidate> result = actionRecommendationService
-                .getSquadActions(LEAGUE_ID);
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                9.0,
+                                                                2,
+                                                                true,
+                                                                5.5,
+                                                                10));
 
-        assertEquals(1, result.size());
+                when(playerProtectionService.calculate(player))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
 
-        ActionCandidate action = result.get(0);
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
 
-        assertEquals(
-                ActionType.HOLD,
-                action.type());
+                assertEquals(1, result.size());
 
-        assertEquals(
-                ActionPriority.HIGH,
-                action.priority());
+                ActionCandidate action = result.get(0);
 
-        assertEquals(
-                "Ryan",
-                action.playerName());
+                assertEquals(
+                                ActionType.HOLD,
+                                action.type());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("HIGH_PROFIT"));
+                assertEquals(
+                                ActionPriority.HIGH,
+                                action.priority());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("VALUE_RISING"));
+                assertEquals(
+                                "Ryan",
+                                action.playerName());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("RECENT_FORM_EXCELLENT"));
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("HIGH_PROFIT"));
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("STARTER"));
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("VALUE_RISING"));
 
-        /*
-         * Regla especialmente importante:
-         *
-         * tener una plusvalía elevada no debe convertir
-         * automáticamente al jugador en candidato a venta.
-         */
-        assertFalse(
-                action.sourceSignals()
-                        .contains("PROFIT_CAN_BE_REALIZED"));
-    }
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("RECENT_FORM_EXCELLENT"));
 
-    @Test
-    void shouldSellPlayerWithFallingValuePoorPerformanceAndCoveredPosition() {
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("STARTER"));
 
-        Player player = createOwnedPlayer(
-                500L,
-                "5000",
-                "Jugador en caída",
-                PlayerPosition.MC,
-                3_000_000L,
-                2_000_000L,
-                -60_000L,
-                PlayerStatus.OK,
-                false);
+                /*
+                 * Regla especialmente importante:
+                 *
+                 * tener una plusvalía elevada no debe convertir
+                 * automáticamente al jugador en candidato a venta.
+                 */
+                assertFalse(
+                                action.sourceSignals()
+                                                .contains("PROFIT_CAN_BE_REALIZED"));
+        }
 
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(List.of(player));
+        @Test
+        void shouldSellPlayerWithFallingValuePoorPerformanceAndCoveredPosition() {
 
-        when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                .thenReturn(
-                        createSquadNeeds(
-                                Map.of(
-                                        "PT", 0,
-                                        "DF", 0,
-                                        "MC", 0,
-                                        "DL", 0)));
+                Player player = createOwnedPlayer(
+                                500L,
+                                "5000",
+                                "Jugador en caída",
+                                PlayerPosition.MC,
+                                3_000_000L,
+                                2_000_000L,
+                                -60_000L,
+                                PlayerStatus.OK,
+                                false);
 
-        when(playerPerformanceSignalService.analyze(player))
-                .thenReturn(
-                        new PlayerPerformanceSignals(
-                                1.5,
-                                3,
-                                false,
-                                1.8,
-                                8));
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
 
-        List<ActionCandidate> result = actionRecommendationService
-                .getSquadActions(LEAGUE_ID);
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
 
-        assertEquals(1, result.size());
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                1.5,
+                                                                3,
+                                                                false,
+                                                                1.8,
+                                                                8));
 
-        ActionCandidate action = result.get(0);
+                when(playerProtectionService.calculate(player))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
 
-        assertEquals(
-                ActionType.SELL,
-                action.type());
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
 
-        assertEquals(
-                ActionPriority.HIGH,
-                action.priority());
+                assertEquals(1, result.size());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("VALUE_FALLING_FAST"));
+                ActionCandidate action = result.get(0);
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("RECENT_FORM_POOR"));
+                assertEquals(
+                                ActionType.SELL,
+                                action.type());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("HISTORICAL_PERFORMANCE_POOR"));
+                assertEquals(
+                                ActionPriority.HIGH,
+                                action.priority());
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("POSITION_WELL_COVERED"));
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("VALUE_FALLING_FAST"));
 
-        assertTrue(
-                action.sourceSignals()
-                        .contains("HIGH_PROFIT"));
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("RECENT_FORM_POOR"));
 
-        /*
-         * Aquí sí tiene sentido realizar el beneficio:
-         * no porque exista plusvalía, sino porque ya hay
-         * suficientes señales negativas independientes.
-         */
-        assertTrue(
-                action.sourceSignals()
-                        .contains("PROFIT_CAN_BE_REALIZED"));
-    }
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("HISTORICAL_PERFORMANCE_POOR"));
 
-    @Test
-    void shouldWatchPlayerWhenSignalsAreStillInsufficient() {
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("POSITION_WELL_COVERED"));
 
-        Player player = createOwnedPlayer(
-                600L,
-                "6000",
-                "Jugador sin datos suficientes",
-                PlayerPosition.DF,
-                1_000_000L,
-                1_000_000L,
-                0L,
-                PlayerStatus.OK,
-                false);
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("HIGH_PROFIT"));
 
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(List.of(player));
+                /*
+                 * Aquí sí tiene sentido realizar el beneficio:
+                 * no porque exista plusvalía, sino porque ya hay
+                 * suficientes señales negativas independientes.
+                 */
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("PROFIT_CAN_BE_REALIZED"));
+        }
 
-        when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                .thenReturn(
-                        createSquadNeeds(
-                                Map.of(
-                                        "PT", 0,
-                                        "DF", 25,
-                                        "MC", 0,
-                                        "DL", 0)));
+        @Test
+        void shouldWatchPlayerWhenSignalsAreStillInsufficient() {
 
-        when(playerPerformanceSignalService.analyze(player))
-                .thenReturn(
-                        new PlayerPerformanceSignals(
-                                0,
+                Player player = createOwnedPlayer(
+                                600L,
+                                "6000",
+                                "Jugador sin datos suficientes",
+                                PlayerPosition.DF,
+                                1_000_000L,
+                                1_000_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 25,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                0,
+                                                                1,
+                                                                false,
+                                                                0,
+                                                                0));
+
+                when(playerProtectionService.calculate(player))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertEquals(1, result.size());
+
+                ActionCandidate action = result.get(0);
+
+                assertEquals(
+                                ActionType.WATCH,
+                                action.type());
+
+                assertEquals(
+                                ActionPriority.LOW,
+                                action.priority());
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains(
+                                                                "RECENT_FORM_INSUFFICIENT_DATA"));
+
+                assertFalse(
+                                action.sourceSignals()
+                                                .contains("VALUE_RISING"));
+
+                assertFalse(
+                                action.sourceSignals()
+                                                .contains("VALUE_FALLING"));
+        }
+
+        @Test
+        void shouldReturnHoldAndProtectForValuablePlayer() {
+
+                Player player = createOwnedPlayer(
+                                700L,
+                                "7000",
+                                "Jugador protegido",
+                                PlayerPosition.PT,
+                                4_000_000L,
+                                3_000_000L,
+                                80_000L,
+                                PlayerStatus.OK,
+                                true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 50,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                8.0,
+                                                                3,
+                                                                true,
+                                                                6.0,
+                                                                10));
+
+                when(playerProtectionService.calculate(player))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.PROTECT,
+                                                                85,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertEquals(2, result.size());
+
+                assertTrue(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.HOLD));
+
+                assertTrue(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.PROTECT));
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.WATCH));
+        }
+
+        @Test
+        void shouldNotProtectPlayerWhenSellIsRecommended() {
+
+                Player player = createOwnedPlayer(
+                                800L,
+                                "8000",
+                                "Jugador vendible",
+                                PlayerPosition.MC,
+                                3_000_000L,
+                                2_000_000L,
+                                -100_000L,
+                                PlayerStatus.OK,
+                                false);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(player));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(player))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                1.0,
+                                                                3,
+                                                                false,
+                                                                1.5,
+                                                                10));
+
+                /*
+                 * Forzamos deliberadamente una alerta PROTECT
+                 * para comprobar que SELL tiene prioridad.
+                 */
+                when(playerProtectionService.calculate(player))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.PROTECT,
+                                                                90,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertEquals(1, result.size());
+
+                assertEquals(
+                                ActionType.SELL,
+                                result.get(0).type());
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.PROTECT));
+        }
+
+        @Test
+        void shouldRecommendReplacingStarterWhenReserveClearlyOutperforms() {
+
+                Player starter = createOwnedPlayer(
+                                900L,
+                                "9000",
+                                "Titular flojo",
+                                PlayerPosition.MC,
+                                3_000_000L,
+                                2_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                true);
+
+                Player reserve = createOwnedPlayer(
+                                901L,
+                                "9001",
+                                "Suplente en forma",
+                                PlayerPosition.MC,
+                                2_000_000L,
+                                1_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "reserve",
+                                true);
+
+                ReflectionTestUtils.setField(
+                                starter,
+                                "lineupPosition",
+                                PlayerPosition.MC);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "benchPosition",
+                                PlayerPosition.MC);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                starter,
+                                                                reserve));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(starter))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                3.0,
+                                                                3,
+                                                                false,
+                                                                4.0,
+                                                                10));
+
+                when(playerPerformanceSignalService.analyze(reserve))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                7.5,
+                                                                3,
+                                                                true,
+                                                                5.5,
+                                                                10));
+
+                when(playerProtectionService.calculate(starter))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                when(playerProtectionService.calculate(reserve))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertTrue(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+
+                ActionCandidate replacement = result.stream()
+                                .filter(action -> action.type() == ActionType.REPLACE_STARTER)
+                                .findFirst()
+                                .orElseThrow();
+
+                assertEquals(
+                                starter.getId(),
+                                replacement.playerId());
+
+                assertTrue(
+                                replacement.explanation()
+                                                .contains("Suplente en forma"));
+        }
+
+        @Test
+        void shouldNotRecommendReplacingStarterWhenReserveAdvantageIsTooSmall() {
+
+                Player starter = createOwnedPlayer(
+                                910L,
+                                "9100",
+                                "Titular estable",
+                                PlayerPosition.DF,
+                                3_000_000L,
+                                2_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                true);
+
+                Player reserve = createOwnedPlayer(
+                                911L,
+                                "9101",
+                                "Suplente parecido",
+                                PlayerPosition.DF,
+                                2_000_000L,
+                                1_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "reserve",
+                                true);
+
+                ReflectionTestUtils.setField(
+                                starter,
+                                "lineupPosition",
+                                PlayerPosition.DF);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "benchPosition",
+                                PlayerPosition.DF);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                starter,
+                                                                reserve));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(starter))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                5.0,
+                                                                3,
+                                                                false,
+                                                                5.0,
+                                                                10));
+
+                when(playerPerformanceSignalService.analyze(reserve))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                6.0,
+                                                                3,
+                                                                false,
+                                                                5.5,
+                                                                10));
+
+                when(playerProtectionService.calculate(starter))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                when(playerProtectionService.calculate(reserve))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+        }
+
+        @Test
+        void shouldNotRecommendReplacingStarterWithUnavailableReserve() {
+
+                Player starter = createOwnedPlayer(
+                                920L,
+                                "9200",
+                                "Titular",
+                                PlayerPosition.MC,
+                                3_000_000L,
+                                2_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                true);
+
+                Player reserve = createOwnedPlayer(
+                                921L,
+                                "9201",
+                                "Suplente lesionado",
+                                PlayerPosition.MC,
+                                2_000_000L,
+                                1_500_000L,
+                                0L,
+                                PlayerStatus.INJURED,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "reserve",
+                                true);
+
+                ReflectionTestUtils.setField(
+                                starter,
+                                "lineupPosition",
+                                PlayerPosition.MC);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "benchPosition",
+                                PlayerPosition.MC);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(starter, reserve));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(starter))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                3.0,
+                                                                3,
+                                                                false,
+                                                                4.0,
+                                                                10));
+
+                when(playerPerformanceSignalService.analyze(reserve))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                9.0,
+                                                                3,
+                                                                true,
+                                                                6.0,
+                                                                10));
+
+                when(playerProtectionService.calculate(starter))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                when(playerProtectionService.calculate(reserve))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+        }
+
+        @Test
+        void shouldNotReplaceStarterWhenReserveRecentFormConflictsWithMuchWorseHistory() {
+
+                Player starter = createOwnedPlayer(
+                                930L,
+                                "9300",
+                                "Titular fiable",
+                                PlayerPosition.DF,
+                                4_000_000L,
+                                3_000_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                true);
+
+                Player reserve = createOwnedPlayer(
+                                931L,
+                                "9301",
+                                "Suplente en racha",
+                                PlayerPosition.DF,
+                                2_000_000L,
+                                1_500_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "reserve",
+                                true);
+
+                ReflectionTestUtils.setField(
+                                starter,
+                                "lineupPosition",
+                                PlayerPosition.DF);
+
+                ReflectionTestUtils.setField(
+                                reserve,
+                                "benchPosition",
+                                PlayerPosition.DF);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(starter, reserve));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(starter))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                4.0,
+                                                                3,
+                                                                false,
+                                                                6.5,
+                                                                12));
+
+                when(playerPerformanceSignalService.analyze(reserve))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                6.5,
+                                                                3,
+                                                                false,
+                                                                3.5,
+                                                                12));
+
+                when(playerProtectionService.calculate(starter))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                when(playerProtectionService.calculate(reserve))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+        }
+
+        private Player createOwnedPlayer(
+                        Long id,
+                        String biwengerPlayerId,
+                        String name,
+                        PlayerPosition position,
+                        Long marketValue,
+                        Long purchasePrice,
+                        Long valueFluctuation,
+                        PlayerStatus status,
+                        boolean starter) {
+
+                Player player = new Player(
+                                biwengerPlayerId,
+                                name,
+                                List.of(position),
+                                "Equipo",
+                                marketValue,
+                                createLeague());
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "id",
+                                id);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "owner",
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "purchasePrice",
+                                purchasePrice);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "valueFluctuation",
+                                valueFluctuation);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "status",
+                                status);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "starter",
+                                starter);
+
+                return player;
+        }
+
+        private League createLeague() {
+
+                League league = new League(
+                                "VII Güenguer",
+                                "1268640");
+
+                ReflectionTestUtils.setField(
+                                league,
+                                "id",
+                                LEAGUE_ID);
+
+                return league;
+        }
+
+        private SquadNeedsResponse createSquadNeeds(
+                        Map<String, Integer> needScoreByPosition) {
+
+                return new SquadNeedsResponse(
+                                13L,
+                                "Califato Omeya",
                                 1,
-                                false,
-                                0,
-                                0));
-
-        List<ActionCandidate> result = actionRecommendationService
-                .getSquadActions(LEAGUE_ID);
-
-        assertEquals(1, result.size());
-
-        ActionCandidate action = result.get(0);
-
-        assertEquals(
-                ActionType.WATCH,
-                action.type());
-
-        assertEquals(
-                ActionPriority.LOW,
-                action.priority());
-
-        assertTrue(
-                action.sourceSignals()
-                        .contains(
-                                "RECENT_FORM_INSUFFICIENT_DATA"));
-
-        assertFalse(
-                action.sourceSignals()
-                        .contains("VALUE_RISING"));
-
-        assertFalse(
-                action.sourceSignals()
-                        .contains("VALUE_FALLING"));
-    }
-
-    private Player createOwnedPlayer(
-            Long id,
-            String biwengerPlayerId,
-            String name,
-            PlayerPosition position,
-            Long marketValue,
-            Long purchasePrice,
-            Long valueFluctuation,
-            PlayerStatus status,
-            boolean starter) {
-
-        Player player = new Player(
-                biwengerPlayerId,
-                name,
-                List.of(position),
-                "Equipo",
-                marketValue,
-                createLeague());
-
-        ReflectionTestUtils.setField(
-                player,
-                "id",
-                id);
-
-        ReflectionTestUtils.setField(
-                player,
-                "owner",
-                manager);
-
-        ReflectionTestUtils.setField(
-                player,
-                "purchasePrice",
-                purchasePrice);
-
-        ReflectionTestUtils.setField(
-                player,
-                "valueFluctuation",
-                valueFluctuation);
-
-        ReflectionTestUtils.setField(
-                player,
-                "status",
-                status);
-
-        ReflectionTestUtils.setField(
-                player,
-                "starter",
-                starter);
-
-        return player;
-    }
-
-    private League createLeague() {
-
-        League league = new League(
-                "VII Güenguer",
-                "1268640");
-
-        ReflectionTestUtils.setField(
-                league,
-                "id",
-                LEAGUE_ID);
-
-        return league;
-    }
-
-    private SquadNeedsResponse createSquadNeeds(
-            Map<String, Integer> needScoreByPosition) {
-
-        return new SquadNeedsResponse(
-                13L,
-                "Califato Omeya",
-                1,
-                Map.of(
-                        "PT", 0,
-                        "DF", 0,
-                        "MC", 0,
-                        "DL", 0),
-                Map.of(
-                        "PT", 0,
-                        "DF", 0,
-                        "MC", 0,
-                        "DL", 0),
-                Map.of(
-                        "PT", 0,
-                        "DF", 0,
-                        "MC", 0,
-                        "DL", 0),
-                needScoreByPosition);
-    }
+                                Map.of(
+                                                "PT", 0,
+                                                "DF", 0,
+                                                "MC", 0,
+                                                "DL", 0),
+                                Map.of(
+                                                "PT", 0,
+                                                "DF", 0,
+                                                "MC", 0,
+                                                "DL", 0),
+                                Map.of(
+                                                "PT", 0,
+                                                "DF", 0,
+                                                "MC", 0,
+                                                "DL", 0),
+                                needScoreByPosition);
+        }
 }
