@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.player.PlayerStatus;
+import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketScoreBreakdown;
@@ -671,6 +673,106 @@ public class RecommendationService {
                                 needScoreByPosition);
         }
 
+        @Transactional(readOnly = true)
+        public FormationRecommendationResponse getFormationRecommendation(
+                        Long leagueId) {
+
+                if (!leagueRepository.existsById(leagueId)) {
+                        throw new LeagueNotFoundException(leagueId);
+                }
+
+                List<Player> squadPlayers = playerRepository
+                                .findAllByLeague_Id(leagueId)
+                                .stream()
+                                .filter(player -> player.getOwner() != null)
+                                .filter(player -> biwengerUserId.equals(
+                                                player.getOwner()
+                                                                .getBiwengerManagerId()))
+                                .filter(player -> !player.getPositions()
+                                                .contains(PlayerPosition.E))
+                                .toList();
+
+                if (squadPlayers.isEmpty()) {
+
+                        return new FormationRecommendationResponse(
+                                        null,
+                                        null,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+                }
+
+                String currentFormation = squadPlayers.get(0)
+                                .getOwner()
+                                .getCurrentFormation();
+
+                if (currentFormation == null
+                                || currentFormation.isBlank()) {
+
+                        return new FormationRecommendationResponse(
+                                        null,
+                                        null,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+                }
+
+                Formation current = findFormation(currentFormation);
+
+                if (current == null) {
+
+                        return new FormationRecommendationResponse(
+                                        currentFormation,
+                                        null,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+                }
+
+                double currentScore = calculateFormationPerformanceScore(
+                                squadPlayers,
+                                current);
+
+                Formation bestFormation = current;
+
+                double bestScore = currentScore;
+
+                for (Formation formation : VALID_FORMATIONS) {
+
+                        if (formation.equals(current)) {
+                                continue;
+                        }
+
+                        double score = calculateFormationPerformanceScore(
+                                        squadPlayers,
+                                        formation);
+
+                        if (score > bestScore) {
+
+                                bestScore = score;
+                                bestFormation = formation;
+                        }
+                }
+
+                double improvement = Math.max(
+                                bestScore - currentScore,
+                                0);
+
+                int confidence = calculateFormationRecommendationConfidence(
+                                improvement);
+
+                return new FormationRecommendationResponse(
+                                currentFormation,
+                                formationName(bestFormation),
+                                round(currentScore),
+                                round(bestScore),
+                                round(improvement),
+                                confidence);
+        }
+
         private double calculateAvailabilityWeight(
                         PlayerStatus status) {
 
@@ -724,6 +826,27 @@ public class RecommendationService {
                 positions.put("DL", 0.0);
 
                 return positions;
+        }
+
+        private Formation findFormation(
+                        String formationName) {
+
+                return VALID_FORMATIONS
+                                .stream()
+                                .filter(formation -> formationName(formation)
+                                                .equals(formationName))
+                                .findFirst()
+                                .orElse(null);
+        }
+
+        private String formationName(
+                        Formation formation) {
+
+                return formation.defenders()
+                                + "-"
+                                + formation.midfielders()
+                                + "-"
+                                + formation.forwards();
         }
 
         private List<PlayerPosition> buildRequiredPositions(
@@ -792,6 +915,194 @@ public class RecommendationService {
                 return calculateCoverageForRequiredPositions(
                                 players,
                                 buildRequiredPositions(formation));
+        }
+
+        private double calculateFormationPerformanceScore(
+                        List<Player> players,
+                        Formation formation) {
+
+                List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
+
+                /*
+                 * Si ni siquiera podemos cubrir los 11 puestos
+                 * de la formación, no puede ser candidata.
+                 */
+                if (calculateFormationCoverage(
+                                players,
+                                formation) < requiredPositions.size()) {
+
+                        return -1_000_000;
+                }
+
+                List<Double> playerRatings = players.stream()
+                                .map(this::calculateFormationPlayerRating)
+                                .toList();
+
+                Map<Long, Double> memo = new HashMap<>();
+
+                return maximizeFormationPerformance(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                0,
+                                0,
+                                memo);
+        }
+
+        private double maximizeFormationPerformance(
+                        List<Player> players,
+                        List<Double> playerRatings,
+                        List<PlayerPosition> requiredPositions,
+                        int playerIndex,
+                        int occupiedSlotsMask,
+                        Map<Long, Double> memo) {
+
+                int allSlotsMask = (1 << requiredPositions.size()) - 1;
+
+                if (occupiedSlotsMask == allSlotsMask) {
+                        return 0;
+                }
+
+                if (playerIndex >= players.size()) {
+                        return -1_000_000;
+                }
+
+                long state = (((long) playerIndex) << 32)
+                                | (occupiedSlotsMask
+                                                & 0xffffffffL);
+
+                Double cached = memo.get(state);
+
+                if (cached != null) {
+                        return cached;
+                }
+
+                /*
+                 * Opción 1:
+                 * no usar a este jugador en el XI.
+                 */
+                double best = maximizeFormationPerformance(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                playerIndex + 1,
+                                occupiedSlotsMask,
+                                memo);
+
+                Player player = players.get(playerIndex);
+
+                double availability = calculateAvailabilityWeight(
+                                player.getStatus());
+
+                /*
+                 * Opción 2:
+                 * asignarlo a cualquiera de los puestos
+                 * compatibles que todavía estén libres.
+                 */
+                if (availability > 0) {
+
+                        for (int slotIndex = 0; slotIndex < requiredPositions.size(); slotIndex++) {
+
+                                int slotBit = 1 << slotIndex;
+
+                                if ((occupiedSlotsMask & slotBit) != 0) {
+                                        continue;
+                                }
+
+                                PlayerPosition requiredPosition = requiredPositions.get(slotIndex);
+
+                                if (!player.getPositions()
+                                                .contains(requiredPosition)) {
+
+                                        continue;
+                                }
+
+                                double remainingScore = maximizeFormationPerformance(
+                                                players,
+                                                playerRatings,
+                                                requiredPositions,
+                                                playerIndex + 1,
+                                                occupiedSlotsMask | slotBit,
+                                                memo);
+
+                                if (remainingScore <= -999_999) {
+                                        continue;
+                                }
+
+                                double candidateScore = playerRatings.get(playerIndex)
+                                                + remainingScore;
+
+                                best = Math.max(
+                                                best,
+                                                candidateScore);
+                        }
+                }
+
+                memo.put(
+                                state,
+                                best);
+
+                return best;
+        }
+
+        private double calculateFormationPlayerRating(
+                        Player player) {
+
+                PlayerPerformanceSignals performance = playerPerformanceSignalService
+                                .analyze(player);
+
+                boolean hasRecentData = performance.recentSampleSize() >= 2;
+
+                boolean hasHistoricalData = performance.historicalSampleSize() >= 5;
+
+                double rating;
+
+                if (hasRecentData
+                                && hasHistoricalData) {
+
+                        rating = performance.recentWeightedAverage()
+                                        * 0.65
+                                        + performance.historicalAveragePoints()
+                                                        * 0.35;
+
+                } else if (hasRecentData) {
+
+                        rating = performance.recentWeightedAverage();
+
+                } else if (hasHistoricalData) {
+
+                        rating = performance.historicalAveragePoints();
+
+                } else {
+
+                        /*
+                         * No inventamos rendimiento cuando todavía
+                         * no disponemos de muestra suficiente.
+                         */
+                        rating = 0;
+                }
+
+                return rating
+                                * calculateAvailabilityWeight(
+                                                player.getStatus());
+        }
+
+        private int calculateFormationRecommendationConfidence(
+                        double improvement) {
+
+                if (improvement <= 0) {
+                        return 0;
+                }
+
+                int confidence = 55
+                                + Math.min(
+                                                (int) Math.round(
+                                                                improvement * 5),
+                                                35);
+
+                return Math.min(
+                                confidence,
+                                90);
         }
 
         private boolean tryAssignPlayerToSlot(

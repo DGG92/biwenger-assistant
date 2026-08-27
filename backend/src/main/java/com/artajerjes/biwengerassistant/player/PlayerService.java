@@ -571,6 +571,9 @@ public class PlayerService {
                 BiwengerUserLineup lineup = response.data().lineup();
 
                 if (lineup == null) {
+
+                        manager.updateCurrentFormation(null);
+
                         return new PlayerLineupSyncResponse(
                                         manager.getId(),
                                         null,
@@ -578,6 +581,12 @@ public class PlayerService {
                                         null,
                                         null);
                 }
+
+                manager.updateCurrentFormation(
+                                lineup.type());
+
+                manager.updateCurrentFormation(
+                                lineup.type());
 
                 Long captainId = lineup.captain() == null
                                 ? null

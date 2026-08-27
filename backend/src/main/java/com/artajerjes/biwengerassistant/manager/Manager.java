@@ -58,6 +58,9 @@ public class Manager {
     @Column
     private Long cash;
 
+    @Column(name = "current_formation", length = 20)
+    private String currentFormation;
+
     @Column(name = "maximum_bid")
     private Long maximumBid;
 
@@ -119,6 +122,10 @@ public class Manager {
         this.cash = cash;
     }
 
+    public void updateCurrentFormation(String currentFormation) {
+        this.currentFormation = currentFormation;
+    }
+
     public void updateEconomicStatus(
             Long cash,
             Long maximumBid) {
@@ -175,6 +182,10 @@ public class Manager {
 
     public Long getCash() {
         return cash;
+    }
+
+    public String getCurrentFormation() {
+        return currentFormation;
     }
 
     public Long getMaximumBid() {

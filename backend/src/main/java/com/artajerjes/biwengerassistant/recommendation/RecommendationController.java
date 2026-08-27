@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
@@ -33,5 +34,13 @@ public class RecommendationController {
             @PathVariable Long leagueId) {
         return recommendationService
                 .getSquadNeeds(leagueId);
+    }
+
+    @GetMapping("/formation")
+    public FormationRecommendationResponse getFormationRecommendation(
+            @PathVariable Long leagueId) {
+
+        return recommendationService
+                .getFormationRecommendation(leagueId);
     }
 }

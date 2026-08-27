@@ -6,12 +6,12 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -20,12 +20,13 @@ import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
+import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.player.PlayerStatus;
-import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
+import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -59,7 +60,8 @@ class ActionRecommendationServiceTest {
         @BeforeEach
         void setUp() {
 
-                when(manager.getBiwengerManagerId())
+                lenient()
+                                .when(manager.getBiwengerManagerId())
                                 .thenReturn(BIWENGER_USER_ID);
 
                 actionRecommendationService = new ActionRecommendationService(
@@ -829,6 +831,98 @@ class ActionRecommendationServiceTest {
                 assertFalse(
                                 result.stream()
                                                 .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+        }
+
+        @Test
+        void shouldRecommendFormationChangeWhenAlternativeIsClearlyBetter() {
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(recommendationService
+                                .getFormationRecommendation(LEAGUE_ID))
+                                .thenReturn(
+                                                new FormationRecommendationResponse(
+                                                                "5-4-1",
+                                                                "4-4-2",
+                                                                55.0,
+                                                                58.5,
+                                                                3.5,
+                                                                73));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(
+                                                LEAGUE_ID);
+
+                assertEquals(
+                                1,
+                                result.size());
+
+                ActionCandidate action = result.get(0);
+
+                assertEquals(
+                                ActionType.CHANGE_FORMATION,
+                                action.type());
+
+                assertEquals(
+                                ActionPriority.MEDIUM,
+                                action.priority());
+
+                assertEquals(
+                                73,
+                                action.confidence());
+
+                assertTrue(
+                                action.title()
+                                                .contains("4-4-2"));
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains(
+                                                                "FORMATION_IMPROVEMENT"));
+        }
+
+        @Test
+        void shouldNotRecommendFormationChangeWhenImprovementIsMarginal() {
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(recommendationService
+                                .getFormationRecommendation(LEAGUE_ID))
+                                .thenReturn(
+                                                new FormationRecommendationResponse(
+                                                                "5-4-1",
+                                                                "4-4-2",
+                                                                55.0,
+                                                                56.2,
+                                                                1.2,
+                                                                61));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(
+                                                LEAGUE_ID);
+
+                assertTrue(
+                                result.isEmpty());
         }
 
         private Player createOwnedPlayer(
