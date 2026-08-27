@@ -1,6 +1,5 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
-import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +21,6 @@ import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.player.PlayerStatus;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
@@ -38,16 +36,6 @@ public class RecommendationService {
                         int defenders,
                         int midfielders,
                         int forwards) {
-        }
-
-        private record RecentFormAnalysis(
-                        int score,
-                        int sampleSize) {
-        }
-
-        private record HistoricalPerformanceAnalysis(
-                        double averagePoints,
-                        int sampleSize) {
         }
 
         private static final List<Formation> VALID_FORMATIONS = List.of(
@@ -70,7 +58,6 @@ public class RecommendationService {
         private final MarketListingRepository marketListingRepository;
         private final OfferService offerService;
         private final PlayerRepository playerRepository;
-        private final PlayerMatchReportRepository playerMatchReportRepository;
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
 
         @Value("${biwenger.user-id}")
@@ -81,14 +68,12 @@ public class RecommendationService {
                         MarketListingRepository marketListingRepository,
                         OfferService offerService,
                         PlayerRepository playerRepository,
-                        PlayerMatchReportRepository playerMatchReportRepository,
                         PlayerPerformanceSignalService playerPerformanceSignalService) {
 
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
                 this.offerService = offerService;
                 this.playerRepository = playerRepository;
-                this.playerMatchReportRepository = playerMatchReportRepository;
                 this.playerPerformanceSignalService = playerPerformanceSignalService;
         }
 
@@ -603,126 +588,6 @@ public class RecommendationService {
                 return -10;
         }
 
-        private RecentFormAnalysis calculateRecentForm(Player player) {
-                List<PlayerMatchReport> recentReports = playerMatchReportRepository
-                                .findTop5ByPlayer_IdOrderByMatchDateDesc(
-                                                player.getId());
-
-                if (recentReports == null
-                                || recentReports.size() < 2) {
-                        return new RecentFormAnalysis(
-                                        0,
-                                        0);
-                }
-
-                List<PlayerMatchReport> streak = buildCurrentConsecutiveStreak(
-                                recentReports);
-
-                if (streak.size() < 2) {
-                        return new RecentFormAnalysis(
-                                        0,
-                                        0);
-                }
-
-                double weightedPoints = 0;
-                int totalWeight = 0;
-
-                for (int i = 0; i < streak.size(); i++) {
-                        PlayerMatchReport report = streak.get(i);
-
-                        /*
-                         * Los reports vienen ordenados del más reciente
-                         * al más antiguo.
-                         *
-                         * Para una racha de 5:
-                         * J5 -> peso 5
-                         * J4 -> peso 4
-                         * J3 -> peso 3
-                         * J2 -> peso 2
-                         * J1 -> peso 1
-                         */
-                        int weight = streak.size() - i;
-
-                        weightedPoints += report.getPoints() * weight;
-                        totalWeight += weight;
-                }
-
-                double average = totalWeight == 0
-                                ? 0
-                                : weightedPoints / totalWeight;
-
-                boolean allExcellent = streak.stream()
-                                .allMatch(report -> report.getPoints() >= 8);
-
-                int sampleSize = streak.size();
-
-                if (allExcellent) {
-                        return new RecentFormAnalysis(
-                                        15,
-                                        sampleSize);
-                }
-
-                if (average >= 7) {
-                        return new RecentFormAnalysis(
-                                        10,
-                                        sampleSize);
-                }
-
-                if (average >= 5) {
-                        return new RecentFormAnalysis(
-                                        5,
-                                        sampleSize);
-                }
-
-                if (average >= 3) {
-                        return new RecentFormAnalysis(
-                                        0,
-                                        sampleSize);
-                }
-
-                if (average >= 1) {
-                        return new RecentFormAnalysis(
-                                        -5,
-                                        sampleSize);
-                }
-
-                return new RecentFormAnalysis(
-                                -10,
-                                sampleSize);
-        }
-
-        private HistoricalPerformanceAnalysis calculateHistoricalPerformance(
-                        Player player) {
-
-                if (player.getPositions() != null
-                                && player.getPositions().contains(PlayerPosition.E)) {
-                        return new HistoricalPerformanceAnalysis(
-                                        0,
-                                        0);
-                }
-
-                List<PlayerMatchReport> reports = playerMatchReportRepository
-                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                                                player.getId());
-
-                if (reports == null
-                                || reports.isEmpty()) {
-                        return new HistoricalPerformanceAnalysis(
-                                        0,
-                                        0);
-                }
-
-                double averagePoints = reports.stream()
-                                .map(PlayerMatchReport::getPoints)
-                                .mapToInt(Integer::intValue)
-                                .average()
-                                .orElse(0);
-
-                return new HistoricalPerformanceAnalysis(
-                                averagePoints,
-                                reports.size());
-        }
-
         private int calculateHistoricalPerformanceScore(
                         PlayerPerformanceSignals performance) {
 
@@ -732,35 +597,6 @@ public class RecommendationService {
                 }
 
                 double average = performance.historicalAveragePoints();
-
-                if (average >= 6) {
-                        return 10;
-                }
-
-                if (average >= 5) {
-                        return 5;
-                }
-
-                if (average >= 3) {
-                        return 0;
-                }
-
-                if (average >= 2) {
-                        return -5;
-                }
-
-                return -10;
-        }
-
-        private int calculateHistoricalPerformanceScore(
-                        HistoricalPerformanceAnalysis historicalPerformance) {
-
-                if (historicalPerformance == null
-                                || historicalPerformance.sampleSize() < 5) {
-                        return 0;
-                }
-
-                double average = historicalPerformance.averagePoints();
 
                 if (average >= 6) {
                         return 10;
@@ -1232,81 +1068,5 @@ public class RecommendationService {
 
         private double round(double value) {
                 return Math.round(value * 100.0) / 100.0;
-        }
-
-        private Integer extractRoundNumber(String roundShort) {
-                if (roundShort == null) {
-                        return null;
-                }
-
-                String normalized = roundShort
-                                .trim()
-                                .toUpperCase();
-
-                if (!normalized.matches("J\\d+")) {
-                        return null;
-                }
-
-                return Integer.parseInt(
-                                normalized.substring(1));
-        }
-
-        private List<PlayerMatchReport> buildCurrentConsecutiveStreak(
-                        List<PlayerMatchReport> recentReports) {
-
-                if (recentReports == null
-                                || recentReports.isEmpty()) {
-                        return List.of();
-                }
-
-                String currentSeason = getCurrentSeason();
-
-                List<PlayerMatchReport> streak = new java.util.ArrayList<>();
-
-                Integer expectedRoundNumber = null;
-
-                for (PlayerMatchReport report : recentReports) {
-
-                        if (report.getSeason() == null
-                                        || !currentSeason.equals(
-                                                        report.getSeason())) {
-                                break;
-                        }
-
-                        if (!report.isParticipated()
-                                        || report.getPoints() == null) {
-                                break;
-                        }
-
-                        Integer roundNumber = extractRoundNumber(
-                                        report.getRoundShort());
-
-                        if (roundNumber == null) {
-                                break;
-                        }
-
-                        if (expectedRoundNumber != null
-                                        && roundNumber != expectedRoundNumber) {
-                                break;
-                        }
-
-                        streak.add(report);
-
-                        expectedRoundNumber = roundNumber - 1;
-                }
-
-                return List.copyOf(streak);
-        }
-
-        private String getCurrentSeason() {
-                LocalDate today = LocalDate.now();
-
-                int year = today.getYear();
-
-                if (today.getMonthValue() >= 7) {
-                        return year + "-" + (year + 1);
-                }
-
-                return (year - 1) + "-" + year;
         }
 }

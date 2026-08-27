@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -38,7 +37,6 @@ import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationR
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
-import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
 @ExtendWith(MockitoExtension.class)
 class RecommendationServiceTest {
@@ -80,7 +78,6 @@ class RecommendationServiceTest {
                                 marketListingRepository,
                                 offerService,
                                 playerRepository,
-                                playerMatchReportRepository,
                                 playerPerformanceSignalService);
 
                 ReflectionTestUtils.setField(
