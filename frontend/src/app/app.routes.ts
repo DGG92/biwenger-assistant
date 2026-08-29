@@ -30,6 +30,15 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'recommendations',
+                loadComponent: () =>
+                    import(
+                        './features/recommendations/recommendations'
+                    ).then(
+                        (m) => m.Recommendations
+                    ),
+            },
+            {
                 path: 'matchday',
                 loadComponent: () =>
                     import(

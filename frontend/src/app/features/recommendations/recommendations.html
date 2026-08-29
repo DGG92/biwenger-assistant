@@ -1,0 +1,209 @@
+<section class="recommendations-page">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Asistente</p>
+
+            <h1>Recomendaciones</h1>
+
+            <p>
+                Acciones priorizadas a partir de tu plantilla,
+                rendimiento, economía y mercado.
+            </p>
+        </div>
+    </header>
+
+    <section class="summary-grid">
+        <article class="summary-card high-summary">
+            <span>Prioridad alta</span>
+
+            <strong>
+                {{ highPriorityCount() }}
+            </strong>
+        </article>
+
+        <article class="summary-card medium-summary">
+            <span>Prioridad media</span>
+
+            <strong>
+                {{ mediumPriorityCount() }}
+            </strong>
+        </article>
+
+        <article class="summary-card low-summary">
+            <span>Prioridad baja</span>
+
+            <strong>
+                {{ lowPriorityCount() }}
+            </strong>
+        </article>
+
+        <article class="summary-card total-summary">
+            <span>Total de acciones</span>
+
+            <strong>
+                {{
+                highPriorityCount()
+                + mediumPriorityCount()
+                + lowPriorityCount()
+                }}
+            </strong>
+        </article>
+    </section>
+
+    <section class="filters">
+        <div class="filter-group">
+            <span>Prioridad</span>
+
+            <div class="filter-buttons">
+                @for (
+                option of ['ALL', 'HIGH', 'MEDIUM', 'LOW'];
+                track option
+                ) {
+                <button type="button" [class.active]="priorityFilter() === option"
+                    (click)="setPriorityFilter($any(option))">
+                    {{
+                    option === 'ALL'
+                    ? 'Todas'
+                    : option === 'HIGH'
+                    ? 'Alta'
+                    : option === 'MEDIUM'
+                    ? 'Media'
+                    : 'Baja'
+                    }}
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <span>Tipo de acción</span>
+
+            <div class="filter-buttons">
+                @for (
+                option of [
+                'ALL',
+                'BUY',
+                'BID',
+                'SELL',
+                'HOLD',
+                'WATCH',
+                'REPLACE_STARTER',
+                'CHANGE_FORMATION',
+                'PROTECT'
+                ];
+                track option
+                ) {
+                <button type="button" [class.active]="actionTypeFilter() === option"
+                    (click)="setActionTypeFilter($any(option))">
+                    {{
+                    option === 'ALL'
+                    ? 'Todas'
+                    : actionLabel($any(option))
+                    }}
+                </button>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="results-summary">
+        {{ filteredActions().length }}
+        {{
+        filteredActions().length === 1
+        ? 'recomendación'
+        : 'recomendaciones'
+        }}
+    </div>
+
+    <section class="action-list">
+        @for (
+        action of filteredActions();
+        track trackAction($index, action)
+        ) {
+        <article class="action-card" [class.high-priority]="action.priority === 'HIGH'"
+            [class.medium-priority]="action.priority === 'MEDIUM'" [class.low-priority]="action.priority === 'LOW'">
+            <div class="action-header">
+                <div class="action-heading">
+                    <div class="badges">
+                        <span class="priority-badge" [class.high]="action.priority === 'HIGH'"
+                            [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                            Prioridad
+                            {{ priorityLabel(action.priority) }}
+                        </span>
+
+                        <span class="action-type" [class.buy]="action.type === 'BUY'"
+                            [class.bid]="action.type === 'BID'" [class.sell]="action.type === 'SELL'"
+                            [class.hold]="action.type === 'HOLD'" [class.watch]="action.type === 'WATCH'"
+                            [class.protect]="action.type === 'PROTECT'">
+                            {{ actionLabel(action.type) }}
+                        </span>
+                    </div>
+
+                    <h2>
+                        {{ action.title }}
+                    </h2>
+
+                    @if (action.playerName) {
+                    <p class="player-name">
+                        {{ action.playerName }}
+                    </p>
+                    }
+                </div>
+
+                @if (action.confidence !== null) {
+                <div class="confidence">
+                    <span>Confianza</span>
+
+                    <strong>
+                        {{ action.confidence }}/100
+                    </strong>
+                </div>
+                }
+            </div>
+
+            <p class="explanation">
+                {{ action.explanation }}
+            </p>
+
+            @if (action.suggestedAmount !== null) {
+            <div class="suggested-amount">
+                <span>
+                    {{
+                    action.type === 'BID'
+                    ? 'Puja máxima recomendada'
+                    : action.type === 'BUY'
+                    ? 'Precio recomendado'
+                    : 'Importe sugerido'
+                    }}
+                </span>
+
+                <strong>
+                    {{
+                    action.suggestedAmount
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </strong>
+            </div>
+            }
+
+            @if (action.sourceSignals.length > 0) {
+            <div class="signals">
+                @for (
+                signal of action.sourceSignals;
+                track signal
+                ) {
+                <span>
+                    {{ signalLabel(signal) }}
+                </span>
+                }
+            </div>
+            }
+        </article>
+        } @empty {
+        <div class="empty-state">
+            No hay recomendaciones que coincidan
+            con los filtros seleccionados.
+        </div>
+        }
+    </section>
+</section>
