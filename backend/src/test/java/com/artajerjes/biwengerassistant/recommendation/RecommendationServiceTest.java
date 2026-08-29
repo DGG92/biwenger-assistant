@@ -3322,6 +3322,41 @@ class RecommendationServiceTest {
                                 result.improvement());
         }
 
+        @Test
+        void formationRecommendationShouldNotExposeSentinelWhenNoFormationIsFeasible() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(1921L, "1921", "PT", List.of(PlayerPosition.PT), manager),
+                                createOwnedPlayer(1922L, "1922", "DF 1", List.of(PlayerPosition.DF), manager),
+                                createOwnedPlayer(1923L, "1923", "DF 2", List.of(PlayerPosition.DF), manager),
+                                createOwnedPlayer(1924L, "1924", "DF 3", List.of(PlayerPosition.DF), manager),
+                                createOwnedPlayer(1925L, "1925", "DF 4", List.of(PlayerPosition.DF), manager),
+                                createOwnedPlayer(1926L, "1926", "MC 1", List.of(PlayerPosition.MC), manager),
+                                createOwnedPlayer(1927L, "1927", "MC 2", List.of(PlayerPosition.MC), manager),
+                                createOwnedPlayer(1928L, "1928", "MC 3", List.of(PlayerPosition.MC), manager),
+                                createOwnedPlayer(1929L, "1929", "MC 4", List.of(PlayerPosition.MC), manager),
+                                createOwnedPlayer(1930L, "1930", "DL", List.of(PlayerPosition.DL), manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID)).thenReturn(true);
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID)).thenReturn(squad);
+
+                FormationRecommendationResponse result = recommendationService.getFormationRecommendation(LEAGUE_ID);
+
+                assertEquals("5-4-1", result.currentFormation());
+                assertEquals("5-4-1", result.recommendedFormation());
+                assertEquals(0.0, result.currentScore());
+                assertEquals(0.0, result.recommendedScore());
+                assertEquals(0.0, result.improvement());
+                assertEquals(0, result.confidence());
+        }
+
         private void mockPerformanceReports(
                         Player player,
                         int points) {

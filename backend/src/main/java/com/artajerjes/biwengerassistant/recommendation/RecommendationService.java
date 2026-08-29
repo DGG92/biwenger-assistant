@@ -60,6 +60,7 @@ public class RecommendationService {
         private final OfferService offerService;
         private final PlayerRepository playerRepository;
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
+        private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -740,13 +741,13 @@ public class RecommendationService {
                                 squadPlayers,
                                 current);
 
-                boolean currentFormationIsFeasible = currentScore > -999_999;
+                boolean currentFormationIsFeasible = currentScore != IMPOSSIBLE_FORMATION_SCORE;
 
                 Formation bestFormation = current;
 
                 double bestScore = currentFormationIsFeasible
                                 ? currentScore
-                                : -1_000_000;
+                                : IMPOSSIBLE_FORMATION_SCORE;
 
                 for (Formation formation : VALID_FORMATIONS) {
 
@@ -765,12 +766,18 @@ public class RecommendationService {
                         }
                 }
 
+                boolean bestFormationIsFeasible = bestScore != IMPOSSIBLE_FORMATION_SCORE;
+
                 double publicCurrentScore = currentFormationIsFeasible
                                 ? currentScore
                                 : 0;
 
+                double publicBestScore = bestFormationIsFeasible
+                                ? bestScore
+                                : 0;
+
                 double improvement = Math.max(
-                                bestScore - publicCurrentScore,
+                                publicBestScore - publicCurrentScore,
                                 0);
 
                 int confidence = calculateFormationRecommendationConfidence(
@@ -780,7 +787,7 @@ public class RecommendationService {
                                 currentFormation,
                                 formationName(bestFormation),
                                 round(publicCurrentScore),
-                                round(bestScore),
+                                round(publicBestScore),
                                 round(improvement),
                                 confidence);
         }
@@ -943,7 +950,7 @@ public class RecommendationService {
                                 players,
                                 formation) < requiredPositions.size()) {
 
-                        return -1_000_000;
+                        return IMPOSSIBLE_FORMATION_SCORE;
                 }
 
                 List<Double> playerRatings = players.stream()
