@@ -6,6 +6,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RecommendationService } from '../../core/services/recommendation';
 import { MarketRecommendation, MarketRecommendationReason } from '../../core/models/market-recommendation.model';
 import { PlayerStatus } from '../../core/models/player.model';
+import { ActionRecommendation, ActionType } from '../../core/models/action-recommendation.model';
 
 type RecommendationFilter = 'ALL' | 'STRONG_BUY' | 'BUY' | 'WATCH' | 'AVOID';
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL' | 'E';
@@ -43,6 +44,59 @@ export class Market {
       this.recommendationService.getMarketRecommendations(),
       { initialValue: [] }
     );
+
+  private readonly actions =
+    toSignal(
+      this.recommendationService.getActions(),
+      { initialValue: [] }
+    );
+
+  readonly marketActions = computed(() =>
+    this.actions().filter(
+      action =>
+        action.playerId !== null
+        && (
+          action.type === 'BUY'
+          || action.type === 'BID'
+        )
+    )
+  );
+
+  marketAction(
+    playerId: number
+  ): ActionRecommendation | null {
+    return this.marketActions().find(
+      action => action.playerId === playerId
+    ) ?? null;
+  }
+
+  actionLabel(type: ActionType): string {
+    switch (type) {
+      case 'BUY':
+        return 'Comprar';
+
+      case 'BID':
+        return 'Pujar';
+
+      default:
+        return type;
+    }
+  }
+
+  priorityLabel(
+    priority: ActionRecommendation['priority']
+  ): string {
+    switch (priority) {
+      case 'HIGH':
+        return 'Alta';
+
+      case 'MEDIUM':
+        return 'Media';
+
+      case 'LOW':
+        return 'Baja';
+    }
+  }
 
   readonly search = signal('');
   readonly recommendationFilter =

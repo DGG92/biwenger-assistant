@@ -8,6 +8,7 @@ import { Player, PlayerProtectionReason, PlayerStatus } from '../../core/models/
 import { SquadNeeds } from '../../core/models/squad-needs.model';
 import { PlayerService } from '../../core/services/player';
 import { RecommendationService } from '../../core/services/recommendation';
+import { ActionRecommendation, ActionType } from '../../core/models/action-recommendation.model';
 
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL';
 
@@ -25,11 +26,13 @@ type StatusFilter =
 interface SquadData {
   manager: SquadNeeds | null;
   players: Player[];
+  actions: ActionRecommendation[];
 }
 
 const INITIAL_SQUAD_DATA: SquadData = {
   manager: null,
   players: [],
+  actions: [],
 };
 
 @Component({
@@ -94,12 +97,14 @@ export class Squad {
     combineLatest({
       players: this.playerService.getPlayers(),
       squad: this.recommendationService.getSquadNeeds(),
+      actions: this.recommendationService.getActions(),
     }).pipe(
-      map(({ players, squad }): SquadData => ({
+      map(({ players, squad, actions }): SquadData => ({
         manager: squad,
         players: players.filter(
           player => player.ownerId === squad.managerId
         ),
+        actions,
       })),
       startWith(INITIAL_SQUAD_DATA)
     ),
@@ -124,6 +129,90 @@ export class Squad {
   readonly players = computed(
     () => this.squadData().players
   );
+
+  readonly lineupActions = computed(() =>
+    this.squadData().actions.filter(
+      action =>
+        action.type === 'REPLACE_STARTER'
+        || action.type === 'CHANGE_FORMATION'
+    )
+  );
+
+  readonly replacementActions = computed(() =>
+    this.lineupActions().filter(
+      action => action.type === 'REPLACE_STARTER'
+    )
+  );
+
+  readonly formationAction = computed(() =>
+    this.lineupActions().find(
+      action => action.type === 'CHANGE_FORMATION'
+    ) ?? null
+  );
+
+  readonly playerActions = computed(() =>
+    this.squadData().actions.filter(
+      action =>
+        action.playerId !== null
+        && (
+          action.type === 'SELL'
+          || action.type === 'HOLD'
+          || action.type === 'WATCH'
+          || action.type === 'PROTECT'
+        )
+    )
+  );
+
+  playerAction(
+    playerId: number
+  ): ActionRecommendation | null {
+    return this.playerActions().find(
+      action => action.playerId === playerId
+    ) ?? null;
+  }
+
+  actionLabel(type: ActionType): string {
+    switch (type) {
+      case 'REPLACE_STARTER':
+        return 'Cambio recomendado';
+
+      case 'CHANGE_FORMATION':
+        return 'Formación recomendada';
+
+      case 'BUY':
+        return 'Comprar';
+
+      case 'BID':
+        return 'Pujar';
+
+      case 'SELL':
+        return 'Vender';
+
+      case 'HOLD':
+        return 'Mantener';
+
+      case 'WATCH':
+        return 'Vigilar';
+
+      case 'PROTECT':
+        return 'Proteger';
+    }
+  }
+
+  priorityLabel(
+    priority: ActionRecommendation['priority']
+  ): string {
+    switch (priority) {
+      case 'HIGH':
+        return 'Alta';
+
+      case 'MEDIUM':
+        return 'Media';
+
+      case 'LOW':
+        return 'Baja';
+    }
+  }
 
   readonly filteredPlayers = computed(() => {
     const search =

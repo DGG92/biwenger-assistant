@@ -268,6 +268,60 @@
                         [class.avoid-score]="player.recommendation === 'AVOID'" [style.width.%]="player.score"></div>
                 </div>
 
+                @if (marketAction(player.playerId); as action) {
+                <section class="market-action" [class.buy-action]="action.type === 'BUY'"
+                    [class.bid-action]="action.type === 'BID'" [class.high-priority]="action.priority === 'HIGH'">
+                    <div class="market-action-main">
+                        <div class="market-action-heading">
+                            <span class="assistant-label">
+                                Asistente
+                            </span>
+
+                            <strong>
+                                {{ actionLabel(action.type) }}
+                            </strong>
+
+                            <span class="market-action-priority" [class.high]="action.priority === 'HIGH'"
+                                [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                                Prioridad {{ priorityLabel(action.priority) }}
+                            </span>
+                        </div>
+
+                        <p>
+                            {{ action.explanation }}
+                        </p>
+                    </div>
+
+                    <div class="market-action-decision">
+                        @if (action.suggestedAmount !== null) {
+                        <div class="market-action-amount">
+                            <span>
+                                @if (action.type === 'BID') {
+                                Puja máxima
+                                } @else {
+                                Precio
+                                }
+                            </span>
+
+                            <strong>
+                                {{
+                                action.suggestedAmount
+                                | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                                }}
+                            </strong>
+                        </div>
+                        }
+
+                        @if (action.confidence !== null) {
+                        <div class="market-action-confidence">
+                            <span>Confianza</span>
+                            <strong>{{ action.confidence }}%</strong>
+                        </div>
+                        }
+                    </div>
+                </section>
+                }
+
                 @if (isScoreBreakdownOpen(player.playerId)) {
                 <section class="score-breakdown">
                     <div class="score-breakdown-header">

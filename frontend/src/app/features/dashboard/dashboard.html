@@ -44,175 +44,98 @@
         </article>
     </div>
 
-    @if (
-    data.lineupWarnings.length > 0
-    || data.protectionAlerts.length > 0
-    || data.strongBuys.length > 0
-    || data.nonStarterInjuredPlayers.length > 0
-    || data.highNeeds.length > 0
-    ) {
     <section class="attention-section">
-        <div class="section-header">
+        <div class="section-heading">
             <div>
-                <p class="eyebrow">Asistente</p>
-                <h2>Requiere tu atención</h2>
-            </div>
-        </div>
-
-        <div class="attention-grid">
-            @for (
-            player of data.lineupWarnings;
-            track player.id
-            ) {
-            <a class="attention-card lineup-attention attention-link" routerLink="/squad" [queryParams]="{
-        search: player.name
-    }">
-                <span class="attention-icon">
-                    @if (player.status === 'DOUBT') {
-                    ❓
-                    } @else {
-                    ⚠️
-                    }
+                <span class="section-eyebrow">
+                    Decisiones
                 </span>
 
-                <div>
-                    <strong>
-                        {{ lineupWarningTitle(player) }}
-                    </strong>
+                <h2>
+                    Requiere tu atención
+                </h2>
 
-                    <p>
-                        {{ lineupWarningDescription(player) }}
-                    </p>
-                </div>
+                <p>
+                    Las acciones más importantes detectadas por el asistente.
+                </p>
+            </div>
+
+            <a class="section-link" routerLink="/recommendations">
+                Ver todas las recomendaciones
             </a>
-            }
-
-            @for (
-            player of data.protectionAlerts;
-            track player.id
-            ) {
-            <a class="attention-card protection-attention attention-link" routerLink="/squad" [queryParams]="{
-        search: player.name
-    }">
-                <span class="attention-icon">🛡️</span>
-
-                <div>
-                    <strong>
-                        {{
-                        player.playerProtectionAlert.level === 'PROTECT'
-                        ? 'Protege a ' + player.name
-                        : 'Vigila la cláusula de ' + player.name
-                        }}
-                    </strong>
-
-                    <p>
-                        Alerta de protección
-                        ·
-                        {{ player.playerProtectionAlert.score }}/100
-                    </p>
-                </div>
-            </a>
-            }
-
-            @for (
-            recommendation of data.strongBuys;
-            track recommendation.playerId
-            ) {
-            <a class="attention-card market-attention attention-link" routerLink="/market" [queryParams]="{
-        search: recommendation.playerName
-    }">
-                <span class="attention-icon">🔥</span>
-
-                <div>
-                    <strong>
-                        Oportunidad de mercado:
-                        {{ recommendation.playerName }}
-                    </strong>
-
-                    <p>
-                        STRONG BUY
-                        ·
-                        {{ recommendation.score }}/100
-                    </p>
-                </div>
-            </a>
-            }
-
-            @if (data.strongBuyCount > data.strongBuys.length) {
-            <a class="attention-card more-opportunities attention-link" routerLink="/market" [queryParams]="{
-        recommendation: 'STRONG_BUY'
-    }">
-                <span class="attention-icon">+</span>
-
-                <div>
-                    <strong>
-                        {{
-                        data.strongBuyCount
-                        - data.strongBuys.length
-                        }}
-                        oportunidades más
-                    </strong>
-
-                    <p>
-                        Consulta el mercado para ver todas las recomendaciones.
-                    </p>
-                </div>
-            </a>
-            }
-
-            @if (data.nonStarterInjuredPlayers.length > 0) {
-            <a class="attention-card injury-attention attention-link" routerLink="/squad" [queryParams]="{
-        status: 'INJURED'
-    }">
-                <span class="attention-icon">🚑</span>
-
-                <div>
-                    <strong>
-                        {{
-                        data.nonStarterInjuredPlayers.length === 1
-                        ? 'Tienes otro jugador lesionado'
-                        : 'Tienes '
-                        + data.nonStarterInjuredPlayers.length
-                        + ' jugadores lesionados fuera del once'
-                        }}
-                    </strong>
-
-                    <p>
-                        {{
-                        data.nonStarterInjuredPlayers
-                        .map(player => player.name)
-                        .join(', ')
-                        }}
-                    </p>
-                </div>
-            </a>
-            }
-
-            @for (
-            need of data.highNeeds;
-            track need[0]
-            ) {
-            <a class="attention-card need-attention attention-link" routerLink="/market" [queryParams]="{
-        position: need[0]
-    }">
-                <span class="attention-icon">⚠️</span>
-
-                <div>
-                    <strong>
-                        Necesidad alta en {{ need[0] }}
-                    </strong>
-
-                    <p>
-                        Prioridad de refuerzo:
-                        {{ need[1] }}/100
-                    </p>
-                </div>
-            </a>
-            }
-
         </div>
+
+        @if (data.topActions.length > 0) {
+        <div class="attention-grid">
+            @for (
+            action of data.topActions;
+            track action.type + '-' + (action.playerId ?? 'general')
+            ) {
+            <article class="attention-card action-attention" [class.priority-high]="action.priority === 'HIGH'"
+                [class.priority-medium]="action.priority === 'MEDIUM'" [class.priority-low]="action.priority === 'LOW'">
+                <div class="action-card-header">
+                    <div class="action-badges">
+                        <span class="priority-badge" [class.high]="action.priority === 'HIGH'"
+                            [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                            Prioridad {{ priorityLabel(action.priority) }}
+                        </span>
+
+                        <span class="action-badge">
+                            {{ actionLabel(action.type) }}
+                        </span>
+                    </div>
+
+                    @if (action.confidence !== null) {
+                    <span class="action-confidence">
+                        {{ action.confidence }}% confianza
+                    </span>
+                    }
+                </div>
+
+                <h3 class="action-title">
+                    {{ action.title }}
+                </h3>
+
+                <p class="action-explanation">
+                    {{ action.explanation }}
+                </p>
+
+                <div class="action-footer">
+                    @if (action.suggestedAmount !== null) {
+                    <div class="action-amount">
+                        <span>
+                            @if (action.type === 'BID') {
+                            Puja máxima
+                            } @else if (action.type === 'BUY') {
+                            Precio recomendado
+                            } @else {
+                            Importe sugerido
+                            }
+                        </span>
+
+                        <strong>
+                            {{ action.suggestedAmount | currency:'EUR':'symbol':'1.0-0':'es-ES' }}
+                        </strong>
+                    </div>
+                    }
+
+                    <a class="action-link" [routerLink]="actionRoute(action)" [queryParams]="actionQueryParams(action)">
+                        Ver detalle →
+                    </a>
+                </div>
+            </article>
+            }
+        </div>
+        } @else {
+        <div class="attention-empty">
+            <strong>No hay acciones pendientes.</strong>
+
+            <p>
+                El asistente no ha detectado ninguna decisión relevante en este momento.
+            </p>
+        </div>
+        }
     </section>
-    }
 
     <section class="dashboard-section">
         <div class="section-header">

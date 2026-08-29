@@ -655,3 +655,153 @@
         padding: 16px;
     }
 }
+
+/* DECISIÓN FINAL DEL ASISTENTE */
+
+.market-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+
+    margin-top: 16px;
+    padding: 15px 16px;
+
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: 12px;
+
+    background: #f7fef9;
+}
+
+.market-action.bid-action {
+    border-color: #bfdbfe;
+    border-left-color: #2563eb;
+    background: #f8faff;
+}
+
+.market-action.high-priority {
+    border-left-color: #dc2626;
+}
+
+.market-action-main {
+    min-width: 0;
+    flex: 1;
+
+    p {
+        margin: 8px 0 0;
+
+        color: #64748b;
+
+        font-size: 12px;
+        line-height: 1.5;
+    }
+}
+
+.market-action-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    >strong {
+        color: #111827;
+        font-size: 14px;
+    }
+}
+
+.assistant-label {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    color: #166534;
+    background: #dcfce7;
+
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.market-action-priority {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.market-action-priority.high {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.market-action-priority.medium {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.market-action-priority.low {
+    color: #1e40af;
+    background: #dbeafe;
+}
+
+.market-action-decision {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    flex-shrink: 0;
+}
+
+.market-action-amount,
+.market-action-confidence {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    span {
+        color: #64748b;
+        font-size: 10px;
+    }
+
+    strong {
+        color: #111827;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+}
+
+.market-action-confidence strong {
+    color: #166534;
+}
+
+.bid-action .assistant-label {
+    color: #1e40af;
+    background: #dbeafe;
+}
+
+.bid-action .market-action-confidence strong {
+    color: #1d4ed8;
+}
+
+@media (max-width: 800px) {
+    .market-action {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .market-action-decision {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

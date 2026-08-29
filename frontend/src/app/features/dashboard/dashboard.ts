@@ -3,10 +3,10 @@ import { RouterLink } from '@angular/router';
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
 import { combineLatest, map } from 'rxjs';
 
-import { Player } from '../../core/models/player.model'
 import { RecommendationService } from '../../core/services/recommendation';
 import { PlayerService } from '../../core/services/player';
 import { MarketRecommendationReason } from '../../core/models/market-recommendation.model';
+import { ActionRecommendation, ActionType } from '../../core/models/action-recommendation.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -30,59 +30,15 @@ export class Dashboard {
     economy: this.recommendationService.getEconomicStatus(),
     market: this.recommendationService.getMarketRecommendations(),
     players: this.playerService.getPlayers(),
+    actions: this.recommendationService.getActions(),
   }).pipe(
     map((data) => {
-      const squadPlayers = data.players.filter(
-        player => player.ownerId === data.squad.managerId
-      );
-
-      const lineupWarnings = squadPlayers.filter(
-        player =>
-          player.starter &&
-          (
-            player.status === 'DOUBT' ||
-            player.status === 'INJURED' ||
-            player.status === 'SANCTIONED' ||
-            player.status === 'DISCARDED'
-          )
-      );
-
-      const injuredPlayers = squadPlayers.filter(
-        player => player.status === 'INJURED'
-      );
-
-      const nonStarterInjuredPlayers = injuredPlayers.filter(
-        player => !player.starter
-      );
-
-      const protectionAlerts = squadPlayers.filter(
-        player =>
-          player.playerProtectionAlert &&
-          player.playerProtectionAlert.level !== 'NONE'
-      );
-
-      const allStrongBuys = data.market.filter(
-        recommendation =>
-          recommendation.recommendation === 'STRONG_BUY'
-      );
-
-      const strongBuys = allStrongBuys.slice(0, 3);
-
-      const highNeeds = Object.entries(
-        data.squad.needScoreByPosition
-      ).filter(
-        ([, score]) => score >= 50
-      );
-
       return {
         ...data,
-        squadPlayers,
-        lineupWarnings,
-        nonStarterInjuredPlayers,
-        protectionAlerts,
-        strongBuys,
-        strongBuyCount: allStrongBuys.length,
-        highNeeds,
+        topActions: data.actions.slice(0, 5),
+        highPriorityActionCount: data.actions.filter(
+          action => action.priority === 'HIGH'
+        ).length,
         topRecommendations: data.market.slice(0, 5),
       };
     })
@@ -130,44 +86,6 @@ export class Dashboard {
     }
   }
 
-  lineupWarningTitle(player: Player): string {
-    switch (player.status) {
-      case 'DOUBT':
-        return `${player.name} está en duda`;
-
-      case 'INJURED':
-        return `${player.name} está lesionado`;
-
-      case 'SANCTIONED':
-        return `${player.name} está sancionado`;
-
-      case 'DISCARDED':
-        return `${player.name} no está convocado`;
-
-      default:
-        return player.name;
-    }
-  }
-
-  lineupWarningDescription(player: Player): string {
-    switch (player.status) {
-      case 'DOUBT':
-        return 'Lo tienes de titular · conviene vigilar su estado';
-
-      case 'INJURED':
-        return 'Lo tienes de titular · revisa tu alineación';
-
-      case 'SANCTIONED':
-        return 'Lo tienes de titular · no podrá disputar la jornada';
-
-      case 'DISCARDED':
-        return 'Lo tienes de titular · no está convocado';
-
-      default:
-        return '';
-    }
-  }
-
   private readonly reasonPriority: Record<
     MarketRecommendationReason,
     number
@@ -197,5 +115,47 @@ export class Dashboard {
           this.reasonPriority[b]
       )
       .slice(0, limit);
+  }
+
+  actionLabel(type: ActionType): string {
+    switch (type) {
+      case 'BUY': return 'Comprar';
+      case 'BID': return 'Pujar';
+      case 'SELL': return 'Vender';
+      case 'HOLD': return 'Mantener';
+      case 'WATCH': return 'Vigilar';
+      case 'REPLACE_STARTER': return 'Cambiar titular';
+      case 'CHANGE_FORMATION': return 'Cambiar formación';
+      case 'PROTECT': return 'Proteger';
+    }
+  }
+
+  priorityLabel(priority: ActionRecommendation['priority']): string {
+    switch (priority) {
+      case 'HIGH': return 'Alta';
+      case 'MEDIUM': return 'Media';
+      case 'LOW': return 'Baja';
+    }
+  }
+
+  actionRoute(action: ActionRecommendation): string {
+    switch (action.type) {
+      case 'BUY':
+      case 'BID':
+        return '/market';
+
+      default:
+        return '/squad';
+    }
+  }
+
+  actionQueryParams(action: ActionRecommendation): Record<string, string> {
+    if (!action.playerName) {
+      return {};
+    }
+
+    return {
+      search: action.playerName
+    };
   }
 }

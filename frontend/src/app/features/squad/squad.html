@@ -76,6 +76,97 @@
     </section>
     }
 
+    @if (lineupActions().length > 0) {
+    <section class="assistant-lineup">
+        <div class="assistant-lineup-heading">
+            <div>
+                <span class="assistant-eyebrow">
+                    Asistente
+                </span>
+
+                <h2>
+                    Mejoras recomendadas para tu once
+                </h2>
+
+                <p>
+                    El asistente ha detectado cambios que podrían mejorar tu alineación actual.
+                </p>
+            </div>
+        </div>
+
+        <div class="assistant-lineup-grid">
+            @if (formationAction(); as action) {
+            <article class="lineup-action formation-action">
+                <div class="lineup-action-top">
+                    <span class="lineup-action-type">
+                        {{ actionLabel(action.type) }}
+                    </span>
+
+                    <span class="lineup-action-priority" [class.high]="action.priority === 'HIGH'"
+                        [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                        Prioridad {{ priorityLabel(action.priority) }}
+                    </span>
+                </div>
+
+                <h3>
+                    {{ action.title }}
+                </h3>
+
+                <p>
+                    {{ action.explanation }}
+                </p>
+
+                @if (action.confidence !== null) {
+                <div class="lineup-action-confidence">
+                    <span>Confianza del asistente</span>
+
+                    <strong>
+                        {{ action.confidence }}%
+                    </strong>
+                </div>
+                }
+            </article>
+            }
+
+            @for (
+            action of replacementActions();
+            track action.type + '-' + (action.playerId ?? 'general')
+            ) {
+            <article class="lineup-action replacement-action">
+                <div class="lineup-action-top">
+                    <span class="lineup-action-type">
+                        {{ actionLabel(action.type) }}
+                    </span>
+
+                    <span class="lineup-action-priority" [class.high]="action.priority === 'HIGH'"
+                        [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                        Prioridad {{ priorityLabel(action.priority) }}
+                    </span>
+                </div>
+
+                <h3>
+                    {{ action.title }}
+                </h3>
+
+                <p>
+                    {{ action.explanation }}
+                </p>
+
+                @if (action.confidence !== null) {
+                <div class="lineup-action-confidence">
+                    <span>Confianza del asistente</span>
+
+                    <strong>
+                        {{ action.confidence }}%
+                    </strong>
+                </div>
+                }
+            </article>
+            }
+        </div>
+    </section>
+    }
+
     <section class="lineup-section">
         <div class="section-heading">
             <div>
@@ -465,6 +556,42 @@
                     </strong>
                 </div>
             </div>
+
+            @if (playerAction(player.id); as action) {
+            <section class="player-recommendation" [class.sell-recommendation]="action.type === 'SELL'"
+                [class.hold-recommendation]="action.type === 'HOLD'"
+                [class.watch-recommendation]="action.type === 'WATCH'"
+                [class.protect-recommendation]="action.type === 'PROTECT'">
+                <div class="player-recommendation-header">
+                    <div class="player-recommendation-title">
+                        <span class="assistant-mini-label">
+                            Asistente
+                        </span>
+
+                        <strong>
+                            {{ actionLabel(action.type) }}
+                        </strong>
+                    </div>
+
+                    <div class="player-recommendation-meta">
+                        <span class="player-action-priority" [class.high]="action.priority === 'HIGH'"
+                            [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                            {{ priorityLabel(action.priority) }}
+                        </span>
+
+                        @if (action.confidence !== null) {
+                        <span class="player-action-confidence">
+                            {{ action.confidence }}%
+                        </span>
+                        }
+                    </div>
+                </div>
+
+                <p class="player-recommendation-explanation">
+                    {{ action.explanation }}
+                </p>
+            </section>
+            }
 
             @if (
             player.playerProtectionAlert &&
