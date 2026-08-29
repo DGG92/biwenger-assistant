@@ -101,6 +101,10 @@ public class RecommendationService {
                 return marketListingRepository
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
+                                .filter(listing -> listing.getSeller() == null
+                                                || !biwengerUserId.equals(
+                                                                listing.getSeller()
+                                                                                .getBiwengerManagerId()))
                                 .map(listing -> toRecommendation(
                                                 listing,
                                                 economicStatus.maximumBid(),

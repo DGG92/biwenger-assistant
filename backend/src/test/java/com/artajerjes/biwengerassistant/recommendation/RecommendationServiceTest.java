@@ -1120,6 +1120,45 @@ class RecommendationServiceTest {
         }
 
         @Test
+        void getMarketRecommendationsShouldExcludeOwnListings() {
+
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                32L,
+                                "302",
+                                "Jugador propio en venta",
+                                List.of(PlayerPosition.DL),
+                                5_000_000L,
+                                100_000L,
+                                false);
+
+                Manager ownManager = createManager();
+
+                MarketListing ownListing = new MarketListing(
+                                MarketListingType.SALE,
+                                player,
+                                ownManager,
+                                4_000_000L,
+                                null,
+                                null,
+                                false,
+                                null,
+                                null,
+                                null,
+                                league);
+
+                mockCommon(
+                                10_000_000L,
+                                List.of(ownListing));
+
+                List<MarketRecommendationResponse> result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID);
+
+                assertTrue(result.isEmpty());
+        }
+
+        @Test
         void getMarketRecommendationsShouldReturnEmptyListWhenMarketIsEmpty() {
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
