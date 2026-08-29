@@ -2940,6 +2940,129 @@ class RecommendationServiceTest {
         }
 
         @Test
+        void formationRecommendationShouldHandleUnfeasibleCurrentFormationWithoutArtificialImprovement() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                1901L,
+                                                "1901",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1902L,
+                                                "1902",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1903L,
+                                                "1903",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1904L,
+                                                "1904",
+                                                "DF 3",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1905L,
+                                                "1905",
+                                                "DF 4",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1906L,
+                                                "1906",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1907L,
+                                                "1907",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1908L,
+                                                "1908",
+                                                "MC 3",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1909L,
+                                                "1909",
+                                                "MC 4",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1910L,
+                                                "1910",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                1911L,
+                                                "1911",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                for (Player player : squad) {
+                        mockPerformanceReports(
+                                        player,
+                                        5);
+                }
+
+                FormationRecommendationResponse result = recommendationService
+                                .getFormationRecommendation(LEAGUE_ID);
+
+                assertEquals(
+                                "5-4-1",
+                                result.currentFormation());
+
+                assertEquals(
+                                "4-4-2",
+                                result.recommendedFormation());
+
+                assertEquals(
+                                0.0,
+                                result.currentScore());
+
+                assertTrue(
+                                result.recommendedScore() > 0);
+
+                assertEquals(
+                                result.recommendedScore(),
+                                result.improvement());
+        }
+
+        @Test
         void formationRecommendationShouldPrefer442WhenSecondForwardClearlyImprovesBestEleven() {
 
                 Manager manager = createManager();

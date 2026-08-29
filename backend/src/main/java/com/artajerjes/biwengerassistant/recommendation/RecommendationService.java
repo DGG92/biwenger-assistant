@@ -740,9 +740,13 @@ public class RecommendationService {
                                 squadPlayers,
                                 current);
 
+                boolean currentFormationIsFeasible = currentScore > -999_999;
+
                 Formation bestFormation = current;
 
-                double bestScore = currentScore;
+                double bestScore = currentFormationIsFeasible
+                                ? currentScore
+                                : -1_000_000;
 
                 for (Formation formation : VALID_FORMATIONS) {
 
@@ -761,8 +765,12 @@ public class RecommendationService {
                         }
                 }
 
+                double publicCurrentScore = currentFormationIsFeasible
+                                ? currentScore
+                                : 0;
+
                 double improvement = Math.max(
-                                bestScore - currentScore,
+                                bestScore - publicCurrentScore,
                                 0);
 
                 int confidence = calculateFormationRecommendationConfidence(
@@ -771,7 +779,7 @@ public class RecommendationService {
                 return new FormationRecommendationResponse(
                                 currentFormation,
                                 formationName(bestFormation),
-                                round(currentScore),
+                                round(publicCurrentScore),
                                 round(bestScore),
                                 round(improvement),
                                 confidence);
