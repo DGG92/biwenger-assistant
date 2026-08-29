@@ -1059,6 +1059,147 @@ class ActionRecommendationServiceTest {
                                 action.confidence());
         }
 
+        @Test
+        void shouldCombineSquadAndMarketActionsOrderedByPriorityAndConfidence() {
+
+                Player squadPlayer = createOwnedPlayer(
+                                700L,
+                                "7000",
+                                "Jugador plantilla",
+                                PlayerPosition.MC,
+                                2_000_000L,
+                                1_500_000L,
+                                30_000L,
+                                PlayerStatus.OK,
+                                false);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(squadPlayer));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 25,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(squadPlayer))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                5.5,
+                                                                2,
+                                                                false,
+                                                                0,
+                                                                0));
+
+                when(playerProtectionService.calculate(squadPlayer))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                MarketRecommendationResponse bidRecommendation = new MarketRecommendationResponse(
+                                515L,
+                                "515",
+                                "Tete Morente",
+                                "Elche",
+                                List.of(PlayerPosition.MC),
+                                MarketListingType.AUCTION,
+                                350_000L,
+                                350_000L,
+                                360_000L,
+                                385_000L,
+                                -10_000L,
+                                -2.86,
+                                10_000L,
+                                0,
+                                PlayerStatus.OK,
+                                true,
+                                81,
+                                RecommendationType.STRONG_BUY,
+                                null,
+                                null,
+                                List.of(),
+                                null);
+
+                MarketRecommendationResponse buyRecommendation = new MarketRecommendationResponse(
+                                485L,
+                                "485",
+                                "Sazonov",
+                                "Torino",
+                                List.of(PlayerPosition.DF),
+                                MarketListingType.SALE,
+                                360_000L,
+                                340_000L,
+                                null,
+                                null,
+                                20_000L,
+                                5.56,
+                                10_000L,
+                                0,
+                                PlayerStatus.OK,
+                                true,
+                                75,
+                                RecommendationType.BUY,
+                                null,
+                                null,
+                                List.of(),
+                                null);
+
+                when(recommendationService
+                                .getMarketRecommendations(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                buyRecommendation,
+                                                                bidRecommendation));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getAllActions(LEAGUE_ID);
+
+                assertEquals(
+                                3,
+                                result.size());
+
+                assertEquals(
+                                ActionType.BID,
+                                result.get(0).type());
+
+                assertEquals(
+                                ActionPriority.HIGH,
+                                result.get(0).priority());
+
+                assertEquals(
+                                81,
+                                result.get(0).confidence());
+
+                assertEquals(
+                                ActionType.BUY,
+                                result.get(1).type());
+
+                assertEquals(
+                                ActionPriority.MEDIUM,
+                                result.get(1).priority());
+
+                assertEquals(
+                                75,
+                                result.get(1).confidence());
+
+                assertEquals(
+                                ActionType.HOLD,
+                                result.get(2).type());
+
+                assertEquals(
+                                ActionPriority.MEDIUM,
+                                result.get(2).priority());
+
+                assertTrue(
+                                result.get(1).confidence() > result.get(2).confidence());
+        }
+
         private Player createOwnedPlayer(
                         Long id,
                         String biwengerPlayerId,

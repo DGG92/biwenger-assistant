@@ -113,6 +113,29 @@ public class ActionRecommendationService {
                                 .toList();
         }
 
+        @Transactional(readOnly = true)
+        public List<ActionCandidate> getAllActions(
+                        Long leagueId) {
+
+                List<ActionCandidate> actions = new ArrayList<>();
+
+                actions.addAll(
+                                getSquadActions(leagueId));
+
+                actions.addAll(
+                                getMarketActions(leagueId));
+
+                return actions.stream()
+                                .sorted(
+                                                Comparator.comparing(
+                                                                ActionCandidate::priority)
+                                                                .thenComparing(
+                                                                                ActionCandidate::confidence,
+                                                                                Comparator.nullsLast(
+                                                                                                Comparator.reverseOrder())))
+                                .toList();
+        }
+
         private ActionCandidate evaluateMarketAction(
                         MarketRecommendationResponse recommendation) {
 
