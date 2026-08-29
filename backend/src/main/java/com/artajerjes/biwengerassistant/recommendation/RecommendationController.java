@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 
 @RestController
@@ -42,5 +43,13 @@ public class RecommendationController {
 
         return recommendationService
                 .getFormationRecommendation(leagueId);
+    }
+
+    @GetMapping("/lineup")
+    public RecommendedLineupResponse getRecommendedLineup(
+            @PathVariable Long leagueId) {
+
+        return recommendationService
+                .getRecommendedLineup(leagueId);
     }
 }

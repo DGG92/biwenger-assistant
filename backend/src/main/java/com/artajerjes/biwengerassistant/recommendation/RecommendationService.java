@@ -1,5 +1,6 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,6 +27,9 @@ import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendati
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketScoreBreakdown;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupChangeResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupPlayerResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -37,6 +41,18 @@ public class RecommendationService {
                         int defenders,
                         int midfielders,
                         int forwards) {
+        }
+
+        private record FormationAssignment(
+                        Player player,
+                        PlayerPosition position,
+                        double rating) {
+        }
+
+        private record FormationLineup(
+                        Formation formation,
+                        double score,
+                        List<FormationAssignment> assignments) {
         }
 
         private static final List<Formation> VALID_FORMATIONS = List.of(
@@ -783,13 +799,201 @@ public class RecommendationService {
                 int confidence = calculateFormationRecommendationConfidence(
                                 improvement);
 
-                return new FormationRecommendationResponse(
+                return new
+
+                FormationRecommendationResponse(
                                 currentFormation,
                                 formationName(bestFormation),
                                 round(publicCurrentScore),
                                 round(publicBestScore),
                                 round(improvement),
                                 confidence);
+        }
+
+        @Transactional(readOnly = true)
+        public RecommendedLineupResponse getRecommendedLineup(
+                        Long leagueId) {
+
+                if (!leagueRepository.existsById(leagueId)) {
+                        throw new LeagueNotFoundException(leagueId);
+                }
+
+                List<Player> squadPlayers = playerRepository
+                                .findAllByLeague_Id(leagueId)
+                                .stream()
+                                .filter(player -> player.getOwner() != null)
+                                .filter(player -> biwengerUserId.equals(
+                                                player.getOwner()
+                                                                .getBiwengerManagerId()))
+                                .filter(player -> !player.getPositions()
+                                                .contains(PlayerPosition.E))
+                                .toList();
+
+                if (squadPlayers.isEmpty()) {
+                        return new RecommendedLineupResponse(
+                                        null,
+                                        null,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        List.of(),
+                                        List.of());
+                }
+
+                Manager manager = squadPlayers.get(0)
+                                .getOwner();
+
+                String currentFormation = manager.getCurrentFormation();
+
+                double currentScore = calculateCurrentLineupScore(
+                                squadPlayers);
+
+                Formation currentFormationDefinition = findFormation(currentFormation);
+
+                FormationLineup bestLineup = currentFormationDefinition == null
+                                ? null
+                                : calculateBestFormationLineup(
+                                                squadPlayers,
+                                                currentFormationDefinition);
+
+                if (bestLineup != null
+                                && bestLineup.score() == IMPOSSIBLE_FORMATION_SCORE) {
+
+                        bestLineup = null;
+                }
+
+                for (Formation formation : VALID_FORMATIONS) {
+
+                        if (formation.equals(
+                                        currentFormationDefinition)) {
+
+                                continue;
+                        }
+
+                        FormationLineup candidate = calculateBestFormationLineup(
+                                        squadPlayers,
+                                        formation);
+
+                        if (candidate.score() == IMPOSSIBLE_FORMATION_SCORE) {
+
+                                continue;
+                        }
+
+                        if (bestLineup == null
+                                        || candidate.score() > bestLineup.score()
+                                                        + 0.000001) {
+
+                                bestLineup = candidate;
+                        }
+                }
+
+                if (bestLineup == null) {
+
+                        return new RecommendedLineupResponse(
+                                        currentFormation,
+                                        null,
+                                        round(currentScore),
+                                        0,
+                                        0,
+                                        0,
+                                        List.of(),
+                                        List.of());
+                }
+
+                double improvement = Math.max(
+                                bestLineup.score()
+                                                - currentScore,
+                                0);
+
+                int confidence = calculateFormationRecommendationConfidence(
+                                improvement);
+
+                List<RecommendedLineupPlayerResponse> recommendedStarters = bestLineup.assignments()
+                                .stream()
+                                .map(assignment -> new RecommendedLineupPlayerResponse(
+                                                assignment.player().getId(),
+                                                assignment.player().getName(),
+                                                assignment.position().name(),
+                                                round(assignment.rating())))
+                                .toList();
+
+                List<RecommendedLineupChangeResponse> changes = calculateRecommendedLineupChanges(
+                                squadPlayers,
+                                bestLineup);
+
+                return new RecommendedLineupResponse(
+                                currentFormation,
+                                formationName(
+                                                bestLineup.formation()),
+                                round(currentScore),
+                                round(bestLineup.score()),
+                                round(improvement),
+                                confidence,
+                                recommendedStarters,
+                                changes);
+        }
+
+        private double calculateCurrentLineupScore(
+                        List<Player> squadPlayers) {
+
+                return squadPlayers.stream()
+                                .filter(Player::isStarter)
+                                .mapToDouble(
+                                                this::calculateFormationPlayerRating)
+                                .sum();
+        }
+
+        private List<RecommendedLineupChangeResponse> calculateRecommendedLineupChanges(
+                        List<Player> squadPlayers,
+                        FormationLineup recommendedLineup) {
+
+                List<Player> currentStarters = squadPlayers.stream()
+                                .filter(Player::isStarter)
+                                .toList();
+
+                List<Player> recommendedStarters = recommendedLineup.assignments()
+                                .stream()
+                                .map(FormationAssignment::player)
+                                .toList();
+
+                List<RecommendedLineupChangeResponse> changes = new ArrayList<>();
+
+                for (Player currentStarter : currentStarters) {
+
+                        boolean remainsStarter = recommendedStarters.stream()
+                                        .anyMatch(player -> player.getId()
+                                                        .equals(
+                                                                        currentStarter.getId()));
+
+                        if (!remainsStarter) {
+
+                                changes.add(
+                                                new RecommendedLineupChangeResponse(
+                                                                "OUT",
+                                                                currentStarter.getId(),
+                                                                currentStarter.getName()));
+                        }
+                }
+
+                for (Player recommendedStarter : recommendedStarters) {
+
+                        boolean alreadyStarter = currentStarters.stream()
+                                        .anyMatch(player -> player.getId()
+                                                        .equals(
+                                                                        recommendedStarter.getId()));
+
+                        if (!alreadyStarter) {
+
+                                changes.add(
+                                                new RecommendedLineupChangeResponse(
+                                                                "IN",
+                                                                recommendedStarter.getId(),
+                                                                recommendedStarter.getName()));
+                        }
+                }
+
+                return List.copyOf(changes);
         }
 
         private double calculateAvailabilityWeight(
@@ -968,6 +1172,57 @@ public class RecommendationService {
                                 memo);
         }
 
+        private FormationLineup calculateBestFormationLineup(
+                        List<Player> players,
+                        Formation formation) {
+
+                List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
+
+                if (calculateFormationCoverage(
+                                players,
+                                formation) < requiredPositions.size()) {
+
+                        return new FormationLineup(
+                                        formation,
+                                        IMPOSSIBLE_FORMATION_SCORE,
+                                        List.of());
+                }
+
+                List<Double> playerRatings = players.stream()
+                                .map(this::calculateFormationPlayerRating)
+                                .toList();
+
+                Map<Long, Double> memo = new HashMap<>();
+
+                double score = maximizeFormationPerformance(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                0,
+                                0,
+                                memo);
+
+                if (score == IMPOSSIBLE_FORMATION_SCORE) {
+                        return new FormationLineup(
+                                        formation,
+                                        IMPOSSIBLE_FORMATION_SCORE,
+                                        List.of());
+                }
+
+                List<FormationAssignment> assignments = reconstructFormationAssignments(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                0,
+                                0,
+                                memo);
+
+                return new FormationLineup(
+                                formation,
+                                score,
+                                List.copyOf(assignments));
+        }
+
         private double maximizeFormationPerformance(
                         List<Player> players,
                         List<Double> playerRatings,
@@ -1062,6 +1317,137 @@ public class RecommendationService {
                                 best);
 
                 return best;
+        }
+
+        private List<FormationAssignment> reconstructFormationAssignments(
+                        List<Player> players,
+                        List<Double> playerRatings,
+                        List<PlayerPosition> requiredPositions,
+                        int playerIndex,
+                        int occupiedSlotsMask,
+                        Map<Long, Double> memo) {
+
+                int allSlotsMask = (1 << requiredPositions.size()) - 1;
+
+                if (occupiedSlotsMask == allSlotsMask) {
+                        return new ArrayList<>();
+                }
+
+                if (playerIndex >= players.size()) {
+                        return new ArrayList<>();
+                }
+
+                double bestScore = maximizeFormationPerformance(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                playerIndex,
+                                occupiedSlotsMask,
+                                memo);
+
+                /*
+                 * Primero comprobamos si la solución óptima
+                 * prescinde del jugador actual.
+                 */
+                double skipScore = maximizeFormationPerformance(
+                                players,
+                                playerRatings,
+                                requiredPositions,
+                                playerIndex + 1,
+                                occupiedSlotsMask,
+                                memo);
+
+                if (scoresAreEqual(
+                                bestScore,
+                                skipScore)) {
+
+                        return reconstructFormationAssignments(
+                                        players,
+                                        playerRatings,
+                                        requiredPositions,
+                                        playerIndex + 1,
+                                        occupiedSlotsMask,
+                                        memo);
+                }
+
+                Player player = players.get(playerIndex);
+
+                double availability = calculateAvailabilityWeight(
+                                player.getStatus());
+
+                if (availability > 0) {
+
+                        for (int slotIndex = 0; slotIndex < requiredPositions.size(); slotIndex++) {
+
+                                int slotBit = 1 << slotIndex;
+
+                                if ((occupiedSlotsMask & slotBit) != 0) {
+                                        continue;
+                                }
+
+                                PlayerPosition requiredPosition = requiredPositions.get(slotIndex);
+
+                                if (!player.getPositions()
+                                                .contains(requiredPosition)) {
+
+                                        continue;
+                                }
+
+                                double remainingScore = maximizeFormationPerformance(
+                                                players,
+                                                playerRatings,
+                                                requiredPositions,
+                                                playerIndex + 1,
+                                                occupiedSlotsMask | slotBit,
+                                                memo);
+
+                                if (remainingScore <= -999_999) {
+                                        continue;
+                                }
+
+                                double candidateScore = playerRatings.get(playerIndex)
+                                                + remainingScore;
+
+                                if (!scoresAreEqual(
+                                                bestScore,
+                                                candidateScore)) {
+
+                                        continue;
+                                }
+
+                                List<FormationAssignment> assignments = new ArrayList<>();
+
+                                assignments.add(
+                                                new FormationAssignment(
+                                                                player,
+                                                                requiredPosition,
+                                                                playerRatings.get(playerIndex)));
+
+                                assignments.addAll(
+                                                reconstructFormationAssignments(
+                                                                players,
+                                                                playerRatings,
+                                                                requiredPositions,
+                                                                playerIndex + 1,
+                                                                occupiedSlotsMask | slotBit,
+                                                                memo));
+
+                                return assignments;
+                        }
+                }
+
+                /*
+                 * En condiciones normales nunca llegaremos aquí
+                 * para una formación factible.
+                 */
+                return new ArrayList<>();
+        }
+
+        private boolean scoresAreEqual(
+                        double first,
+                        double second) {
+
+                return Math.abs(first - second) < 0.000001;
         }
 
         private double calculateFormationPlayerRating(

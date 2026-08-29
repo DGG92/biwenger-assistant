@@ -36,6 +36,7 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 
@@ -3355,6 +3356,326 @@ class RecommendationServiceTest {
                 assertEquals(0.0, result.recommendedScore());
                 assertEquals(0.0, result.improvement());
                 assertEquals(0, result.confidence());
+        }
+
+        @Test
+        void recommendedLineupShouldKeepCurrentFormationWhenAnotherFormationTies() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                3001L,
+                                                "3001",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3002L,
+                                                "3002",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                3003L,
+                                                "3003",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                3004L,
+                                                "3004",
+                                                "DF 3",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                3005L,
+                                                "3005",
+                                                "DF MC",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                3006L,
+                                                "3006",
+                                                "DF DL",
+                                                List.of(
+                                                                PlayerPosition.DF,
+                                                                PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3007L,
+                                                "3007",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                3008L,
+                                                "3008",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                3009L,
+                                                "3009",
+                                                "MC DL",
+                                                List.of(
+                                                                PlayerPosition.MC,
+                                                                PlayerPosition.DL),
+                                                manager),
+                                createOwnedPlayer(
+                                                3010L,
+                                                "3010",
+                                                "MC DL 2",
+                                                List.of(
+                                                                PlayerPosition.MC,
+                                                                PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3011L,
+                                                "3011",
+                                                "DL",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                for (Player player : squad) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        true);
+
+                        mockPerformanceReports(
+                                        player,
+                                        5);
+                }
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                RecommendedLineupResponse result = recommendationService
+                                .getRecommendedLineup(
+                                                LEAGUE_ID);
+
+                assertEquals(
+                                "5-4-1",
+                                result.currentFormation());
+
+                assertEquals(
+                                "5-4-1",
+                                result.recommendedFormation());
+
+                assertEquals(
+                                11,
+                                result.recommendedStarters().size());
+
+                assertEquals(
+                                0.0,
+                                result.improvement());
+
+                assertEquals(
+                                0,
+                                result.confidence());
+
+                assertTrue(
+                                result.changes().isEmpty());
+        }
+
+        @Test
+        void recommendedLineupShouldReplaceStarterWhenReserveImprovesBestEleven() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                Player goalkeeper = createOwnedPlayer(
+                                3101L,
+                                "3101",
+                                "PT",
+                                List.of(PlayerPosition.PT),
+                                manager);
+
+                Player defenderOne = createOwnedPlayer(
+                                3102L,
+                                "3102",
+                                "DF 1",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderTwo = createOwnedPlayer(
+                                3103L,
+                                "3103",
+                                "DF 2",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderThree = createOwnedPlayer(
+                                3104L,
+                                "3104",
+                                "DF 3",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderFour = createOwnedPlayer(
+                                3105L,
+                                "3105",
+                                "DF 4",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player weakDefender = createOwnedPlayer(
+                                3106L,
+                                "3106",
+                                "DF titular flojo",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player midfielderOne = createOwnedPlayer(
+                                3107L,
+                                "3107",
+                                "MC 1",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderTwo = createOwnedPlayer(
+                                3108L,
+                                "3108",
+                                "MC 2",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderThree = createOwnedPlayer(
+                                3109L,
+                                "3109",
+                                "MC 3",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderFour = createOwnedPlayer(
+                                3110L,
+                                "3110",
+                                "MC 4",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player forward = createOwnedPlayer(
+                                3111L,
+                                "3111",
+                                "DL",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player strongDefender = createOwnedPlayer(
+                                3112L,
+                                "3112",
+                                "DF suplente fuerte",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                List<Player> squad = List.of(
+                                goalkeeper,
+                                defenderOne,
+                                defenderTwo,
+                                defenderThree,
+                                defenderFour,
+                                weakDefender,
+                                midfielderOne,
+                                midfielderTwo,
+                                midfielderThree,
+                                midfielderFour,
+                                forward,
+                                strongDefender);
+
+                for (Player player : squad) {
+
+                        boolean starter = !player.getId()
+                                        .equals(3112L);
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        starter);
+                }
+
+                for (Player player : squad) {
+
+                        int points;
+
+                        if (player.getId().equals(3106L)) {
+                                points = 2;
+                        } else if (player.getId().equals(3112L)) {
+                                points = 9;
+                        } else {
+                                points = 5;
+                        }
+
+                        mockPerformanceReports(
+                                        player,
+                                        points);
+                }
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                RecommendedLineupResponse result = recommendationService
+                                .getRecommendedLineup(
+                                                LEAGUE_ID);
+
+                assertEquals(
+                                11,
+                                result.recommendedStarters().size());
+
+                assertTrue(
+                                result.recommendedScore() > result.currentScore());
+
+                assertTrue(
+                                result.improvement() > 0);
+
+                assertTrue(
+                                result.recommendedStarters()
+                                                .stream()
+                                                .anyMatch(player -> player.playerId()
+                                                                .equals(3112L)));
+
+                assertFalse(
+                                result.recommendedStarters()
+                                                .stream()
+                                                .anyMatch(player -> player.playerId()
+                                                                .equals(3106L)));
+
+                assertTrue(
+                                result.changes()
+                                                .stream()
+                                                .anyMatch(change -> "OUT".equals(
+                                                                change.type())
+                                                                && change.playerId()
+                                                                                .equals(3106L)));
+
+                assertTrue(
+                                result.changes()
+                                                .stream()
+                                                .anyMatch(change -> "IN".equals(
+                                                                change.type())
+                                                                && change.playerId()
+                                                                                .equals(3112L)));
         }
 
         private void mockPerformanceReports(
