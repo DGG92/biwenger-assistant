@@ -12,6 +12,7 @@ import com.artajerjes.biwengerassistant.manager.ManagerService;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
+import com.artajerjes.biwengerassistant.matchday.MatchdayGameService;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
 import com.artajerjes.biwengerassistant.offer.OfferService;
@@ -35,6 +36,7 @@ public class BiwengerSyncService {
         private final OfferService offerService;
         private final MovementService movementService;
         private final ManagerService managerService;
+        private final MatchdayGameService matchdayGameService;
         private final PlayerMatchReportService playerMatchReportService;
 
         public BiwengerSyncService(
@@ -43,6 +45,7 @@ public class BiwengerSyncService {
                         OfferService offerService,
                         MovementService movementService,
                         ManagerService managerService,
+                        MatchdayGameService matchdayGameService,
                         PlayerMatchReportService playerMatchReportService) {
 
                 this.playerService = playerService;
@@ -50,6 +53,7 @@ public class BiwengerSyncService {
                 this.offerService = offerService;
                 this.movementService = movementService;
                 this.managerService = managerService;
+                this.matchdayGameService = matchdayGameService;
                 this.playerMatchReportService = playerMatchReportService;
         }
 
@@ -87,6 +91,13 @@ public class BiwengerSyncService {
                         log.info("Syncing current lineup for league {}", leagueId);
                         PlayerLineupSyncResponse lineup = playerService.syncCurrentLineup(leagueId);
                         log.info("Current lineup synced for league {}", leagueId);
+
+                        log.info("Syncing matchday games for league {}", leagueId);
+                        int matchdayGames = matchdayGameService.syncCurrentMatchday(leagueId);
+                        log.info(
+                                        "Matchday games synced for league {}: {}",
+                                        leagueId,
+                                        matchdayGames);
 
                         log.info("Syncing offers for league {}", leagueId);
                         OfferSyncResponse offers = offerService.sync(leagueId);
@@ -183,6 +194,11 @@ public class BiwengerSyncService {
                                         leagueId,
                                         "current lineup",
                                         () -> playerService.syncCurrentLineup(leagueId));
+
+                        runScheduledPhase(
+                                        leagueId,
+                                        "matchday games",
+                                        () -> matchdayGameService.syncCurrentMatchday(leagueId));
 
                         runScheduledPhase(
                                         leagueId,

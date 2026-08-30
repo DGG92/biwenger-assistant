@@ -20,6 +20,7 @@ import com.artajerjes.biwengerassistant.manager.ManagerService;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
+import com.artajerjes.biwengerassistant.matchday.MatchdayGameService;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
 import com.artajerjes.biwengerassistant.offer.OfferService;
@@ -50,6 +51,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private ManagerService managerService;
+
+        @Mock
+        private MatchdayGameService matchdayGameService;
 
         @Mock
         private PlayerMatchReportService playerMatchReportService;
@@ -134,7 +138,8 @@ class BiwengerSyncServiceTest {
                                 managerService,
                                 marketService,
                                 offerService,
-                                movementService);
+                                movementService,
+                                matchdayGameService);
 
                 inOrder.verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -153,6 +158,9 @@ class BiwengerSyncServiceTest {
 
                 inOrder.verify(playerService)
                                 .syncCurrentLineup(LEAGUE_ID);
+
+                inOrder.verify(matchdayGameService)
+                                .syncCurrentMatchday(LEAGUE_ID);
 
                 inOrder.verify(offerService)
                                 .sync(LEAGUE_ID);
@@ -395,6 +403,9 @@ class BiwengerSyncServiceTest {
                 verify(playerService)
                                 .syncCurrentLineup(
                                                 customLeagueId);
+
+                verify(matchdayGameService)
+                                .syncCurrentMatchday(customLeagueId);
         }
 
         @Test
@@ -452,6 +463,11 @@ class BiwengerSyncServiceTest {
                 verify(
                                 playerService,
                                 never()).syncCurrentLineup(
+                                                LEAGUE_ID);
+
+                verify(
+                                matchdayGameService,
+                                never()).syncCurrentMatchday(
                                                 LEAGUE_ID);
         }
 
@@ -581,6 +597,9 @@ class BiwengerSyncServiceTest {
                 verify(playerService)
                                 .syncCurrentLineup(LEAGUE_ID);
 
+                verify(matchdayGameService)
+                                .syncCurrentMatchday(LEAGUE_ID);
+
                 verify(offerService)
                                 .sync(LEAGUE_ID);
 
@@ -617,6 +636,9 @@ class BiwengerSyncServiceTest {
 
                 verify(playerService)
                                 .syncCurrentLineup(LEAGUE_ID);
+
+                verify(matchdayGameService)
+                                .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)
                                 .sync(LEAGUE_ID);
@@ -672,6 +694,11 @@ class BiwengerSyncServiceTest {
                                 playerMatchReportService,
                                 never())
                                 .syncLeagueReports(LEAGUE_ID);
+
+                verify(
+                                matchdayGameService,
+                                never()).syncCurrentMatchday(
+                                                LEAGUE_ID);
         }
 
         @Test
@@ -704,8 +731,14 @@ class BiwengerSyncServiceTest {
                 verify(playerService)
                                 .syncCurrentLineup(LEAGUE_ID);
 
+                verify(matchdayGameService)
+                                .syncCurrentMatchday(LEAGUE_ID);
+
                 verify(offerService)
                                 .sync(LEAGUE_ID);
+
+                verify(matchdayGameService)
+                                .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(playerMatchReportService)
                                 .syncLeagueReports(LEAGUE_ID);
