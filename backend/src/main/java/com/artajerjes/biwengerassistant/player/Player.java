@@ -58,6 +58,9 @@ public class Player {
     @Column(name = "team_name", length = 100)
     private String teamName;
 
+    @Column(name = "team_id")
+    private Long teamId;
+
     @Column(name = "market_value", nullable = false)
     private Long marketValue;
 
@@ -192,6 +195,7 @@ public class Player {
             List<PlayerPosition> positions,
             Integer points,
             String teamName,
+            Long teamId,
             Long marketValue,
             PlayerStatus status,
             Long valueFluctuation) {
@@ -201,6 +205,7 @@ public class Player {
         this.positions = new ArrayList<>(positions);
         this.points = points;
         this.teamName = teamName;
+        this.teamId = teamId;
         this.marketValue = marketValue;
         this.status = status;
         this.valueFluctuation = valueFluctuation;
@@ -282,6 +287,10 @@ public class Player {
 
     public String getName() {
         return name;
+    }
+
+    public Long getTeamId() {
+        return teamId;
     }
 
     public String getSlug() {

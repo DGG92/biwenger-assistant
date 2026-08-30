@@ -12,22 +12,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
@@ -38,8 +34,8 @@ import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompeti
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupPlayerRef;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupReserve;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
-import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
+import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
 import com.artajerjes.biwengerassistant.league.League;
@@ -763,6 +759,10 @@ class PlayerServiceTest {
                 assertEquals(
                                 "Osasuna",
                                 existingPlayer.getTeamName());
+
+                assertEquals(
+                                93L,
+                                existingPlayer.getTeamId());
 
                 assertEquals(
                                 3_630_000L,

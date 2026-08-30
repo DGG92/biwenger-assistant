@@ -370,6 +370,7 @@ public class PlayerService {
                                                                 ? 0
                                                                 : externalPlayer.points(),
                                                 teamName,
+                                                externalPlayer.teamId(),
                                                 externalPlayer.price(),
                                                 status,
                                                 externalPlayer.priceIncrement() == null
@@ -387,6 +388,7 @@ public class PlayerService {
                                                                 ? 0
                                                                 : externalPlayer.points(),
                                                 teamName,
+                                                externalPlayer.teamId(),
                                                 externalPlayer.price(),
                                                 status,
                                                 externalPlayer.priceIncrement() == null
@@ -581,9 +583,6 @@ public class PlayerService {
                                         null,
                                         null);
                 }
-
-                manager.updateCurrentFormation(
-                                lineup.type());
 
                 manager.updateCurrentFormation(
                                 lineup.type());
