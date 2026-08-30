@@ -167,6 +167,229 @@
     </section>
     }
 
+    @if (recommendedLineup(); as lineup) {
+    <section class="recommended-lineup-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">
+                    Asistente
+                </p>
+
+                <h2>
+                    Alineación recomendada
+                </h2>
+
+                @if (
+                lineup.improvement === 0
+                && lineup.changes.length === 0
+                ) {
+                <p class="recommended-lineup-message optimal">
+                    Tu once actual ya coincide con la mejor alineación detectada.
+                </p>
+                } @else {
+                <p class="recommended-lineup-message">
+                    El asistente ha encontrado una combinación que mejora tu alineación actual.
+                </p>
+                }
+            </div>
+
+            @if (lineup.recommendedFormation) {
+            <span class="formation recommended-formation">
+                {{ lineup.recommendedFormation }}
+            </span>
+            }
+        </div>
+
+        <div class="recommended-lineup-summary">
+            <article>
+                <span>Score actual</span>
+                <strong>
+                    {{ lineup.currentScore }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Score recomendado</span>
+                <strong>
+                    {{ lineup.recommendedScore }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Mejora</span>
+                <strong [class.positive]="lineup.improvement > 0">
+                    +{{ lineup.improvement }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Confianza</span>
+                <strong>
+                    {{ lineup.confidence }}%
+                </strong>
+            </article>
+        </div>
+
+        @if (lineup.changes.length > 0) {
+        <div class="recommended-changes">
+            <div class="recommended-changes-heading">
+                <strong>
+                    Cambios sugeridos
+                </strong>
+            </div>
+
+            <div class="recommended-changes-grid">
+                @for (
+                change of recommendedPlayersOut();
+                track change.playerId
+                ) {
+                <article class="recommended-change out">
+                    <span class="change-label">
+                        Sale
+                    </span>
+
+                    <strong>
+                        {{ change.playerName }}
+                    </strong>
+                </article>
+                }
+
+                @for (
+                change of recommendedPlayersIn();
+                track change.playerId
+                ) {
+                <article class="recommended-change in">
+                    <span class="change-label">
+                        Entra
+                    </span>
+
+                    <strong>
+                        {{ change.playerName }}
+                    </strong>
+                </article>
+                }
+            </div>
+        </div>
+        }
+
+        <div class="football-pitch recommended-pitch">
+            <div class="pitch-line center-line"></div>
+            <div class="center-circle"></div>
+
+            <div class="penalty-area penalty-area-top"></div>
+            <div class="penalty-area penalty-area-bottom"></div>
+
+            <div class="lineup-row forwards-row">
+                @for (
+                player of recommendedForwards();
+                track player.playerId
+                ) {
+                <div class="lineup-player recommended-player">
+                    <div class="player-circle recommended-player-circle">
+                        {{ player.playerName.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>
+                            {{ player.playerName }}
+                        </strong>
+                    </div>
+
+                    <span>
+                        {{ player.position }}
+                    </span>
+
+                    <span class="recommended-rating">
+                        {{ player.rating }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row midfielders-row">
+                @for (
+                player of recommendedMidfielders();
+                track player.playerId
+                ) {
+                <div class="lineup-player recommended-player">
+                    <div class="player-circle recommended-player-circle">
+                        {{ player.playerName.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>
+                            {{ player.playerName }}
+                        </strong>
+                    </div>
+
+                    <span>
+                        {{ player.position }}
+                    </span>
+
+                    <span class="recommended-rating">
+                        {{ player.rating }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row defenders-row">
+                @for (
+                player of recommendedDefenders();
+                track player.playerId
+                ) {
+                <div class="lineup-player recommended-player">
+                    <div class="player-circle recommended-player-circle">
+                        {{ player.playerName.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>
+                            {{ player.playerName }}
+                        </strong>
+                    </div>
+
+                    <span>
+                        {{ player.position }}
+                    </span>
+
+                    <span class="recommended-rating">
+                        {{ player.rating }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <div class="lineup-row goalkeeper-row">
+                @for (
+                player of recommendedGoalkeeper();
+                track player.playerId
+                ) {
+                <div class="lineup-player recommended-player">
+                    <div class="player-circle recommended-player-circle">
+                        {{ player.playerName.charAt(0) }}
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>
+                            {{ player.playerName }}
+                        </strong>
+                    </div>
+
+                    <span>
+                        {{ player.position }}
+                    </span>
+
+                    <span class="recommended-rating">
+                        {{ player.rating }}
+                    </span>
+                </div>
+                }
+            </div>
+        </div>
+    </section>
+    }
+
     <section class="lineup-section">
         <div class="section-heading">
             <div>

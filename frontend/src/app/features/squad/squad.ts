@@ -9,6 +9,7 @@ import { SquadNeeds } from '../../core/models/squad-needs.model';
 import { PlayerService } from '../../core/services/player';
 import { RecommendationService } from '../../core/services/recommendation';
 import { ActionRecommendation, ActionType } from '../../core/models/action-recommendation.model';
+import { RecommendedLineup } from '../../core/models/recommended-lineup.model';
 
 type PositionFilter = 'ALL' | 'PT' | 'DF' | 'MC' | 'DL';
 
@@ -27,12 +28,14 @@ interface SquadData {
   manager: SquadNeeds | null;
   players: Player[];
   actions: ActionRecommendation[];
+  recommendedLineup: RecommendedLineup | null;
 }
 
 const INITIAL_SQUAD_DATA: SquadData = {
   manager: null,
   players: [],
   actions: [],
+  recommendedLineup: null,
 };
 
 @Component({
@@ -98,13 +101,21 @@ export class Squad {
       players: this.playerService.getPlayers(),
       squad: this.recommendationService.getSquadNeeds(),
       actions: this.recommendationService.getActions(),
+      recommendedLineup:
+        this.recommendationService.getRecommendedLineup(),
     }).pipe(
-      map(({ players, squad, actions }): SquadData => ({
+      map(({
+        players,
+        squad,
+        actions,
+        recommendedLineup
+      }): SquadData => ({
         manager: squad,
         players: players.filter(
           player => player.ownerId === squad.managerId
         ),
         actions,
+        recommendedLineup,
       })),
       startWith(INITIAL_SQUAD_DATA)
     ),
@@ -128,6 +139,52 @@ export class Squad {
 
   readonly players = computed(
     () => this.squadData().players
+  );
+
+  readonly recommendedLineup = computed(
+    () => this.squadData().recommendedLineup
+  );
+
+  readonly recommendedGoalkeeper = computed(() =>
+    this.recommendedLineup()
+      ?.recommendedStarters
+      .filter(player => player.position === 'PT')
+    ?? []
+  );
+
+  readonly recommendedDefenders = computed(() =>
+    this.recommendedLineup()
+      ?.recommendedStarters
+      .filter(player => player.position === 'DF')
+    ?? []
+  );
+
+  readonly recommendedMidfielders = computed(() =>
+    this.recommendedLineup()
+      ?.recommendedStarters
+      .filter(player => player.position === 'MC')
+    ?? []
+  );
+
+  readonly recommendedForwards = computed(() =>
+    this.recommendedLineup()
+      ?.recommendedStarters
+      .filter(player => player.position === 'DL')
+    ?? []
+  );
+
+  readonly recommendedPlayersIn = computed(() =>
+    this.recommendedLineup()
+      ?.changes
+      .filter(change => change.type === 'IN')
+    ?? []
+  );
+
+  readonly recommendedPlayersOut = computed(() =>
+    this.recommendedLineup()
+      ?.changes
+      .filter(change => change.type === 'OUT')
+    ?? []
   );
 
   readonly lineupActions = computed(() =>

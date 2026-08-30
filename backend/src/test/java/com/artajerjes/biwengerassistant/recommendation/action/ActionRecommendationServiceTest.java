@@ -28,8 +28,10 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationType;
-import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupChangeResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupPlayerResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -451,7 +453,7 @@ class ActionRecommendationServiceTest {
         }
 
         @Test
-        void shouldRecommendReplacingStarterWhenReserveClearlyOutperforms() {
+        void shouldCreateStarterReplacementFromRecommendedLineup() {
 
                 Player starter = createOwnedPlayer(
                                 900L,
@@ -467,7 +469,7 @@ class ActionRecommendationServiceTest {
                 Player reserve = createOwnedPlayer(
                                 901L,
                                 "9001",
-                                "Suplente en forma",
+                                "Suplente recomendado",
                                 PlayerPosition.MC,
                                 2_000_000L,
                                 1_500_000L,
@@ -476,18 +478,8 @@ class ActionRecommendationServiceTest {
                                 false);
 
                 ReflectionTestUtils.setField(
-                                reserve,
-                                "reserve",
-                                true);
-
-                ReflectionTestUtils.setField(
                                 starter,
                                 "lineupPosition",
-                                PlayerPosition.MC);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "benchPosition",
                                 PlayerPosition.MC);
 
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
@@ -508,7 +500,7 @@ class ActionRecommendationServiceTest {
                 when(playerPerformanceSignalService.analyze(starter))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
-                                                                3.0,
+                                                                4.0,
                                                                 3,
                                                                 false,
                                                                 4.0,
@@ -517,10 +509,10 @@ class ActionRecommendationServiceTest {
                 when(playerPerformanceSignalService.analyze(reserve))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
-                                                                7.5,
+                                                                7.0,
                                                                 3,
                                                                 true,
-                                                                5.5,
+                                                                6.0,
                                                                 10));
 
                 when(playerProtectionService.calculate(starter))
@@ -537,12 +529,34 @@ class ActionRecommendationServiceTest {
                                                                 0,
                                                                 List.of()));
 
-                List<ActionCandidate> result = actionRecommendationService
-                                .getSquadActions(LEAGUE_ID);
+                when(recommendationService.getRecommendedLineup(LEAGUE_ID))
+                                .thenReturn(
+                                                new RecommendedLineupResponse(
+                                                                "5-4-1",
+                                                                "5-4-1",
+                                                                40.0,
+                                                                44.5,
+                                                                4.5,
+                                                                82,
+                                                                List.of(
+                                                                                new RecommendedLineupPlayerResponse(
+                                                                                                reserve.getId(),
+                                                                                                reserve.getName(),
+                                                                                                "MC",
+                                                                                                7.0)),
+                                                                List.of(
+                                                                                new RecommendedLineupChangeResponse(
+                                                                                                "OUT",
+                                                                                                starter.getId(),
+                                                                                                starter.getName()),
+                                                                                new RecommendedLineupChangeResponse(
+                                                                                                "IN",
+                                                                                                reserve.getId(),
+                                                                                                reserve.getName()))));
 
-                assertTrue(
-                                result.stream()
-                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(
+                                                LEAGUE_ID);
 
                 ActionCandidate replacement = result.stream()
                                 .filter(action -> action.type() == ActionType.REPLACE_STARTER)
@@ -553,292 +567,32 @@ class ActionRecommendationServiceTest {
                                 starter.getId(),
                                 replacement.playerId());
 
+                assertEquals(
+                                ActionPriority.HIGH,
+                                replacement.priority());
+
+                assertEquals(
+                                82,
+                                replacement.confidence());
+
                 assertTrue(
-                                replacement.explanation()
-                                                .contains("Suplente en forma"));
+                                replacement.title()
+                                                .contains(
+                                                                "Suplente recomendado"));
+
+                assertTrue(
+                                replacement.sourceSignals()
+                                                .contains(
+                                                                "RECOMMENDED_LINEUP_CHANGE"));
+
+                assertTrue(
+                                replacement.sourceSignals()
+                                                .contains(
+                                                                "IN_PLAYER_901"));
         }
 
         @Test
-        void shouldNotRecommendReplacingStarterWhenReserveAdvantageIsTooSmall() {
-
-                Player starter = createOwnedPlayer(
-                                910L,
-                                "9100",
-                                "Titular estable",
-                                PlayerPosition.DF,
-                                3_000_000L,
-                                2_500_000L,
-                                0L,
-                                PlayerStatus.OK,
-                                true);
-
-                Player reserve = createOwnedPlayer(
-                                911L,
-                                "9101",
-                                "Suplente parecido",
-                                PlayerPosition.DF,
-                                2_000_000L,
-                                1_500_000L,
-                                0L,
-                                PlayerStatus.OK,
-                                false);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "reserve",
-                                true);
-
-                ReflectionTestUtils.setField(
-                                starter,
-                                "lineupPosition",
-                                PlayerPosition.DF);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "benchPosition",
-                                PlayerPosition.DF);
-
-                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                                .thenReturn(
-                                                List.of(
-                                                                starter,
-                                                                reserve));
-
-                when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                                .thenReturn(
-                                                createSquadNeeds(
-                                                                Map.of(
-                                                                                "PT", 0,
-                                                                                "DF", 0,
-                                                                                "MC", 0,
-                                                                                "DL", 0)));
-
-                when(playerPerformanceSignalService.analyze(starter))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                5.0,
-                                                                3,
-                                                                false,
-                                                                5.0,
-                                                                10));
-
-                when(playerPerformanceSignalService.analyze(reserve))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                6.0,
-                                                                3,
-                                                                false,
-                                                                5.5,
-                                                                10));
-
-                when(playerProtectionService.calculate(starter))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                when(playerProtectionService.calculate(reserve))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                List<ActionCandidate> result = actionRecommendationService
-                                .getSquadActions(LEAGUE_ID);
-
-                assertFalse(
-                                result.stream()
-                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
-        }
-
-        @Test
-        void shouldNotRecommendReplacingStarterWithUnavailableReserve() {
-
-                Player starter = createOwnedPlayer(
-                                920L,
-                                "9200",
-                                "Titular",
-                                PlayerPosition.MC,
-                                3_000_000L,
-                                2_500_000L,
-                                0L,
-                                PlayerStatus.OK,
-                                true);
-
-                Player reserve = createOwnedPlayer(
-                                921L,
-                                "9201",
-                                "Suplente lesionado",
-                                PlayerPosition.MC,
-                                2_000_000L,
-                                1_500_000L,
-                                0L,
-                                PlayerStatus.INJURED,
-                                false);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "reserve",
-                                true);
-
-                ReflectionTestUtils.setField(
-                                starter,
-                                "lineupPosition",
-                                PlayerPosition.MC);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "benchPosition",
-                                PlayerPosition.MC);
-
-                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                                .thenReturn(List.of(starter, reserve));
-
-                when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                                .thenReturn(
-                                                createSquadNeeds(
-                                                                Map.of(
-                                                                                "PT", 0,
-                                                                                "DF", 0,
-                                                                                "MC", 0,
-                                                                                "DL", 0)));
-
-                when(playerPerformanceSignalService.analyze(starter))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                3.0,
-                                                                3,
-                                                                false,
-                                                                4.0,
-                                                                10));
-
-                when(playerPerformanceSignalService.analyze(reserve))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                9.0,
-                                                                3,
-                                                                true,
-                                                                6.0,
-                                                                10));
-
-                when(playerProtectionService.calculate(starter))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                when(playerProtectionService.calculate(reserve))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                List<ActionCandidate> result = actionRecommendationService
-                                .getSquadActions(LEAGUE_ID);
-
-                assertFalse(
-                                result.stream()
-                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
-        }
-
-        @Test
-        void shouldNotReplaceStarterWhenReserveRecentFormConflictsWithMuchWorseHistory() {
-
-                Player starter = createOwnedPlayer(
-                                930L,
-                                "9300",
-                                "Titular fiable",
-                                PlayerPosition.DF,
-                                4_000_000L,
-                                3_000_000L,
-                                0L,
-                                PlayerStatus.OK,
-                                true);
-
-                Player reserve = createOwnedPlayer(
-                                931L,
-                                "9301",
-                                "Suplente en racha",
-                                PlayerPosition.DF,
-                                2_000_000L,
-                                1_500_000L,
-                                0L,
-                                PlayerStatus.OK,
-                                false);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "reserve",
-                                true);
-
-                ReflectionTestUtils.setField(
-                                starter,
-                                "lineupPosition",
-                                PlayerPosition.DF);
-
-                ReflectionTestUtils.setField(
-                                reserve,
-                                "benchPosition",
-                                PlayerPosition.DF);
-
-                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                                .thenReturn(List.of(starter, reserve));
-
-                when(recommendationService.getSquadNeeds(LEAGUE_ID))
-                                .thenReturn(
-                                                createSquadNeeds(
-                                                                Map.of(
-                                                                                "PT", 0,
-                                                                                "DF", 0,
-                                                                                "MC", 0,
-                                                                                "DL", 0)));
-
-                when(playerPerformanceSignalService.analyze(starter))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                4.0,
-                                                                3,
-                                                                false,
-                                                                6.5,
-                                                                12));
-
-                when(playerPerformanceSignalService.analyze(reserve))
-                                .thenReturn(
-                                                new PlayerPerformanceSignals(
-                                                                6.5,
-                                                                3,
-                                                                false,
-                                                                3.5,
-                                                                12));
-
-                when(playerProtectionService.calculate(starter))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                when(playerProtectionService.calculate(reserve))
-                                .thenReturn(
-                                                new PlayerProtectionAlert(
-                                                                PlayerProtectionAlertLevel.NONE,
-                                                                0,
-                                                                List.of()));
-
-                List<ActionCandidate> result = actionRecommendationService
-                                .getSquadActions(LEAGUE_ID);
-
-                assertFalse(
-                                result.stream()
-                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
-        }
-
-        @Test
-        void shouldRecommendFormationChangeWhenAlternativeIsClearlyBetter() {
+        void shouldNotCreateStarterReplacementWhenRecommendedLineupHasNoChanges() {
 
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of());
@@ -852,16 +606,57 @@ class ActionRecommendationServiceTest {
                                                                                 "MC", 0,
                                                                                 "DL", 0)));
 
-                when(recommendationService
-                                .getFormationRecommendation(LEAGUE_ID))
+                when(recommendationService.getRecommendedLineup(LEAGUE_ID))
                                 .thenReturn(
-                                                new FormationRecommendationResponse(
+                                                new RecommendedLineupResponse(
+                                                                "5-4-1",
+                                                                "5-4-1",
+                                                                38.27,
+                                                                38.27,
+                                                                0,
+                                                                0,
+                                                                List.of(),
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(
+                                                LEAGUE_ID);
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.REPLACE_STARTER));
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.type() == ActionType.CHANGE_FORMATION));
+        }
+
+        @Test
+        void shouldRecommendFormationChangeFromRecommendedLineup() {
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(recommendationService.getRecommendedLineup(LEAGUE_ID))
+                                .thenReturn(
+                                                new RecommendedLineupResponse(
                                                                 "5-4-1",
                                                                 "4-4-2",
                                                                 55.0,
                                                                 58.5,
                                                                 3.5,
-                                                                73));
+                                                                73,
+                                                                List.of(),
+                                                                List.of()));
 
                 List<ActionCandidate> result = actionRecommendationService
                                 .getSquadActions(
@@ -893,10 +688,15 @@ class ActionRecommendationServiceTest {
                                 action.sourceSignals()
                                                 .contains(
                                                                 "FORMATION_IMPROVEMENT"));
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains(
+                                                                "RECOMMENDED_LINEUP"));
         }
 
         @Test
-        void shouldNotRecommendFormationChangeWhenImprovementIsMarginal() {
+        void shouldNotRecommendFormationChangeWhenLineupImprovementIsMarginal() {
 
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of());
@@ -910,16 +710,17 @@ class ActionRecommendationServiceTest {
                                                                                 "MC", 0,
                                                                                 "DL", 0)));
 
-                when(recommendationService
-                                .getFormationRecommendation(LEAGUE_ID))
+                when(recommendationService.getRecommendedLineup(LEAGUE_ID))
                                 .thenReturn(
-                                                new FormationRecommendationResponse(
+                                                new RecommendedLineupResponse(
                                                                 "5-4-1",
                                                                 "4-4-2",
                                                                 55.0,
                                                                 56.2,
                                                                 1.2,
-                                                                61));
+                                                                61,
+                                                                List.of(),
+                                                                List.of()));
 
                 List<ActionCandidate> result = actionRecommendationService
                                 .getSquadActions(

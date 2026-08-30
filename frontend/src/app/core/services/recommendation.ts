@@ -7,6 +7,7 @@ import { SquadNeeds } from '../models/squad-needs.model';
 import { EconomicStatus } from '../models/economic-status.model';
 import { MarketRecommendation } from '../models/market-recommendation.model';
 import { ActionRecommendation } from '../models/action-recommendation.model';
+import { RecommendedLineup } from '../models/recommended-lineup.model';
 
 @Injectable({
     providedIn: 'root',
@@ -35,6 +36,12 @@ export class RecommendationService {
     getActions(): Observable<ActionRecommendation[]> {
         return this.http.get<ActionRecommendation[]>(
             `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/recommendations/actions`
+        );
+    }
+
+    getRecommendedLineup(): Observable<RecommendedLineup> {
+        return this.http.get<RecommendedLineup>(
+            `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/recommendations/lineup`
         );
     }
 }

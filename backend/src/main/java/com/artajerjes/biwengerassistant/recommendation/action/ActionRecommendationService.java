@@ -19,8 +19,9 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationType;
-import com.artajerjes.biwengerassistant.recommendation.dto.FormationRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupChangeResponse;
+import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
@@ -80,16 +81,14 @@ public class ActionRecommendationService {
                                                         squadNeeds));
                 }
 
+                RecommendedLineupResponse recommendedLineup = recommendationService
+                                .getRecommendedLineup(
+                                                leagueId);
+
                 actions.addAll(
-                                evaluateStarterReplacementActions(
-                                                squadPlayers));
-
-                ActionCandidate formationAction = evaluateFormationChange(
-                                leagueId);
-
-                if (formationAction != null) {
-                        actions.add(formationAction);
-                }
+                                evaluateRecommendedLineupActions(
+                                                squadPlayers,
+                                                recommendedLineup));
 
                 return actions.stream()
                                 .sorted(
@@ -190,55 +189,216 @@ public class ActionRecommendationService {
                                                 .toList());
         }
 
-        private ActionCandidate evaluateFormationChange(
-                        Long leagueId) {
+        private List<ActionCandidate> evaluateRecommendedLineupActions(
+                        List<Player> squadPlayers,
+                        RecommendedLineupResponse lineup) {
 
-                FormationRecommendationResponse formation = recommendationService
-                                .getFormationRecommendation(
-                                                leagueId);
+                if (lineup == null) {
+                        return List.of();
+                }
 
-                if (formation == null
-                                || formation.currentFormation() == null
-                                || formation.recommendedFormation() == null) {
+                List<ActionCandidate> actions = new ArrayList<>();
 
-                        return null;
+                ActionCandidate formationAction = evaluateRecommendedFormationChange(
+                                lineup);
+
+                if (formationAction != null) {
+                        actions.add(formationAction);
                 }
 
                 /*
-                 * Si la mejor formación encontrada sigue siendo
-                 * la actual, no existe ninguna acción que recomendar.
-                 */
-                if (formation.currentFormation()
-                                .equals(
-                                                formation.recommendedFormation())) {
-
-                        return null;
-                }
-
-                /*
-                 * Evitamos recomendar cambios por diferencias
-                 * marginales.
+                 * Si además cambia la formación, dejamos que esa acción
+                 * represente la reestructuración completa del once.
                  *
-                 * La mejora representa puntos esperados del XI
-                 * completo, por lo que exigimos al menos +2.
+                 * No tiene sentido generar también sustituciones
+                 * individuales potencialmente engañosas, porque los
+                 * puestos requeridos han cambiado.
                  */
-                if (formation.improvement() < 2.0) {
+                boolean formationChanges = lineup.currentFormation() != null
+                                && lineup.recommendedFormation() != null
+                                && !lineup.currentFormation()
+                                                .equals(
+                                                                lineup.recommendedFormation());
+
+                if (formationChanges) {
+                        return actions;
+                }
+
+                /*
+                 * No generamos acciones individuales por diferencias
+                 * insignificantes ni por soluciones empatadas.
+                 */
+                if (lineup.improvement() < 1.0) {
+                        return actions;
+                }
+
+                List<RecommendedLineupChangeResponse> incomingChanges = new ArrayList<>(
+                                lineup.changes()
+                                                .stream()
+                                                .filter(change -> "IN".equals(
+                                                                change.type()))
+                                                .toList());
+
+                List<RecommendedLineupChangeResponse> outgoingChanges = lineup.changes()
+                                .stream()
+                                .filter(change -> "OUT".equals(
+                                                change.type()))
+                                .toList();
+
+                for (RecommendedLineupChangeResponse outgoing : outgoingChanges) {
+
+                        Player outgoingPlayer = squadPlayers.stream()
+                                        .filter(player -> player.getId()
+                                                        .equals(
+                                                                        outgoing.playerId()))
+                                        .findFirst()
+                                        .orElse(null);
+
+                        if (outgoingPlayer == null
+                                        || incomingChanges.isEmpty()) {
+
+                                continue;
+                        }
+
+                        String outgoingPosition = outgoingPlayer.getLineupPosition() == null
+                                        ? null
+                                        : outgoingPlayer
+                                                        .getLineupPosition()
+                                                        .name();
+
+                        RecommendedLineupChangeResponse incoming = incomingChanges.stream()
+                                        .filter(change -> incomingMatchesPosition(
+                                                        change,
+                                                        outgoingPosition,
+                                                        lineup))
+                                        .findFirst()
+                                        .orElse(
+                                                        incomingChanges.get(0));
+
+                        incomingChanges.remove(incoming);
+
+                        actions.add(
+                                        buildRecommendedStarterReplacementAction(
+                                                        outgoing,
+                                                        incoming,
+                                                        outgoingPosition,
+                                                        lineup));
+                }
+
+                return actions;
+        }
+
+        private boolean incomingMatchesPosition(
+                        RecommendedLineupChangeResponse incoming,
+                        String outgoingPosition,
+                        RecommendedLineupResponse lineup) {
+
+                if (outgoingPosition == null) {
+                        return false;
+                }
+
+                return lineup.recommendedStarters()
+                                .stream()
+                                .anyMatch(player -> player.playerId()
+                                                .equals(
+                                                                incoming.playerId())
+                                                && outgoingPosition.equals(
+                                                                player.position()));
+        }
+
+        private ActionCandidate buildRecommendedStarterReplacementAction(
+                        RecommendedLineupChangeResponse outgoing,
+                        RecommendedLineupChangeResponse incoming,
+                        String position,
+                        RecommendedLineupResponse lineup) {
+
+                ActionPriority priority = lineup.improvement() >= 4.0
+                                ? ActionPriority.HIGH
+                                : ActionPriority.MEDIUM;
+
+                String explanation = "El XI recomendado por el asistente incluye a "
+                                + incoming.playerName()
+                                + " en lugar de "
+                                + outgoing.playerName()
+                                + ", dentro de una alineación que mejora "
+                                + "la puntuación estimada de "
+                                + lineup.currentScore()
+                                + " a "
+                                + lineup.recommendedScore()
+                                + ".";
+
+                List<String> signals = new ArrayList<>();
+
+                signals.add(
+                                "RECOMMENDED_LINEUP_CHANGE");
+
+                signals.add(
+                                "OUT_PLAYER_"
+                                                + outgoing.playerId());
+
+                signals.add(
+                                "IN_PLAYER_"
+                                                + incoming.playerId());
+
+                if (position != null) {
+                        signals.add(
+                                        "POSITION_"
+                                                        + position);
+                }
+
+                return new ActionCandidate(
+                                ActionType.REPLACE_STARTER,
+                                priority,
+                                outgoing.playerId(),
+                                outgoing.playerName(),
+                                "Sustituye a "
+                                                + outgoing.playerName()
+                                                + " por "
+                                                + incoming.playerName(),
+                                explanation,
+                                lineup.confidence(),
+                                null,
+                                List.copyOf(signals));
+        }
+
+        private ActionCandidate evaluateRecommendedFormationChange(
+                        RecommendedLineupResponse lineup) {
+
+                if (lineup.currentFormation() == null
+                                || lineup.recommendedFormation() == null) {
+
                         return null;
                 }
 
-                ActionPriority priority = formation.improvement() >= 4.0
+                if (lineup.currentFormation()
+                                .equals(
+                                                lineup.recommendedFormation())) {
+
+                        return null;
+                }
+
+                /*
+                 * Para cambiar toda la estructura del once mantenemos
+                 * un umbral más exigente que para una sustitución.
+                 */
+                if (lineup.improvement() < 2.0) {
+                        return null;
+                }
+
+                ActionPriority priority = lineup.improvement() >= 4.0
                                 ? ActionPriority.HIGH
                                 : ActionPriority.MEDIUM;
 
                 String title = "Cambiar formación a "
-                                + formation.recommendedFormation();
+                                + lineup.recommendedFormation();
 
-                String explanation = "La formación "
-                                + formation.recommendedFormation()
-                                + " aprovecha mejor la plantilla disponible que "
-                                + formation.currentFormation()
+                String explanation = "El XI recomendado mejora la alineación actual "
+                                + "al pasar de "
+                                + lineup.currentFormation()
+                                + " a "
+                                + lineup.recommendedFormation()
                                 + ", con una mejora estimada de "
-                                + formation.improvement()
+                                + lineup.improvement()
                                 + " puntos.";
 
                 return new ActionCandidate(
@@ -248,14 +408,15 @@ public class ActionRecommendationService {
                                 null,
                                 title,
                                 explanation,
-                                formation.confidence(),
+                                lineup.confidence(),
                                 null,
                                 List.of(
                                                 "FORMATION_IMPROVEMENT",
+                                                "RECOMMENDED_LINEUP",
                                                 "CURRENT_FORMATION_"
-                                                                + formation.currentFormation(),
+                                                                + lineup.currentFormation(),
                                                 "RECOMMENDED_FORMATION_"
-                                                                + formation.recommendedFormation()));
+                                                                + lineup.recommendedFormation()));
         }
 
         private List<ActionCandidate> evaluatePlayerActions(
@@ -531,193 +692,6 @@ public class ActionRecommendationService {
 
                 return actions;
 
-        }
-
-        private List<ActionCandidate> evaluateStarterReplacementActions(
-                        List<Player> squadPlayers) {
-
-                List<ActionCandidate> actions = new ArrayList<>();
-
-                List<Player> starters = squadPlayers.stream()
-                                .filter(Player::isStarter)
-                                .toList();
-
-                List<Player> reserves = squadPlayers.stream()
-                                .filter(Player::isReserve)
-                                .filter(this::isAvailableForLineup)
-                                .toList();
-
-                for (Player starter : starters) {
-
-                        PlayerPerformanceSignals starterPerformance = playerPerformanceSignalService
-                                        .analyze(starter);
-
-                        /*
-                         * No queremos recomendar cambios de once
-                         * con una muestra demasiado pequeña.
-                         */
-                        if (starterPerformance.recentSampleSize() < 2) {
-                                continue;
-                        }
-
-                        Player bestReserve = null;
-                        PlayerPerformanceSignals bestReservePerformance = null;
-
-                        for (Player reserve : reserves) {
-
-                                if (!canReplaceStarter(
-                                                starter,
-                                                reserve)) {
-
-                                        continue;
-                                }
-
-                                PlayerPerformanceSignals reservePerformance = playerPerformanceSignalService
-                                                .analyze(reserve);
-
-                                if (reservePerformance.recentSampleSize() < 2) {
-                                        continue;
-                                }
-
-                                double improvement = reservePerformance.recentWeightedAverage()
-                                                - starterPerformance.recentWeightedAverage();
-
-                                /*
-                                 * Exigimos una ventaja clara.
-                                 * Dos puntos de media reciente evita
-                                 * recomendaciones por diferencias pequeñas.
-                                 */
-                                if (improvement < 2.0) {
-                                        continue;
-                                }
-
-                                /*
-                                 * Si tenemos histórico suficiente de ambos jugadores,
-                                 * evitamos cambiar el once por una racha corta cuando
-                                 * el suplente ha rendido claramente peor a largo plazo.
-                                 *
-                                 * Una ventaja reciente muy grande (>= 4 puntos)
-                                 * sí puede imponerse al histórico.
-                                 */
-                                boolean enoughHistoricalData = starterPerformance.historicalSampleSize() >= 5
-                                                && reservePerformance.historicalSampleSize() >= 5;
-
-                                if (enoughHistoricalData) {
-
-                                        double historicalDifference = reservePerformance.historicalAveragePoints()
-                                                        - starterPerformance.historicalAveragePoints();
-
-                                        if (historicalDifference <= -2.0
-                                                        && improvement < 4.0) {
-
-                                                continue;
-                                        }
-                                }
-
-                                if (bestReserve == null
-                                                || reservePerformance.recentWeightedAverage() > bestReservePerformance
-                                                                .recentWeightedAverage()) {
-
-                                        bestReserve = reserve;
-                                        bestReservePerformance = reservePerformance;
-                                }
-                        }
-
-                        if (bestReserve == null) {
-                                continue;
-                        }
-
-                        double improvement = bestReservePerformance
-                                        .recentWeightedAverage()
-                                        - starterPerformance
-                                                        .recentWeightedAverage();
-
-                        actions.add(
-                                        new ActionCandidate(
-                                                        ActionType.REPLACE_STARTER,
-                                                        improvement >= 4.0
-                                                                        ? ActionPriority.HIGH
-                                                                        : ActionPriority.MEDIUM,
-                                                        starter.getId(),
-                                                        starter.getName(),
-                                                        "Replantea la titularidad de "
-                                                                        + starter.getName(),
-                                                        bestReserve.getName()
-                                                                        + " está rindiendo mejor recientemente: "
-                                                                        + round(
-                                                                                        bestReservePerformance
-                                                                                                        .recentWeightedAverage())
-                                                                        + " puntos de media frente a "
-                                                                        + round(
-                                                                                        starterPerformance
-                                                                                                        .recentWeightedAverage())
-                                                                        + ".",
-                                                        calculateLineupChangeConfidence(
-                                                                        starterPerformance,
-                                                                        bestReservePerformance,
-                                                                        improvement),
-                                                        null,
-                                                        List.of(
-                                                                        "STARTER_UNDERPERFORMING",
-                                                                        "RESERVE_OUTPERFORMING",
-                                                                        "SAME_POSITION")));
-                }
-
-                return actions;
-        }
-
-        private boolean canReplaceStarter(
-                        Player starter,
-                        Player reserve) {
-
-                if (starter.getLineupPosition() != null
-                                && reserve.getBenchPosition() != null) {
-
-                        return starter.getLineupPosition() == reserve.getBenchPosition();
-                }
-
-                return starter.getPositions()
-                                .stream()
-                                .anyMatch(
-                                                reserve.getPositions()::contains);
-        }
-
-        private boolean isAvailableForLineup(
-                        Player player) {
-
-                PlayerStatus status = player.getStatus();
-
-                return status != PlayerStatus.INJURED
-                                && status != PlayerStatus.SANCTIONED
-                                && status != PlayerStatus.DISCARDED;
-        }
-
-        private int calculateLineupChangeConfidence(
-                        PlayerPerformanceSignals starterPerformance,
-                        PlayerPerformanceSignals reservePerformance,
-                        double improvement) {
-
-                int confidence = 40;
-
-                if (starterPerformance.recentSampleSize() >= 3
-                                && reservePerformance.recentSampleSize() >= 3) {
-
-                        confidence += 20;
-                }
-
-                if (starterPerformance.historicalSampleSize() >= 5
-                                && reservePerformance.historicalSampleSize() >= 5) {
-
-                        confidence += 15;
-                }
-
-                confidence += Math.min(
-                                (int) Math.round(improvement * 5),
-                                25);
-
-                return Math.min(
-                                confidence,
-                                100);
         }
 
         private int calculateConfidence(
