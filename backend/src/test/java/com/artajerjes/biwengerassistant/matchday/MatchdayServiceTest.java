@@ -217,7 +217,8 @@ class MatchdayServiceTest {
                                 1,
                                 List.of(
                                                 finishedGame,
-                                                pendingGame));
+                                                pendingGame),
+                                null);
 
                 BiwengerRoundsResponse roundsResponse = new BiwengerRoundsResponse(
                                 200,
@@ -626,7 +627,8 @@ class MatchdayServiceTest {
                                                 "active",
                                                 100,
                                                 1,
-                                                List.of(game)));
+                                                List.of(game),
+                                                null));
 
                 BiwengerCompetitionResponse competitionResponse = new BiwengerCompetitionResponse(
                                 200,
@@ -760,7 +762,8 @@ class MatchdayServiceTest {
                                                 "active",
                                                 100,
                                                 1,
-                                                List.of()));
+                                                List.of(),
+                                                null));
 
                 BiwengerCompetitionResponse competitionResponse = new BiwengerCompetitionResponse(
                                 200,
@@ -854,7 +857,8 @@ class MatchdayServiceTest {
                                                                                 "active",
                                                                                 100,
                                                                                 1,
-                                                                                List.of())));
+                                                                                List.of(),
+                                                                                null)));
 
                 when(biwengerClient.getCompetition())
                                 .thenReturn(
