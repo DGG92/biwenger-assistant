@@ -2,6 +2,7 @@ package com.artajerjes.biwengerassistant.recommendation;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,6 +26,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
+import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
 import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
@@ -61,6 +63,9 @@ class RecommendationServiceTest {
         @Mock
         private PlayerMatchReportRepository playerMatchReportRepository;
 
+        @Mock
+        private MatchdayDifficultyService matchdayDifficultyService;
+
         private RecommendationService recommendationService;
 
         @BeforeEach
@@ -80,7 +85,14 @@ class RecommendationServiceTest {
                                 marketListingRepository,
                                 offerService,
                                 playerRepository,
-                                playerPerformanceSignalService);
+                                playerPerformanceSignalService,
+                                matchdayDifficultyService);
+
+                lenient().when(
+                                matchdayDifficultyService.resolveForTeams(
+                                                org.mockito.ArgumentMatchers.anyLong(),
+                                                org.mockito.ArgumentMatchers.anyList()))
+                                .thenReturn(Map.of());
 
                 ReflectionTestUtils.setField(
                                 recommendationService,

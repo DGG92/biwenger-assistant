@@ -17,6 +17,8 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
+import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
+import com.artajerjes.biwengerassistant.matchday.OpponentDifficulty;
 import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
@@ -76,6 +78,8 @@ public class RecommendationService {
         private final OfferService offerService;
         private final PlayerRepository playerRepository;
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
+        private final MatchdayDifficultyService matchdayDifficultyService;
+
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
 
         @Value("${biwenger.user-id}")
@@ -86,13 +90,15 @@ public class RecommendationService {
                         MarketListingRepository marketListingRepository,
                         OfferService offerService,
                         PlayerRepository playerRepository,
-                        PlayerPerformanceSignalService playerPerformanceSignalService) {
+                        PlayerPerformanceSignalService playerPerformanceSignalService,
+                        MatchdayDifficultyService matchdayDifficultyService) {
 
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
                 this.offerService = offerService;
                 this.playerRepository = playerRepository;
                 this.playerPerformanceSignalService = playerPerformanceSignalService;
+                this.matchdayDifficultyService = matchdayDifficultyService;
         }
 
         private double clampDouble(
@@ -846,8 +852,19 @@ public class RecommendationService {
 
                 String currentFormation = manager.getCurrentFormation();
 
+                List<Long> teamIds = squadPlayers.stream()
+                                .map(Player::getTeamId)
+                                .filter(java.util.Objects::nonNull)
+                                .distinct()
+                                .toList();
+
+                Map<Long, OpponentDifficulty> difficultyByTeamId = matchdayDifficultyService.resolveForTeams(
+                                leagueId,
+                                teamIds);
+
                 double currentScore = calculateCurrentLineupScore(
-                                squadPlayers);
+                                squadPlayers,
+                                difficultyByTeamId);
 
                 Formation currentFormationDefinition = findFormation(currentFormation);
 
@@ -855,7 +872,8 @@ public class RecommendationService {
                                 ? null
                                 : calculateBestFormationLineup(
                                                 squadPlayers,
-                                                currentFormationDefinition);
+                                                currentFormationDefinition,
+                                                difficultyByTeamId);
 
                 if (bestLineup != null
                                 && bestLineup.score() == IMPOSSIBLE_FORMATION_SCORE) {
@@ -873,7 +891,8 @@ public class RecommendationService {
 
                         FormationLineup candidate = calculateBestFormationLineup(
                                         squadPlayers,
-                                        formation);
+                                        formation,
+                                        difficultyByTeamId);
 
                         if (candidate.score() == IMPOSSIBLE_FORMATION_SCORE) {
 
@@ -935,12 +954,14 @@ public class RecommendationService {
         }
 
         private double calculateCurrentLineupScore(
-                        List<Player> squadPlayers) {
+                        List<Player> squadPlayers,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 return squadPlayers.stream()
                                 .filter(Player::isStarter)
-                                .mapToDouble(
-                                                this::calculateFormationPlayerRating)
+                                .mapToDouble(player -> calculateFormationPlayerRating(
+                                                player,
+                                                difficultyByTeamId))
                                 .sum();
         }
 
@@ -1158,7 +1179,9 @@ public class RecommendationService {
                 }
 
                 List<Double> playerRatings = players.stream()
-                                .map(this::calculateFormationPlayerRating)
+                                .map(player -> calculateFormationPlayerRating(
+                                                player,
+                                                Map.of()))
                                 .toList();
 
                 Map<Long, Double> memo = new HashMap<>();
@@ -1174,7 +1197,8 @@ public class RecommendationService {
 
         private FormationLineup calculateBestFormationLineup(
                         List<Player> players,
-                        Formation formation) {
+                        Formation formation,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
 
@@ -1189,7 +1213,9 @@ public class RecommendationService {
                 }
 
                 List<Double> playerRatings = players.stream()
-                                .map(this::calculateFormationPlayerRating)
+                                .map(player -> calculateFormationPlayerRating(
+                                                player,
+                                                difficultyByTeamId))
                                 .toList();
 
                 Map<Long, Double> memo = new HashMap<>();
@@ -1451,7 +1477,7 @@ public class RecommendationService {
         }
 
         private double calculateFormationPlayerRating(
-                        Player player) {
+                        Player player, Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 PlayerPerformanceSignals performance = playerPerformanceSignalService
                                 .analyze(player);

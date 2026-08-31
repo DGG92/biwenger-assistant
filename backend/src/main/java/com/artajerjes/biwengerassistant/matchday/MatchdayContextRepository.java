@@ -5,9 +5,12 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MatchdayContextRepository
-        extends JpaRepository<MatchdayContext, Long> {
+                extends JpaRepository<MatchdayContext, Long> {
 
-    Optional<MatchdayContext> findByLeagueIdAndBiwengerRoundId(
-            Long leagueId,
-            Long biwengerRoundId);
+        Optional<MatchdayContext> findByLeagueIdAndBiwengerRoundId(
+                        Long leagueId,
+                        Long biwengerRoundId);
+
+        Optional<MatchdayContext> findTopByLeagueIdOrderByIdDesc(
+                        Long leagueId);
 }
