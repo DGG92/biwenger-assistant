@@ -262,6 +262,138 @@ class ActionRecommendationServiceTest {
         }
 
         @Test
+        void shouldHoldCoachWithStrongPerformanceUsingCoachScoringScale() {
+
+                Player coach = createOwnedPlayer(
+                                550L,
+                                "5500",
+                                "Entrenador en buena forma",
+                                PlayerPosition.E,
+                                1_000_000L,
+                                1_000_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(coach));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(coach))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                2.1,
+                                                                3,
+                                                                false,
+                                                                1.9,
+                                                                8));
+
+                when(playerProtectionService.calculate(coach))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertEquals(1, result.size());
+
+                ActionCandidate action = result.get(0);
+
+                assertEquals(
+                                ActionType.HOLD,
+                                action.type());
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("RECENT_FORM_EXCELLENT"));
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("HISTORICAL_PERFORMANCE_STRONG"));
+
+                assertFalse(
+                                action.sourceSignals()
+                                                .contains("POSITION_WELL_COVERED"));
+        }
+
+        @Test
+        void shouldSellCoachWithPoorPerformanceUsingCoachScoringScale() {
+
+                Player coach = createOwnedPlayer(
+                                551L,
+                                "5501",
+                                "Entrenador en mala forma",
+                                PlayerPosition.E,
+                                1_000_000L,
+                                1_000_000L,
+                                0L,
+                                PlayerStatus.OK,
+                                false);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(coach));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 0,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(coach))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                0.5,
+                                                                3,
+                                                                false,
+                                                                0.6,
+                                                                8));
+
+                when(playerProtectionService.calculate(coach))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertEquals(1, result.size());
+
+                ActionCandidate action = result.get(0);
+
+                assertEquals(
+                                ActionType.SELL,
+                                action.type());
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("RECENT_FORM_POOR"));
+
+                assertTrue(
+                                action.sourceSignals()
+                                                .contains("HISTORICAL_PERFORMANCE_POOR"));
+
+                assertFalse(
+                                action.sourceSignals()
+                                                .contains("POSITION_WELL_COVERED"));
+        }
+
+        @Test
         void shouldWatchPlayerWhenSignalsAreStillInsufficient() {
 
                 Player player = createOwnedPlayer(

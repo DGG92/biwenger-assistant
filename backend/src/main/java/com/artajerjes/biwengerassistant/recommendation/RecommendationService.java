@@ -85,6 +85,7 @@ public class RecommendationService {
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
         private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
+        private static final double MIN_FORMATION_CHANGE_IMPROVEMENT = 1.0;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -814,6 +815,22 @@ public class RecommendationService {
                                 publicBestScore - publicCurrentScore,
                                 0);
 
+                /*
+                 * Si la formación actual es válida y la mejora de otra
+                 * formación es demasiado pequeña, mantenemos la actual.
+                 *
+                 * Evitamos recomendar cambios tácticos por diferencias
+                 * prácticamente irrelevantes.
+                 */
+                if (currentFormationIsFeasible
+                                && !bestFormation.equals(current)
+                                && improvement < MIN_FORMATION_CHANGE_IMPROVEMENT) {
+
+                        bestFormation = current;
+                        publicBestScore = publicCurrentScore;
+                        improvement = 0;
+                }
+
                 int confidence = calculateFormationRecommendationConfidence(
                                 improvement);
 
@@ -905,6 +922,8 @@ public class RecommendationService {
                                                 difficultyByTeamId,
                                                 lockedStarterIds);
 
+                FormationLineup bestCurrentFormationLineup = bestLineup;
+
                 if (bestLineup != null
                                 && bestLineup.score() == IMPOSSIBLE_FORMATION_SCORE) {
 
@@ -955,6 +974,33 @@ public class RecommendationService {
                                 bestLineup.score()
                                                 - currentScore,
                                 0);
+
+                /*
+                 * Una formación distinta debe aportar una mejora mínima
+                 * para justificar que la presentemos como recomendación.
+                 *
+                 * Seguimos permitiendo cambios de jugadores dentro de la
+                 * formación actual aunque la mejora sea menor.
+                 */
+                if (currentFormationDefinition != null
+                                && bestCurrentFormationLineup != null
+                                && bestCurrentFormationLineup.score() != IMPOSSIBLE_FORMATION_SCORE
+                                && !bestLineup.formation()
+                                                .equals(currentFormationDefinition)) {
+
+                        double formationChangeImprovement = bestLineup.score()
+                                        - bestCurrentFormationLineup.score();
+
+                        if (formationChangeImprovement < MIN_FORMATION_CHANGE_IMPROVEMENT) {
+
+                                bestLineup = bestCurrentFormationLineup;
+
+                                improvement = Math.max(
+                                                bestLineup.score()
+                                                                - currentScore,
+                                                0);
+                        }
+                }
 
                 int confidence = calculateFormationRecommendationConfidence(
                                 improvement);

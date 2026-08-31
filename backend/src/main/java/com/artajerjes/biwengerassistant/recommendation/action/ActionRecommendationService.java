@@ -12,6 +12,7 @@ import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.player.Player;
+import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerProtectionService;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.player.PlayerStatus;
@@ -427,6 +428,10 @@ public class ActionRecommendationService {
 
                 PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
 
+                boolean coach = player.getPositions() != null
+                                && player.getPositions()
+                                                .contains(PlayerPosition.E);
+
                 long marketValue = player.getMarketValue() == null
                                 ? 0L
                                 : player.getMarketValue();
@@ -510,17 +515,44 @@ public class ActionRecommendationService {
 
                 if (performance.recentSampleSize() >= 2) {
 
-                        if (performance.recentWeightedAverage() >= 7) {
-                                holdPressure += 4;
-                                signals.add("RECENT_FORM_EXCELLENT");
+                        double recentAverage = performance.recentWeightedAverage();
 
-                        } else if (performance.recentWeightedAverage() >= 5) {
-                                holdPressure += 2;
-                                signals.add("RECENT_FORM_GOOD");
+                        if (coach) {
 
-                        } else if (performance.recentWeightedAverage() < 2) {
-                                sellPressure += 3;
-                                signals.add("RECENT_FORM_POOR");
+                                /*
+                                 * Los entrenadores puntúan:
+                                 * victoria = 3, empate = 1, derrota = 0.
+                                 *
+                                 * Por tanto necesitan una escala propia y no pueden
+                                 * compararse con los umbrales de los futbolistas.
+                                 */
+                                if (recentAverage >= 2.0) {
+                                        holdPressure += 4;
+                                        signals.add("RECENT_FORM_EXCELLENT");
+
+                                } else if (recentAverage >= 1.3) {
+                                        holdPressure += 2;
+                                        signals.add("RECENT_FORM_GOOD");
+
+                                } else if (recentAverage < 0.8) {
+                                        sellPressure += 3;
+                                        signals.add("RECENT_FORM_POOR");
+                                }
+
+                        } else {
+
+                                if (recentAverage >= 7) {
+                                        holdPressure += 4;
+                                        signals.add("RECENT_FORM_EXCELLENT");
+
+                                } else if (recentAverage >= 5) {
+                                        holdPressure += 2;
+                                        signals.add("RECENT_FORM_GOOD");
+
+                                } else if (recentAverage < 2) {
+                                        sellPressure += 3;
+                                        signals.add("RECENT_FORM_POOR");
+                                }
                         }
 
                 } else {
@@ -533,17 +565,37 @@ public class ActionRecommendationService {
 
                 if (performance.historicalSampleSize() >= 5) {
 
-                        if (performance.historicalAveragePoints() >= 6) {
-                                holdPressure += 3;
-                                signals.add("HISTORICAL_PERFORMANCE_STRONG");
+                        double historicalAverage = performance.historicalAveragePoints();
 
-                        } else if (performance.historicalAveragePoints() >= 5) {
-                                holdPressure += 1;
-                                signals.add("HISTORICAL_PERFORMANCE_GOOD");
+                        if (coach) {
 
-                        } else if (performance.historicalAveragePoints() < 2) {
-                                sellPressure += 2;
-                                signals.add("HISTORICAL_PERFORMANCE_POOR");
+                                if (historicalAverage >= 1.8) {
+                                        holdPressure += 3;
+                                        signals.add("HISTORICAL_PERFORMANCE_STRONG");
+
+                                } else if (historicalAverage >= 1.3) {
+                                        holdPressure += 1;
+                                        signals.add("HISTORICAL_PERFORMANCE_GOOD");
+
+                                } else if (historicalAverage < 0.8) {
+                                        sellPressure += 2;
+                                        signals.add("HISTORICAL_PERFORMANCE_POOR");
+                                }
+
+                        } else {
+
+                                if (historicalAverage >= 6) {
+                                        holdPressure += 3;
+                                        signals.add("HISTORICAL_PERFORMANCE_STRONG");
+
+                                } else if (historicalAverage >= 5) {
+                                        holdPressure += 1;
+                                        signals.add("HISTORICAL_PERFORMANCE_GOOD");
+
+                                } else if (historicalAverage < 2) {
+                                        sellPressure += 2;
+                                        signals.add("HISTORICAL_PERFORMANCE_POOR");
+                                }
                         }
                 }
 
@@ -551,13 +603,16 @@ public class ActionRecommendationService {
                  * CONTEXTO DE PLANTILLA
                  */
 
-                if (positionNeed >= 50) {
-                        holdPressure += 4;
-                        signals.add("POSITION_NEEDED");
+                if (!coach) {
 
-                } else if (positionNeed == 0) {
-                        sellPressure += 1;
-                        signals.add("POSITION_WELL_COVERED");
+                        if (positionNeed >= 50) {
+                                holdPressure += 4;
+                                signals.add("POSITION_NEEDED");
+
+                        } else if (positionNeed == 0) {
+                                sellPressure += 1;
+                                signals.add("POSITION_WELL_COVERED");
+                        }
                 }
 
                 if (player.isStarter()) {

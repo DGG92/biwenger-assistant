@@ -31,308 +31,401 @@ import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncRespons
 @ExtendWith(MockitoExtension.class)
 class PlayerMatchReportSyncServiceTest {
 
-    private static final Long LEAGUE_ID = 1L;
+        private static final Long LEAGUE_ID = 1L;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private BiwengerClient biwengerClient;
+        @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+        private BiwengerClient biwengerClient;
 
-    @Mock
-    private PlayerRepository playerRepository;
+        @Mock
+        private PlayerRepository playerRepository;
 
-    @Mock
-    private PlayerMatchReportPersistenceService persistenceService;
+        @Mock
+        private PlayerMatchReportPersistenceService persistenceService;
 
-    private PlayerMatchReportService service;
+        private PlayerMatchReportService service;
 
-    @BeforeEach
-    void setUp() {
+        @BeforeEach
+        void setUp() {
 
-        service = new PlayerMatchReportService(
-                biwengerClient,
-                playerRepository,
-                new CustomScoreEvaluator(),
-                persistenceService);
+                service = new PlayerMatchReportService(
+                                biwengerClient,
+                                playerRepository,
+                                new CustomScoreEvaluator(),
+                                persistenceService);
 
-        ReflectionTestUtils.setField(
-                service,
-                "reportsSyncBatchSize",
-                25);
+                ReflectionTestUtils.setField(
+                                service,
+                                "reportsSyncBatchSize",
+                                25);
 
-        when(
-                biwengerClient
-                        .getLeague()
-                        .data()
-                        .scoreID())
-                .thenReturn(1);
-    }
+                when(
+                                biwengerClient
+                                                .getLeague()
+                                                .data()
+                                                .scoreID())
+                                .thenReturn(1);
+        }
 
-    @Test
-    void leagueSyncShouldPrioritizePlayersWithOldestOrMissingReports() {
+        @Test
+        void leagueSyncShouldPrioritizePlayersWithOldestOrMissingReports() {
 
-        Player noReports = createPlayer(
-                1L,
-                "no-reports");
+                Player noReports = createPlayer(
+                                1L,
+                                "no-reports");
 
-        Player oldReports = createPlayer(
-                2L,
-                "old-reports");
+                Player oldReports = createPlayer(
+                                2L,
+                                "old-reports");
 
-        Player recentReports = createPlayer(
-                3L,
-                "recent-reports");
+                Player recentReports = createPlayer(
+                                3L,
+                                "recent-reports");
 
-        /*
-         * El repository devuelve los jugadores en un orden
-         * deliberadamente incorrecto.
-         */
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(
-                        List.of(
+                /*
+                 * El repository devuelve los jugadores en un orden
+                 * deliberadamente incorrecto.
+                 */
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                recentReports,
+                                                                noReports,
+                                                                oldReports));
+
+                ReflectionTestUtils.setField(
+                                oldReports,
+                                "reportsLastSyncSuccessAt",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                1,
+                                                20,
+                                                0));
+
+                ReflectionTestUtils.setField(
                                 recentReports,
-                                noReports,
-                                oldReports));
+                                "reportsLastSyncSuccessAt",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                25,
+                                                20,
+                                                0));
 
-        ReflectionTestUtils.setField(
-                oldReports,
-                "reportsLastSyncAttemptAt",
-                LocalDateTime.of(
-                        2026,
-                        8,
-                        1,
-                        20,
-                        0));
+                /*
+                 * null es suficiente:
+                 * el jugador cuenta como procesado,
+                 * pero no hay reports que persistir.
+                 */
+                when(biwengerClient.getPlayerDetail("no-reports"))
+                                .thenReturn(null);
 
-        ReflectionTestUtils.setField(
-                recentReports,
-                "reportsLastSyncAttemptAt",
-                LocalDateTime.of(
-                        2026,
-                        8,
-                        25,
-                        20,
-                        0));
+                when(biwengerClient.getPlayerDetail("old-reports"))
+                                .thenReturn(null);
 
-        /*
-         * null es suficiente:
-         * el jugador cuenta como procesado,
-         * pero no hay reports que persistir.
-         */
-        when(biwengerClient.getPlayerDetail("no-reports"))
-                .thenReturn(null);
+                when(biwengerClient.getPlayerDetail("recent-reports"))
+                                .thenReturn(null);
 
-        when(biwengerClient.getPlayerDetail("old-reports"))
-                .thenReturn(null);
+                PlayerReportSyncResponse result = service.syncLeagueReports(
+                                LEAGUE_ID);
 
-        when(biwengerClient.getPlayerDetail("recent-reports"))
-                .thenReturn(null);
+                InOrder order = inOrder(biwengerClient);
 
-        PlayerReportSyncResponse result = service.syncLeagueReports(
-                LEAGUE_ID);
+                order.verify(biwengerClient)
+                                .getPlayerDetail("no-reports");
 
-        InOrder order = inOrder(biwengerClient);
+                order.verify(biwengerClient)
+                                .getPlayerDetail("old-reports");
 
-        order.verify(biwengerClient)
-                .getPlayerDetail("no-reports");
+                order.verify(biwengerClient)
+                                .getPlayerDetail("recent-reports");
 
-        order.verify(biwengerClient)
-                .getPlayerDetail("old-reports");
+                assertEquals(
+                                3,
+                                result.playersCompleted());
 
-        order.verify(biwengerClient)
-                .getPlayerDetail("recent-reports");
+                assertEquals(
+                                true,
+                                result.completed());
+        }
 
-        assertEquals(
-                3,
-                result.playersCompleted());
+        @Test
+        void leagueSyncShouldStopImmediatelyWhenBiwengerReturns429() {
 
-        assertEquals(
-                true,
-                result.completed());
-    }
+                Player first = createPlayer(
+                                10L,
+                                "first");
 
-    @Test
-    void leagueSyncShouldStopImmediatelyWhenBiwengerReturns429() {
+                Player rateLimited = createPlayer(
+                                20L,
+                                "rate-limited");
 
-        Player first = createPlayer(
-                10L,
-                "first");
+                Player neverAttempted = createPlayer(
+                                30L,
+                                "never-attempted");
 
-        Player rateLimited = createPlayer(
-                20L,
-                "rate-limited");
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                first,
+                                                                rateLimited,
+                                                                neverAttempted));
 
-        Player neverAttempted = createPlayer(
-                30L,
-                "never-attempted");
+                when(biwengerClient.getPlayerDetail("first"))
+                                .thenReturn(null);
 
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(
-                        List.of(
-                                first,
+                when(biwengerClient.getPlayerDetail("rate-limited"))
+                                .thenThrow(
+                                                HttpClientErrorException.create(
+                                                                HttpStatus.TOO_MANY_REQUESTS,
+                                                                "Too Many Requests",
+                                                                HttpHeaders.EMPTY,
+                                                                new byte[0],
+                                                                StandardCharsets.UTF_8));
+
+                PlayerReportSyncResponse result = service.syncLeagueReports(
+                                LEAGUE_ID);
+
+                assertFalse(
+                                result.completed());
+
+                assertEquals(
+                                "RATE_LIMIT",
+                                result.stopReason());
+
+                assertEquals(
+                                3,
+                                result.playersTotal());
+
+                assertEquals(
+                                3,
+                                result.playersEligible());
+
+                assertEquals(
+                                2,
+                                result.playersAttempted());
+
+                assertEquals(
+                                1,
+                                result.playersCompleted());
+
+                assertEquals(
+                                10L,
+                                result.lastCompletedPlayerId());
+
+                assertEquals(
+                                20L,
+                                result.rateLimitedPlayerId());
+
+                InOrder order = inOrder(biwengerClient);
+
+                order.verify(biwengerClient)
+                                .getPlayerDetail("first");
+
+                order.verify(biwengerClient)
+                                .getPlayerDetail("rate-limited");
+
+                verify(
+                                biwengerClient,
+                                never())
+                                .getPlayerDetail(
+                                                "never-attempted");
+
+                /*
+                 * Si intentara "never-attempted",
+                 * el InOrder/verifyNoMoreInteractions posterior
+                 * nos descubriría el problema.
+                 */
+        }
+
+        @Test
+        void leagueSyncShouldRetryRateLimitedPlayerBeforeAlreadySuccessfulPlayers() {
+
+                Player successful = createPlayer(
+                                10L,
+                                "successful");
+
+                Player rateLimited = createPlayer(
+                                20L,
+                                "rate-limited");
+
+                Player pending = createPlayer(
+                                30L,
+                                "pending");
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                successful,
+                                                                rateLimited,
+                                                                pending));
+
+                /*
+                 * El jugador 10 ya fue sincronizado correctamente
+                 * en una ejecución anterior.
+                 *
+                 * El 20 fue intentado pero recibió 429:
+                 * tiene attemptAt, pero NO successAt.
+                 *
+                 * El 30 todavía no ha sido intentado.
+                 */
+                ReflectionTestUtils.setField(
+                                successful,
+                                "reportsLastSyncAttemptAt",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                30,
+                                                20,
+                                                0));
+
+                ReflectionTestUtils.setField(
+                                successful,
+                                "reportsLastSyncSuccessAt",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                30,
+                                                20,
+                                                0));
+
+                ReflectionTestUtils.setField(
                                 rateLimited,
-                                neverAttempted));
+                                "reportsLastSyncAttemptAt",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                31,
+                                                20,
+                                                0));
 
-        when(biwengerClient.getPlayerDetail("first"))
-                .thenReturn(null);
+                when(biwengerClient.getPlayerDetail("rate-limited"))
+                                .thenReturn(null);
 
-        when(biwengerClient.getPlayerDetail("rate-limited"))
-                .thenThrow(
-                        HttpClientErrorException.create(
-                                HttpStatus.TOO_MANY_REQUESTS,
-                                "Too Many Requests",
-                                HttpHeaders.EMPTY,
-                                new byte[0],
-                                StandardCharsets.UTF_8));
+                when(biwengerClient.getPlayerDetail("pending"))
+                                .thenReturn(null);
 
-        PlayerReportSyncResponse result = service.syncLeagueReports(
-                LEAGUE_ID);
+                when(biwengerClient.getPlayerDetail("successful"))
+                                .thenReturn(null);
 
-        assertFalse(
-                result.completed());
+                PlayerReportSyncResponse result = service.syncLeagueReports(
+                                LEAGUE_ID);
 
-        assertEquals(
-                "RATE_LIMIT",
-                result.stopReason());
+                InOrder order = inOrder(biwengerClient);
 
-        assertEquals(
-                3,
-                result.playersTotal());
+                order.verify(biwengerClient)
+                                .getPlayerDetail("rate-limited");
 
-        assertEquals(
-                3,
-                result.playersEligible());
+                order.verify(biwengerClient)
+                                .getPlayerDetail("pending");
 
-        assertEquals(
-                2,
-                result.playersAttempted());
+                order.verify(biwengerClient)
+                                .getPlayerDetail("successful");
 
-        assertEquals(
-                1,
-                result.playersCompleted());
+                assertEquals(
+                                3,
+                                result.playersCompleted());
 
-        assertEquals(
-                10L,
-                result.lastCompletedPlayerId());
+                assertEquals(
+                                true,
+                                result.completed());
+        }
 
-        assertEquals(
-                20L,
-                result.rateLimitedPlayerId());
+        @Test
+        void leagueSyncShouldRespectConfiguredBatchSize() {
 
-        InOrder order = inOrder(biwengerClient);
+                Player first = createPlayer(
+                                10L,
+                                "first");
 
-        order.verify(biwengerClient)
-                .getPlayerDetail("first");
+                Player second = createPlayer(
+                                20L,
+                                "second");
 
-        order.verify(biwengerClient)
-                .getPlayerDetail("rate-limited");
+                Player third = createPlayer(
+                                30L,
+                                "third");
 
-        verify(
-                biwengerClient,
-                never())
-                .getPlayerDetail(
-                        "never-attempted");
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                first,
+                                                                second,
+                                                                third));
 
-        /*
-         * Si intentara "never-attempted",
-         * el InOrder/verifyNoMoreInteractions posterior
-         * nos descubriría el problema.
-         */
-    }
+                when(biwengerClient.getPlayerDetail("first"))
+                                .thenReturn(null);
 
-    @Test
-    void leagueSyncShouldRespectConfiguredBatchSize() {
+                when(biwengerClient.getPlayerDetail("second"))
+                                .thenReturn(null);
 
-        Player first = createPlayer(
-                10L,
-                "first");
+                /*
+                 * Para este test reducimos el lote a 2.
+                 */
+                ReflectionTestUtils.setField(
+                                service,
+                                "reportsSyncBatchSize",
+                                2);
 
-        Player second = createPlayer(
-                20L,
-                "second");
+                PlayerReportSyncResponse result = service.syncLeagueReports(
+                                LEAGUE_ID);
 
-        Player third = createPlayer(
-                30L,
-                "third");
+                assertEquals(
+                                3,
+                                result.playersTotal());
 
-        when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
-                .thenReturn(
-                        List.of(
-                                first,
-                                second,
-                                third));
+                assertEquals(
+                                3,
+                                result.playersEligible());
 
-        when(biwengerClient.getPlayerDetail("first"))
-                .thenReturn(null);
+                assertEquals(
+                                2,
+                                result.playersAttempted());
 
-        when(biwengerClient.getPlayerDetail("second"))
-                .thenReturn(null);
+                assertEquals(
+                                2,
+                                result.playersCompleted());
 
-        /*
-         * Para este test reducimos el lote a 2.
-         */
-        ReflectionTestUtils.setField(
-                service,
-                "reportsSyncBatchSize",
-                2);
+                assertEquals(
+                                true,
+                                result.completed());
 
-        PlayerReportSyncResponse result = service.syncLeagueReports(
-                LEAGUE_ID);
+                verify(
+                                biwengerClient)
+                                .getPlayerDetail("first");
 
-        assertEquals(
-                3,
-                result.playersTotal());
+                verify(
+                                biwengerClient)
+                                .getPlayerDetail("second");
 
-        assertEquals(
-                3,
-                result.playersEligible());
+                verify(
+                                biwengerClient,
+                                never())
+                                .getPlayerDetail("third");
+        }
 
-        assertEquals(
-                2,
-                result.playersAttempted());
+        private Player createPlayer(
+                        Long id,
+                        String slug) {
 
-        assertEquals(
-                2,
-                result.playersCompleted());
+                Player player = new Player(
+                                String.valueOf(id),
+                                "Jugador " + id,
+                                List.of(PlayerPosition.MC),
+                                "Equipo",
+                                1_000_000L,
+                                null);
 
-        assertEquals(
-                true,
-                result.completed());
+                ReflectionTestUtils.setField(
+                                player,
+                                "id",
+                                id);
 
-        verify(
-                biwengerClient)
-                .getPlayerDetail("first");
+                ReflectionTestUtils.setField(
+                                player,
+                                "slug",
+                                slug);
 
-        verify(
-                biwengerClient)
-                .getPlayerDetail("second");
-
-        verify(
-                biwengerClient,
-                never())
-                .getPlayerDetail("third");
-    }
-
-    private Player createPlayer(
-            Long id,
-            String slug) {
-
-        Player player = new Player(
-                String.valueOf(id),
-                "Jugador " + id,
-                List.of(PlayerPosition.MC),
-                "Equipo",
-                1_000_000L,
-                null);
-
-        ReflectionTestUtils.setField(
-                player,
-                "id",
-                id);
-
-        ReflectionTestUtils.setField(
-                player,
-                "slug",
-                slug);
-
-        return player;
-    }
+                return player;
+        }
 }

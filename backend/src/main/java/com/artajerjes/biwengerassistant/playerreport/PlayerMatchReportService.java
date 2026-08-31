@@ -142,7 +142,7 @@ public class PlayerMatchReportService {
                                 .sorted(
                                                 Comparator
                                                                 .comparing(
-                                                                                Player::getReportsLastSyncAttemptAt,
+                                                                                Player::getReportsLastSyncSuccessAt,
                                                                                 Comparator.nullsFirst(
                                                                                                 Comparator.naturalOrder()))
                                                                 .thenComparing(

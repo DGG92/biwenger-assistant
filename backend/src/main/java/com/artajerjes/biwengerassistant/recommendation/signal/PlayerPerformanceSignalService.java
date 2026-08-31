@@ -110,8 +110,6 @@ public class PlayerPerformanceSignalService {
 
         List<PlayerMatchReport> streak = new ArrayList<>();
 
-        Integer expectedRoundNumber = null;
-
         for (PlayerMatchReport report : recentReports) {
 
             if (report.getSeason() == null
@@ -125,44 +123,10 @@ public class PlayerPerformanceSignalService {
                 break;
             }
 
-            Integer roundNumber = extractRoundNumber(
-                    report.getRoundShort());
-
-            if (roundNumber == null) {
-                break;
-            }
-
-            if (expectedRoundNumber != null
-                    && !roundNumber.equals(
-                            expectedRoundNumber)) {
-                break;
-            }
-
             streak.add(report);
-
-            expectedRoundNumber = roundNumber - 1;
         }
 
         return List.copyOf(streak);
-    }
-
-    private Integer extractRoundNumber(
-            String roundShort) {
-
-        if (roundShort == null) {
-            return null;
-        }
-
-        String normalized = roundShort
-                .trim()
-                .toUpperCase();
-
-        if (!normalized.matches("J\\d+")) {
-            return null;
-        }
-
-        return Integer.parseInt(
-                normalized.substring(1));
     }
 
     private String getCurrentSeason() {

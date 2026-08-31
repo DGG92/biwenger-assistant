@@ -122,12 +122,27 @@ public class MatchdayChangeEligibilityService {
             return MatchdayGameStatus.UNKNOWN;
         }
 
-        try {
-            return MatchdayGameStatus.valueOf(
-                    status.trim()
-                            .toUpperCase());
-        } catch (IllegalArgumentException exception) {
-            return MatchdayGameStatus.UNKNOWN;
-        }
+        return switch (status.trim()) {
+            case "preview",
+                    "pending",
+                    "PENDING" ->
+                MatchdayGameStatus.PENDING;
+
+            case "firstTime",
+                    "halfTime",
+                    "secondTime",
+                    "extraTime",
+                    "penalties",
+                    "playing",
+                    "IN_PLAY" ->
+                MatchdayGameStatus.IN_PLAY;
+
+            case "finished",
+                    "FINISHED" ->
+                MatchdayGameStatus.FINISHED;
+
+            default ->
+                MatchdayGameStatus.UNKNOWN;
+        };
     }
 }

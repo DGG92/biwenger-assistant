@@ -1975,7 +1975,7 @@ class RecommendationServiceTest {
         }
 
         @Test
-        void marketRecommendationShouldIgnoreRecentFormWhenRoundsAreNotConsecutive() {
+        void marketRecommendationShouldUseRecentFormEvenWhenRoundNumbersAreNotConsecutive() {
                 League league = createLeague();
 
                 Player player = createPlayer(
@@ -2035,26 +2035,23 @@ class RecommendationServiceTest {
                                 .get(0);
 
                 /*
-                 * J1 y J9 pertenecen a la misma temporada,
-                 * pero no forman una racha consecutiva.
+                 * La forma reciente sigue el orden cronológico
+                 * de los partidos realmente disputados.
                  *
-                 * Por tanto, esos 15 + 15 no deben aportar
-                 * bonus de forma reciente.
+                 * El salto entre J1 y J9 no invalida los reports:
+                 * puede deberse a jornadas aplazadas o a otro
+                 * orden administrativo de Biwenger.
                  */
                 assertEquals(
-                                50,
+                                65,
                                 result.score());
 
                 assertEquals(
-                                RecommendationType.WATCH,
-                                result.recommendation());
-
-                assertEquals(
-                                0,
+                                2,
                                 result.scoreBreakdown().recentFormSampleSize());
 
                 assertEquals(
-                                0.0,
+                                15.0,
                                 result.scoreBreakdown().recentForm());
         }
 
@@ -2571,7 +2568,7 @@ class RecommendationServiceTest {
         }
 
         @Test
-        void marketRecommendationShouldStopRecentFormStreakAtMissingRound() {
+        void marketRecommendationShouldUsePlayedMatchesAcrossMissingRoundNumbers() {
                 League league = createLeague();
 
                 Player player = createPlayer(
@@ -2649,9 +2646,32 @@ class RecommendationServiceTest {
                                 .getMarketRecommendations(LEAGUE_ID)
                                 .get(0);
 
+                /*
+                 * La ausencia administrativa de J3 no corta
+                 * la forma reciente si los reports disponibles
+                 * corresponden a partidos realmente disputados.
+                 *
+                 * Promedio ponderado:
+                 * J5 -> 8 * 4
+                 * J4 -> 8 * 3
+                 * J2 -> 1 * 2
+                 * J1 -> 1 * 1
+                 *
+                 * 59 / 10 = 5.9
+                 *
+                 * Una media reciente >= 5 aporta +5 puntos.
+                 */
                 assertEquals(
-                                65,
+                                55,
                                 result.score());
+
+                assertEquals(
+                                4,
+                                result.scoreBreakdown().recentFormSampleSize());
+
+                assertEquals(
+                                5.0,
+                                result.scoreBreakdown().recentForm());
         }
 
         @Test
