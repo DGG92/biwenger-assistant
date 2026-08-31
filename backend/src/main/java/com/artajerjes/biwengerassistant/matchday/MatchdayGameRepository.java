@@ -6,13 +6,13 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MatchdayGameRepository
-        extends JpaRepository<MatchdayGame, Long> {
+                extends JpaRepository<MatchdayGame, Long> {
 
-    Optional<MatchdayGame> findByLeagueIdAndBiwengerGameId(
-            Long leagueId,
-            Long biwengerGameId);
+        Optional<MatchdayGame> findByLeagueIdAndBiwengerGameId(
+                        Long leagueId,
+                        Long biwengerGameId);
 
-    List<MatchdayGame> findByLeagueIdAndBiwengerRoundId(
-            Long leagueId,
-            Long biwengerRoundId);
+        List<MatchdayGame> findByLeagueIdAndBiwengerRoundId(
+                        Long leagueId,
+                        Long biwengerRoundId);
 }
