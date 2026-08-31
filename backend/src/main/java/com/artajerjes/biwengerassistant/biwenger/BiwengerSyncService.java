@@ -14,6 +14,9 @@ import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
 import com.artajerjes.biwengerassistant.matchday.MatchdayContextService;
 import com.artajerjes.biwengerassistant.matchday.MatchdayGameService;
+import com.artajerjes.biwengerassistant.matchday.MatchdayRoundSyncResult;
+import com.artajerjes.biwengerassistant.matchday.MatchdayRoundSyncService;
+import com.artajerjes.biwengerassistant.matchday.TeamStandingSnapshotService;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
 import com.artajerjes.biwengerassistant.offer.OfferService;
@@ -38,7 +41,7 @@ public class BiwengerSyncService {
         private final MovementService movementService;
         private final ManagerService managerService;
         private final MatchdayContextService matchdayContextService;
-        private final MatchdayGameService matchdayGameService;
+        private final MatchdayRoundSyncService matchdayRoundSyncService;
         private final PlayerMatchReportService playerMatchReportService;
 
         public BiwengerSyncService(
@@ -48,7 +51,7 @@ public class BiwengerSyncService {
                         MovementService movementService,
                         ManagerService managerService,
                         MatchdayContextService matchdayContextService,
-                        MatchdayGameService matchdayGameService,
+                        MatchdayRoundSyncService matchdayRoundSyncService,
                         PlayerMatchReportService playerMatchReportService) {
 
                 this.playerService = playerService;
@@ -57,7 +60,7 @@ public class BiwengerSyncService {
                 this.movementService = movementService;
                 this.managerService = managerService;
                 this.matchdayContextService = matchdayContextService;
-                this.matchdayGameService = matchdayGameService;
+                this.matchdayRoundSyncService = matchdayRoundSyncService;
                 this.playerMatchReportService = playerMatchReportService;
         }
 
@@ -100,12 +103,16 @@ public class BiwengerSyncService {
                         matchdayContextService.syncCurrentMatchday(leagueId);
                         log.info("Matchday context synced for league {}", leagueId);
 
-                        log.info("Syncing matchday games for league {}", leagueId);
-                        int matchdayGames = matchdayGameService.syncCurrentMatchday(leagueId);
+                        log.info("Syncing matchday round data for league {}", leagueId);
+
+                        MatchdayRoundSyncResult matchdayRound = matchdayRoundSyncService
+                                        .syncCurrentMatchday(leagueId);
+
                         log.info(
-                                        "Matchday games synced for league {}: {}",
+                                        "Matchday round data synced for league {}: games={}, teamStandings={}",
                                         leagueId,
-                                        matchdayGames);
+                                        matchdayRound.games(),
+                                        matchdayRound.teamStandings());
 
                         log.info("Syncing offers for league {}", leagueId);
                         OfferSyncResponse offers = offerService.sync(leagueId);
@@ -210,8 +217,8 @@ public class BiwengerSyncService {
 
                         runScheduledPhase(
                                         leagueId,
-                                        "matchday games",
-                                        () -> matchdayGameService.syncCurrentMatchday(leagueId));
+                                        "matchday round data",
+                                        () -> matchdayRoundSyncService.syncCurrentMatchday(leagueId));
 
                         runScheduledPhase(
                                         leagueId,

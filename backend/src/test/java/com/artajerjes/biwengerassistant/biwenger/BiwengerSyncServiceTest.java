@@ -21,7 +21,8 @@ import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
 import com.artajerjes.biwengerassistant.market.dto.MarketSyncResponse;
 import com.artajerjes.biwengerassistant.matchday.MatchdayContextService;
-import com.artajerjes.biwengerassistant.matchday.MatchdayGameService;
+import com.artajerjes.biwengerassistant.matchday.MatchdayRoundSyncResult;
+import com.artajerjes.biwengerassistant.matchday.MatchdayRoundSyncService;
 import com.artajerjes.biwengerassistant.movement.MovementService;
 import com.artajerjes.biwengerassistant.movement.dto.MovementSyncResponse;
 import com.artajerjes.biwengerassistant.offer.OfferService;
@@ -57,13 +58,22 @@ class BiwengerSyncServiceTest {
         private MatchdayContextService matchdayContextService;
 
         @Mock
-        private MatchdayGameService matchdayGameService;
+        private MatchdayRoundSyncService matchdayRoundSyncService;
 
         @Mock
         private PlayerMatchReportService playerMatchReportService;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
+
+        private void mockMatchdayRoundSync(Long leagueId) {
+
+                when(matchdayRoundSyncService.syncCurrentMatchday(leagueId))
+                                .thenReturn(
+                                                new MatchdayRoundSyncResult(
+                                                                10,
+                                                                20));
+        }
 
         @Test
         void syncAllShouldExecuteAllSyncsInCorrectOrder() {
@@ -135,6 +145,8 @@ class BiwengerSyncServiceTest {
                                                 LEAGUE_ID))
                                 .thenReturn(lineup);
 
+                mockMatchdayRoundSync(LEAGUE_ID);
+
                 biwengerSyncService.syncAll(LEAGUE_ID);
 
                 InOrder inOrder = inOrder(
@@ -144,7 +156,7 @@ class BiwengerSyncServiceTest {
                                 offerService,
                                 movementService,
                                 matchdayContextService,
-                                matchdayGameService);
+                                matchdayRoundSyncService);
 
                 inOrder.verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -167,7 +179,7 @@ class BiwengerSyncServiceTest {
                 inOrder.verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                inOrder.verify(matchdayGameService)
+                inOrder.verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 inOrder.verify(offerService)
@@ -251,6 +263,8 @@ class BiwengerSyncServiceTest {
                                 playerService.syncCurrentLineup(
                                                 LEAGUE_ID))
                                 .thenReturn(lineup);
+
+                mockMatchdayRoundSync(LEAGUE_ID);
 
                 BiwengerSyncResponse result = biwengerSyncService.syncAll(
                                 LEAGUE_ID);
@@ -382,6 +396,8 @@ class BiwengerSyncServiceTest {
                                                 customLeagueId))
                                 .thenReturn(lineup);
 
+                mockMatchdayRoundSync(customLeagueId);
+
                 biwengerSyncService.syncAll(
                                 customLeagueId);
 
@@ -415,7 +431,7 @@ class BiwengerSyncServiceTest {
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(customLeagueId);
 
-                verify(matchdayGameService)
+                verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(customLeagueId);
         }
 
@@ -482,7 +498,7 @@ class BiwengerSyncServiceTest {
                                                 LEAGUE_ID);
 
                 verify(
-                                matchdayGameService,
+                                matchdayRoundSyncService,
                                 never()).syncCurrentMatchday(
                                                 LEAGUE_ID);
         }
@@ -552,6 +568,8 @@ class BiwengerSyncServiceTest {
                                                 new IllegalStateException(
                                                                 "Offer sync failed"));
 
+                mockMatchdayRoundSync(LEAGUE_ID);
+
                 IllegalStateException exception = assertThrows(
                                 IllegalStateException.class,
                                 () -> biwengerSyncService.syncAll(
@@ -582,7 +600,7 @@ class BiwengerSyncServiceTest {
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                verify(matchdayGameService)
+                verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)
@@ -619,10 +637,7 @@ class BiwengerSyncServiceTest {
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                verify(matchdayGameService)
-                                .syncCurrentMatchday(LEAGUE_ID);
-
-                verify(matchdayGameService)
+                verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)
@@ -665,7 +680,7 @@ class BiwengerSyncServiceTest {
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                verify(matchdayGameService)
+                verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)
@@ -729,7 +744,7 @@ class BiwengerSyncServiceTest {
                                                 LEAGUE_ID);
 
                 verify(
-                                matchdayGameService,
+                                matchdayRoundSyncService,
                                 never()).syncCurrentMatchday(
                                                 LEAGUE_ID);
         }
@@ -767,7 +782,7 @@ class BiwengerSyncServiceTest {
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                verify(matchdayGameService)
+                verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)

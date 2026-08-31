@@ -34,11 +34,21 @@ public class MatchdayGameService {
         @Transactional
         public int syncCurrentMatchday(Long leagueId) {
 
+                BiwengerRoundsResponse response = biwengerClient.getRounds();
+
+                return syncCurrentMatchday(
+                                leagueId,
+                                response);
+        }
+
+        @Transactional
+        public int syncCurrentMatchday(
+                        Long leagueId,
+                        BiwengerRoundsResponse response) {
+
                 League league = leagueRepository.findById(leagueId)
                                 .orElseThrow(
                                                 () -> new LeagueNotFoundException(leagueId));
-
-                BiwengerRoundsResponse response = biwengerClient.getRounds();
 
                 if (response == null
                                 || response.data() == null) {
