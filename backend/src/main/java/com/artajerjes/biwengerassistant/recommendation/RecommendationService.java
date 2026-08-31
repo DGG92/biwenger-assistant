@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
+import com.artajerjes.biwengerassistant.matchday.MatchdayChangeEligibilityService;
 import com.artajerjes.biwengerassistant.matchday.OpponentDifficulty;
 import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
@@ -79,6 +81,7 @@ public class RecommendationService {
         private final PlayerRepository playerRepository;
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
         private final MatchdayDifficultyService matchdayDifficultyService;
+        private final MatchdayChangeEligibilityService matchdayChangeEligibilityService;
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
         private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
@@ -92,7 +95,8 @@ public class RecommendationService {
                         OfferService offerService,
                         PlayerRepository playerRepository,
                         PlayerPerformanceSignalService playerPerformanceSignalService,
-                        MatchdayDifficultyService matchdayDifficultyService) {
+                        MatchdayDifficultyService matchdayDifficultyService,
+                        MatchdayChangeEligibilityService matchdayChangeEligibilityService) {
 
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
@@ -100,6 +104,7 @@ public class RecommendationService {
                 this.playerRepository = playerRepository;
                 this.playerPerformanceSignalService = playerPerformanceSignalService;
                 this.matchdayDifficultyService = matchdayDifficultyService;
+                this.matchdayChangeEligibilityService = matchdayChangeEligibilityService;
         }
 
         private double clampDouble(
@@ -863,6 +868,25 @@ public class RecommendationService {
                                 leagueId,
                                 squadPlayers);
 
+                Map<Long, Boolean> modifiableByTeamId = matchdayChangeEligibilityService
+                                .resolveModifiableByTeam(
+                                                leagueId);
+
+                Set<Long> lockedStarterIds = squadPlayers.stream()
+                                .filter(Player::isStarter)
+                                .filter(player -> !isPlayerModifiable(
+                                                player,
+                                                modifiableByTeamId))
+                                .map(Player::getId)
+                                .collect(java.util.stream.Collectors.toSet());
+
+                List<Player> optimizationPlayers = squadPlayers.stream()
+                                .filter(player -> player.isStarter()
+                                                || isPlayerModifiable(
+                                                                player,
+                                                                modifiableByTeamId))
+                                .toList();
+
                 Formation currentFormationDefinition = findFormation(
                                 currentFormation);
 
@@ -876,9 +900,10 @@ public class RecommendationService {
                 FormationLineup bestLineup = currentFormationDefinition == null
                                 ? null
                                 : calculateBestFormationLineup(
-                                                squadPlayers,
+                                                optimizationPlayers,
                                                 currentFormationDefinition,
-                                                difficultyByTeamId);
+                                                difficultyByTeamId,
+                                                lockedStarterIds);
 
                 if (bestLineup != null
                                 && bestLineup.score() == IMPOSSIBLE_FORMATION_SCORE) {
@@ -895,9 +920,10 @@ public class RecommendationService {
                         }
 
                         FormationLineup candidate = calculateBestFormationLineup(
-                                        squadPlayers,
+                                        optimizationPlayers,
                                         formation,
-                                        difficultyByTeamId);
+                                        difficultyByTeamId,
+                                        lockedStarterIds);
 
                         if (candidate.score() == IMPOSSIBLE_FORMATION_SCORE) {
 
@@ -1003,6 +1029,35 @@ public class RecommendationService {
                 }
 
                 return currentLineup.score();
+        }
+
+        private boolean isPlayerModifiable(
+                        Player player,
+                        Map<Long, Boolean> modifiableByTeamId) {
+
+                /*
+                 * Si todavía no tenemos contexto de jornada persistido,
+                 * mantenemos el comportamiento normal del recomendador.
+                 */
+                if (modifiableByTeamId == null
+                                || modifiableByTeamId.isEmpty()) {
+
+                        return true;
+                }
+
+                /*
+                 * Si ya tenemos contexto pero desconocemos el equipo,
+                 * no asumimos que el jugador pueda modificarse.
+                 */
+                if (player == null
+                                || player.getTeamId() == null) {
+
+                        return false;
+                }
+
+                return Boolean.TRUE.equals(
+                                modifiableByTeamId.get(
+                                                player.getTeamId()));
         }
 
         private List<RecommendedLineupChangeResponse> calculateRecommendedLineupChanges(
@@ -1227,7 +1282,8 @@ public class RecommendationService {
                                 0,
                                 0,
                                 memo,
-                                difficultyByTeamId);
+                                difficultyByTeamId,
+                                Set.of());
         }
 
         private FormationLineup calculateBestFormationLineup(
@@ -1235,7 +1291,21 @@ public class RecommendationService {
                         Formation formation,
                         Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
-                List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
+                return calculateBestFormationLineup(
+                                players,
+                                formation,
+                                difficultyByTeamId,
+                                Set.of());
+        }
+
+        private FormationLineup calculateBestFormationLineup(
+                        List<Player> players,
+                        Formation formation,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId,
+                        Set<Long> requiredPlayerIds) {
+
+                List<PlayerPosition> requiredPositions = buildRequiredPositions(
+                                formation);
 
                 if (calculateFormationCoverage(
                                 players,
@@ -1255,9 +1325,11 @@ public class RecommendationService {
                                 0,
                                 0,
                                 memo,
-                                difficultyByTeamId);
+                                difficultyByTeamId,
+                                requiredPlayerIds);
 
                 if (score == IMPOSSIBLE_FORMATION_SCORE) {
+
                         return new FormationLineup(
                                         formation,
                                         IMPOSSIBLE_FORMATION_SCORE,
@@ -1270,7 +1342,8 @@ public class RecommendationService {
                                 0,
                                 0,
                                 memo,
-                                difficultyByTeamId);
+                                difficultyByTeamId,
+                                requiredPlayerIds);
 
                 return new FormationLineup(
                                 formation,
@@ -1284,16 +1357,25 @@ public class RecommendationService {
                         int playerIndex,
                         int occupiedSlotsMask,
                         Map<Long, Double> memo,
-                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
+                        Map<Long, OpponentDifficulty> difficultyByTeamId,
+                        Set<Long> requiredPlayerIds) {
 
                 int allSlotsMask = (1 << requiredPositions.size()) - 1;
 
                 if (occupiedSlotsMask == allSlotsMask) {
-                        return 0;
+
+                        boolean requiredPlayerStillPending = hasRequiredPlayerFromIndex(
+                                        players,
+                                        playerIndex,
+                                        requiredPlayerIds);
+
+                        return requiredPlayerStillPending
+                                        ? IMPOSSIBLE_FORMATION_SCORE
+                                        : 0;
                 }
 
                 if (playerIndex >= players.size()) {
-                        return -1_000_000;
+                        return IMPOSSIBLE_FORMATION_SCORE;
                 }
 
                 long state = (((long) playerIndex) << 32)
@@ -1306,28 +1388,29 @@ public class RecommendationService {
                         return cached;
                 }
 
-                /*
-                 * Opción 1:
-                 * no usar a este jugador en el XI.
-                 */
-                double best = maximizeFormationPerformance(
-                                players,
-                                requiredPositions,
-                                playerIndex + 1,
-                                occupiedSlotsMask,
-                                memo,
-                                difficultyByTeamId);
-
                 Player player = players.get(playerIndex);
+
+                boolean requiredPlayer = requiredPlayerIds != null
+                                && requiredPlayerIds.contains(
+                                                player.getId());
+
+                /*
+                 * Un jugador obligatorio no puede ser omitido.
+                 */
+                double best = requiredPlayer
+                                ? IMPOSSIBLE_FORMATION_SCORE
+                                : maximizeFormationPerformance(
+                                                players,
+                                                requiredPositions,
+                                                playerIndex + 1,
+                                                occupiedSlotsMask,
+                                                memo,
+                                                difficultyByTeamId,
+                                                requiredPlayerIds);
 
                 double availability = calculateAvailabilityWeight(
                                 player.getStatus());
 
-                /*
-                 * Opción 2:
-                 * asignarlo a cualquiera de los puestos
-                 * compatibles que todavía estén libres.
-                 */
                 if (availability > 0) {
 
                         for (int slotIndex = 0; slotIndex < requiredPositions.size(); slotIndex++) {
@@ -1338,7 +1421,8 @@ public class RecommendationService {
                                         continue;
                                 }
 
-                                PlayerPosition requiredPosition = requiredPositions.get(slotIndex);
+                                PlayerPosition requiredPosition = requiredPositions.get(
+                                                slotIndex);
 
                                 if (!player.getPositions()
                                                 .contains(requiredPosition)) {
@@ -1350,11 +1434,15 @@ public class RecommendationService {
                                                 players,
                                                 requiredPositions,
                                                 playerIndex + 1,
-                                                occupiedSlotsMask | slotBit,
+                                                occupiedSlotsMask
+                                                                | slotBit,
                                                 memo,
-                                                difficultyByTeamId);
+                                                difficultyByTeamId,
+                                                requiredPlayerIds);
 
-                                if (remainingScore <= -999_999) {
+                                if (remainingScore <= IMPOSSIBLE_FORMATION_SCORE
+                                                + 1) {
+
                                         continue;
                                 }
 
@@ -1379,21 +1467,43 @@ public class RecommendationService {
                 return best;
         }
 
+        private boolean hasRequiredPlayerFromIndex(
+                        List<Player> players,
+                        int playerIndex,
+                        Set<Long> requiredPlayerIds) {
+
+                if (requiredPlayerIds == null
+                                || requiredPlayerIds.isEmpty()) {
+
+                        return false;
+                }
+
+                for (int index = playerIndex; index < players.size(); index++) {
+
+                        if (requiredPlayerIds.contains(
+                                        players.get(index).getId())) {
+
+                                return true;
+                        }
+                }
+
+                return false;
+        }
+
         private List<FormationAssignment> reconstructFormationAssignments(
                         List<Player> players,
                         List<PlayerPosition> requiredPositions,
                         int playerIndex,
                         int occupiedSlotsMask,
                         Map<Long, Double> memo,
-                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
+                        Map<Long, OpponentDifficulty> difficultyByTeamId,
+                        Set<Long> requiredPlayerIds) {
 
                 int allSlotsMask = (1 << requiredPositions.size()) - 1;
 
-                if (occupiedSlotsMask == allSlotsMask) {
-                        return new ArrayList<>();
-                }
+                if (occupiedSlotsMask == allSlotsMask
+                                || playerIndex >= players.size()) {
 
-                if (playerIndex >= players.size()) {
                         return new ArrayList<>();
                 }
 
@@ -1403,34 +1513,44 @@ public class RecommendationService {
                                 playerIndex,
                                 occupiedSlotsMask,
                                 memo,
-                                difficultyByTeamId);
+                                difficultyByTeamId,
+                                requiredPlayerIds);
+
+                Player player = players.get(playerIndex);
+
+                boolean requiredPlayer = requiredPlayerIds != null
+                                && requiredPlayerIds.contains(
+                                                player.getId());
 
                 /*
-                 * Primero comprobamos si la solución óptima
-                 * prescinde del jugador actual.
+                 * Solo intentamos omitir al jugador si no está bloqueado
+                 * como titular obligatorio.
                  */
-                double skipScore = maximizeFormationPerformance(
-                                players,
-                                requiredPositions,
-                                playerIndex + 1,
-                                occupiedSlotsMask,
-                                memo,
-                                difficultyByTeamId);
+                if (!requiredPlayer) {
 
-                if (scoresAreEqual(
-                                bestScore,
-                                skipScore)) {
-
-                        return reconstructFormationAssignments(
+                        double skipScore = maximizeFormationPerformance(
                                         players,
                                         requiredPositions,
                                         playerIndex + 1,
                                         occupiedSlotsMask,
                                         memo,
-                                        difficultyByTeamId);
-                }
+                                        difficultyByTeamId,
+                                        requiredPlayerIds);
 
-                Player player = players.get(playerIndex);
+                        if (scoresAreEqual(
+                                        bestScore,
+                                        skipScore)) {
+
+                                return reconstructFormationAssignments(
+                                                players,
+                                                requiredPositions,
+                                                playerIndex + 1,
+                                                occupiedSlotsMask,
+                                                memo,
+                                                difficultyByTeamId,
+                                                requiredPlayerIds);
+                        }
+                }
 
                 double availability = calculateAvailabilityWeight(
                                 player.getStatus());
@@ -1445,7 +1565,8 @@ public class RecommendationService {
                                         continue;
                                 }
 
-                                PlayerPosition requiredPosition = requiredPositions.get(slotIndex);
+                                PlayerPosition requiredPosition = requiredPositions.get(
+                                                slotIndex);
 
                                 if (!player.getPositions()
                                                 .contains(requiredPosition)) {
@@ -1457,11 +1578,15 @@ public class RecommendationService {
                                                 players,
                                                 requiredPositions,
                                                 playerIndex + 1,
-                                                occupiedSlotsMask | slotBit,
+                                                occupiedSlotsMask
+                                                                | slotBit,
                                                 memo,
-                                                difficultyByTeamId);
+                                                difficultyByTeamId,
+                                                requiredPlayerIds);
 
-                                if (remainingScore <= -999_999) {
+                                if (remainingScore <= IMPOSSIBLE_FORMATION_SCORE
+                                                + 1) {
+
                                         continue;
                                 }
 
@@ -1493,18 +1618,16 @@ public class RecommendationService {
                                                                 players,
                                                                 requiredPositions,
                                                                 playerIndex + 1,
-                                                                occupiedSlotsMask | slotBit,
+                                                                occupiedSlotsMask
+                                                                                | slotBit,
                                                                 memo,
-                                                                difficultyByTeamId));
+                                                                difficultyByTeamId,
+                                                                requiredPlayerIds));
 
                                 return assignments;
                         }
                 }
 
-                /*
-                 * En condiciones normales nunca llegaremos aquí
-                 * para una formación factible.
-                 */
                 return new ArrayList<>();
         }
 

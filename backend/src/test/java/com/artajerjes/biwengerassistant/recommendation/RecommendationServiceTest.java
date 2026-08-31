@@ -26,6 +26,7 @@ import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
+import com.artajerjes.biwengerassistant.matchday.MatchdayChangeEligibilityService;
 import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
 import com.artajerjes.biwengerassistant.matchday.MatchdayVenue;
 import com.artajerjes.biwengerassistant.matchday.OpponentDifficulty;
@@ -68,6 +69,9 @@ class RecommendationServiceTest {
         @Mock
         private MatchdayDifficultyService matchdayDifficultyService;
 
+        @Mock
+        private MatchdayChangeEligibilityService matchdayChangeEligibilityService;
+
         private RecommendationService recommendationService;
 
         @BeforeEach
@@ -88,12 +92,19 @@ class RecommendationServiceTest {
                                 offerService,
                                 playerRepository,
                                 playerPerformanceSignalService,
-                                matchdayDifficultyService);
+                                matchdayDifficultyService,
+                                matchdayChangeEligibilityService);
 
                 lenient().when(
                                 matchdayDifficultyService.resolveForTeams(
                                                 org.mockito.ArgumentMatchers.anyLong(),
                                                 org.mockito.ArgumentMatchers.anyList()))
+                                .thenReturn(Map.of());
+
+                lenient().when(
+                                matchdayChangeEligibilityService
+                                                .resolveModifiableByTeam(
+                                                                org.mockito.ArgumentMatchers.anyLong()))
                                 .thenReturn(Map.of());
 
                 ReflectionTestUtils.setField(
@@ -4387,6 +4398,390 @@ class RecommendationServiceTest {
                                                 .findTop5ByPlayer_IdOrderByMatchDateDesc(
                                                                 player.getId()))
                                 .thenReturn(reports);
+        }
+
+        @Test
+        void recommendedLineupShouldKeepLockedStarterEvenWhenBetterReplacementExists() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "4-4-2");
+
+                Player goalkeeper = createOwnedPlayer(
+                                4001L,
+                                "4001",
+                                "Portero",
+                                List.of(PlayerPosition.PT),
+                                manager);
+
+                Player lockedDefender = createOwnedPlayer(
+                                4002L,
+                                "4002",
+                                "Defensa bloqueado",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender2 = createOwnedPlayer(
+                                4003L,
+                                "4003",
+                                "Defensa 2",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender3 = createOwnedPlayer(
+                                4004L,
+                                "4004",
+                                "Defensa 3",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender4 = createOwnedPlayer(
+                                4005L,
+                                "4005",
+                                "Defensa 4",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player midfielder1 = createOwnedPlayer(
+                                4006L,
+                                "4006",
+                                "Medio 1",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder2 = createOwnedPlayer(
+                                4007L,
+                                "4007",
+                                "Medio 2",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder3 = createOwnedPlayer(
+                                4008L,
+                                "4008",
+                                "Medio 3",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder4 = createOwnedPlayer(
+                                4009L,
+                                "4009",
+                                "Medio 4",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player forward1 = createOwnedPlayer(
+                                4010L,
+                                "4010",
+                                "Delantero 1",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player forward2 = createOwnedPlayer(
+                                4011L,
+                                "4011",
+                                "Delantero 2",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player betterDefender = createOwnedPlayer(
+                                4012L,
+                                "4012",
+                                "Defensa mejor",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                List<Player> currentStarters = List.of(
+                                goalkeeper,
+                                lockedDefender,
+                                defender2,
+                                defender3,
+                                defender4,
+                                midfielder1,
+                                midfielder2,
+                                midfielder3,
+                                midfielder4,
+                                forward1,
+                                forward2);
+
+                for (Player player : currentStarters) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        true);
+                }
+
+                for (Player player : currentStarters) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "teamId",
+                                        30L);
+                }
+
+                ReflectionTestUtils.setField(
+                                lockedDefender,
+                                "teamId",
+                                10L);
+
+                ReflectionTestUtils.setField(
+                                betterDefender,
+                                "teamId",
+                                20L);
+
+                List<Player> squad = List.of(
+                                goalkeeper,
+                                lockedDefender,
+                                defender2,
+                                defender3,
+                                defender4,
+                                midfielder1,
+                                midfielder2,
+                                midfielder3,
+                                midfielder4,
+                                forward1,
+                                forward2,
+                                betterDefender);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                when(matchdayChangeEligibilityService
+                                .resolveModifiableByTeam(LEAGUE_ID))
+                                .thenReturn(Map.of(
+                                                10L, false,
+                                                20L, true,
+                                                30L, true));
+
+                for (Player player : squad) {
+
+                        int points;
+
+                        if (player.getId().equals(4002L)) {
+
+                                /*
+                                 * Titular bloqueado:
+                                 * sería claramente el defensa a sustituir
+                                 * si Biwenger todavía permitiera modificarlo.
+                                 */
+                                points = 1;
+
+                        } else if (player.getId().equals(4012L)) {
+
+                                /*
+                                 * Suplente mejor que el bloqueado,
+                                 * pero peor que los otros tres defensas.
+                                 */
+                                points = 10;
+
+                        } else if (player.getId().equals(4003L)
+                                        || player.getId().equals(4004L)
+                                        || player.getId().equals(4005L)) {
+
+                                points = 20;
+
+                        } else {
+
+                                points = 5;
+                        }
+
+                        mockPerformanceReports(
+                                        player,
+                                        points);
+                }
+
+                RecommendedLineupResponse result = recommendationService
+                                .getRecommendedLineup(
+                                                LEAGUE_ID);
+
+                boolean lockedStarterStillPresent = result.recommendedStarters()
+                                .stream()
+                                .anyMatch(player -> player.playerId()
+                                                .equals(
+                                                                lockedDefender.getId()));
+
+                assertTrue(lockedStarterStillPresent);
+        }
+
+        @Test
+        void recommendedLineupShouldNotAddLockedNonStarter() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "4-4-2");
+
+                Player goalkeeper = createOwnedPlayer(
+                                4101L,
+                                "4101",
+                                "Portero",
+                                List.of(PlayerPosition.PT),
+                                manager);
+
+                Player defender1 = createOwnedPlayer(
+                                4102L,
+                                "4102",
+                                "Defensa 1",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender2 = createOwnedPlayer(
+                                4103L,
+                                "4103",
+                                "Defensa 2",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender3 = createOwnedPlayer(
+                                4104L,
+                                "4104",
+                                "Defensa 3",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defender4 = createOwnedPlayer(
+                                4105L,
+                                "4105",
+                                "Defensa 4",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player midfielder1 = createOwnedPlayer(
+                                4106L,
+                                "4106",
+                                "Medio 1",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder2 = createOwnedPlayer(
+                                4107L,
+                                "4107",
+                                "Medio 2",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder3 = createOwnedPlayer(
+                                4108L,
+                                "4108",
+                                "Medio 3",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielder4 = createOwnedPlayer(
+                                4109L,
+                                "4109",
+                                "Medio 4",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player forward1 = createOwnedPlayer(
+                                4110L,
+                                "4110",
+                                "Delantero 1",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player forward2 = createOwnedPlayer(
+                                4111L,
+                                "4111",
+                                "Delantero 2",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player lockedBetterForward = createOwnedPlayer(
+                                4112L,
+                                "4112",
+                                "Delantero bloqueado mejor",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                List<Player> currentStarters = List.of(
+                                goalkeeper,
+                                defender1,
+                                defender2,
+                                defender3,
+                                defender4,
+                                midfielder1,
+                                midfielder2,
+                                midfielder3,
+                                midfielder4,
+                                forward1,
+                                forward2);
+
+                for (Player player : currentStarters) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        true);
+                }
+
+                for (Player player : currentStarters) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "teamId",
+                                        30L);
+                }
+
+                ReflectionTestUtils.setField(
+                                lockedBetterForward,
+                                "teamId",
+                                20L);
+
+                List<Player> squad = List.of(
+                                goalkeeper,
+                                defender1,
+                                defender2,
+                                defender3,
+                                defender4,
+                                midfielder1,
+                                midfielder2,
+                                midfielder3,
+                                midfielder4,
+                                forward1,
+                                forward2,
+                                lockedBetterForward);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                when(matchdayChangeEligibilityService
+                                .resolveModifiableByTeam(LEAGUE_ID))
+                                .thenReturn(Map.of(
+                                                20L, false,
+                                                30L, true));
+
+                for (Player player : currentStarters) {
+
+                        mockPerformanceReports(
+                                        player,
+                                        5);
+                }
+
+                RecommendedLineupResponse result = recommendationService
+                                .getRecommendedLineup(
+                                                LEAGUE_ID);
+
+                boolean lockedForwardPresent = result.recommendedStarters()
+                                .stream()
+                                .anyMatch(player -> player.playerId()
+                                                .equals(
+                                                                lockedBetterForward.getId()));
+
+                assertFalse(lockedForwardPresent);
         }
 
         private void mockCommon(
