@@ -4147,6 +4147,185 @@ class RecommendationServiceTest {
                                 midfielderRating > defenderRating);
         }
 
+        @Test
+        void recommendedLineupShouldAssignMultiPositionPlayersToBestMatchupSlots() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "4-4-2");
+
+                Player flexibleEasyDefense = createOwnedPlayer(
+                                3401L,
+                                "3401",
+                                "Polivalente rival ataque débil",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                manager);
+
+                Player flexibleHardDefense = createOwnedPlayer(
+                                3402L,
+                                "3402",
+                                "Polivalente rival ataque fuerte",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                flexibleEasyDefense,
+                                "teamId",
+                                101L);
+
+                ReflectionTestUtils.setField(
+                                flexibleHardDefense,
+                                "teamId",
+                                102L);
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                3410L,
+                                                "3410",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3411L,
+                                                "3411",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3412L,
+                                                "3412",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3413L,
+                                                "3413",
+                                                "DF 3",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+
+                                flexibleEasyDefense,
+                                flexibleHardDefense,
+
+                                createOwnedPlayer(
+                                                3414L,
+                                                "3414",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3415L,
+                                                "3415",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3416L,
+                                                "3416",
+                                                "MC 3",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3417L,
+                                                "3417",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+
+                                createOwnedPlayer(
+                                                3418L,
+                                                "3418",
+                                                "DL 2",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                for (Player player : squad) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        true);
+
+                        mockPerformanceReports(
+                                        player,
+                                        5);
+                }
+
+                OpponentDifficulty easyDefenseMatchup = new OpponentDifficulty(
+                                50.0,
+                                0.0,
+                                50.0,
+                                MatchdayVenue.HOME);
+
+                OpponentDifficulty hardDefenseMatchup = new OpponentDifficulty(
+                                50.0,
+                                100.0,
+                                50.0,
+                                MatchdayVenue.AWAY);
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                when(matchdayDifficultyService.resolveForTeams(
+                                org.mockito.ArgumentMatchers.eq(LEAGUE_ID),
+                                org.mockito.ArgumentMatchers.anyList()))
+                                .thenReturn(
+                                                Map.of(
+                                                                101L,
+                                                                easyDefenseMatchup,
+                                                                102L,
+                                                                hardDefenseMatchup));
+
+                RecommendedLineupResponse result = recommendationService.getRecommendedLineup(
+                                LEAGUE_ID);
+
+                var easyDefenseAssignment = result.recommendedStarters()
+                                .stream()
+                                .filter(player -> player.playerId()
+                                                .equals(3401L))
+                                .findFirst()
+                                .orElseThrow();
+
+                var hardDefenseAssignment = result.recommendedStarters()
+                                .stream()
+                                .filter(player -> player.playerId()
+                                                .equals(3402L))
+                                .findFirst()
+                                .orElseThrow();
+
+                assertEquals(
+                                "DF",
+                                easyDefenseAssignment.position());
+
+                assertEquals(
+                                "MC",
+                                hardDefenseAssignment.position());
+
+                assertTrue(
+                                easyDefenseAssignment.rating() > hardDefenseAssignment.rating());
+
+                assertEquals(
+                                55.28,
+                                result.currentScore(),
+                                0.000001);
+        }
+
         private void mockPerformanceReports(
                         Player player,
                         int points) {

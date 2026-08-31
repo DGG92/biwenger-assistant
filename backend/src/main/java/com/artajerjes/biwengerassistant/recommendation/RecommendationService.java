@@ -863,11 +863,15 @@ public class RecommendationService {
                                 leagueId,
                                 squadPlayers);
 
-                double currentScore = calculateCurrentLineupScore(
-                                squadPlayers,
-                                difficultyByTeamId);
+                Formation currentFormationDefinition = findFormation(
+                                currentFormation);
 
-                Formation currentFormationDefinition = findFormation(currentFormation);
+                double currentScore = currentFormationDefinition == null
+                                ? 0
+                                : calculateCurrentLineupScore(
+                                                squadPlayers,
+                                                currentFormationDefinition,
+                                                difficultyByTeamId);
 
                 FormationLineup bestLineup = currentFormationDefinition == null
                                 ? null
@@ -982,19 +986,23 @@ public class RecommendationService {
 
         private double calculateCurrentLineupScore(
                         List<Player> squadPlayers,
+                        Formation currentFormation,
                         Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
-                return squadPlayers.stream()
+                List<Player> currentStarters = squadPlayers.stream()
                                 .filter(Player::isStarter)
-                                .mapToDouble(player -> calculateFormationPlayerRating(
-                                                player,
-                                                player.getPositions()
-                                                                .stream()
-                                                                .filter(position -> position != PlayerPosition.E)
-                                                                .findFirst()
-                                                                .orElse(PlayerPosition.MC),
-                                                difficultyByTeamId))
-                                .sum();
+                                .toList();
+
+                FormationLineup currentLineup = calculateBestFormationLineup(
+                                currentStarters,
+                                currentFormation,
+                                difficultyByTeamId);
+
+                if (currentLineup.score() == IMPOSSIBLE_FORMATION_SCORE) {
+                        return 0;
+                }
+
+                return currentLineup.score();
         }
 
         private List<RecommendedLineupChangeResponse> calculateRecommendedLineupChanges(
