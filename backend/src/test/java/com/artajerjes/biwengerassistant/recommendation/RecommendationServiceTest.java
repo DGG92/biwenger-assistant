@@ -27,6 +27,8 @@ import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
+import com.artajerjes.biwengerassistant.matchday.MatchdayVenue;
+import com.artajerjes.biwengerassistant.matchday.OpponentDifficulty;
 import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
 import com.artajerjes.biwengerassistant.player.Player;
@@ -3688,6 +3690,461 @@ class RecommendationServiceTest {
                                                                 change.type())
                                                                 && change.playerId()
                                                                                 .equals(3112L)));
+        }
+
+        @Test
+        void formationPlayerRatingShouldIncreaseAgainstEasyOpponent() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3201L,
+                                "3201",
+                                "Jugador rival fácil",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                10L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                0.0,
+                                50.0,
+                                50.0,
+                                MatchdayVenue.HOME);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                10L,
+                                                difficulty));
+
+                assertEquals(
+                                5.4,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldDecreaseAgainstHardOpponent() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3202L,
+                                "3202",
+                                "Jugador rival difícil",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                20L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                100.0,
+                                50.0,
+                                50.0,
+                                MatchdayVenue.AWAY);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                20L,
+                                                difficulty));
+
+                assertEquals(
+                                4.6,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldKeepBaselineWithoutMatchdayContext() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3203L,
+                                "3203",
+                                "Jugador sin contexto",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                30L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of());
+
+                assertEquals(
+                                5.0,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldRemainZeroForUnavailablePlayer() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3204L,
+                                "3204",
+                                "Jugador lesionado",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                40L);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "status",
+                                PlayerStatus.INJURED);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                0.0,
+                                50.0,
+                                50.0,
+                                MatchdayVenue.HOME);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                40L,
+                                                difficulty));
+
+                assertEquals(
+                                0.0,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldApplyDifficultyAfterDoubtAvailability() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3205L,
+                                "3205",
+                                "Jugador duda",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                50L);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "status",
+                                PlayerStatus.DOUBT);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                0.0,
+                                50.0,
+                                50.0,
+                                MatchdayVenue.HOME);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                50L,
+                                                difficulty));
+
+                assertEquals(
+                                2.7,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldPenalizeDefenderMoreThanMidfielderAgainstStrongAttack() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3301L,
+                                "3301",
+                                "Defensa centrocampista",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                10L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                50.0,
+                                100.0,
+                                50.0,
+                                MatchdayVenue.AWAY);
+
+                Double defenderRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.DF,
+                                Map.of(
+                                                10L,
+                                                difficulty));
+
+                Double midfielderRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                10L,
+                                                difficulty));
+
+                assertEquals(
+                                4.72,
+                                defenderRating,
+                                0.000001);
+
+                assertEquals(
+                                5.0,
+                                midfielderRating,
+                                0.000001);
+
+                assertTrue(
+                                defenderRating < midfielderRating);
+        }
+
+        @Test
+        void formationPlayerRatingShouldPenalizeForwardMoreThanMidfielderAgainstStrongDefense() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3302L,
+                                "3302",
+                                "Centrocampista delantero",
+                                List.of(
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DL),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                20L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                50.0,
+                                50.0,
+                                100.0,
+                                MatchdayVenue.AWAY);
+
+                Double midfielderRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                20L,
+                                                difficulty));
+
+                Double forwardRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.DL,
+                                Map.of(
+                                                20L,
+                                                difficulty));
+
+                assertEquals(
+                                5.0,
+                                midfielderRating,
+                                0.000001);
+
+                assertEquals(
+                                4.72,
+                                forwardRating,
+                                0.000001);
+
+                assertTrue(
+                                forwardRating < midfielderRating);
+        }
+
+        @Test
+        void formationPlayerRatingShouldUseOverallDifficultyForMidfielder() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3303L,
+                                "3303",
+                                "Centrocampista",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                30L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                75.0,
+                                0.0,
+                                100.0,
+                                MatchdayVenue.AWAY);
+
+                Double rating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                30L,
+                                                difficulty));
+
+                assertEquals(
+                                4.8,
+                                rating,
+                                0.000001);
+        }
+
+        @Test
+        void formationPlayerRatingShouldDependOnAssignedPositionForMultiPositionPlayer() {
+
+                Manager manager = createManager();
+
+                Player player = createOwnedPlayer(
+                                3304L,
+                                "3304",
+                                "Jugador multiposición",
+                                List.of(
+                                                PlayerPosition.DF,
+                                                PlayerPosition.MC,
+                                                PlayerPosition.DL),
+                                manager);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "teamId",
+                                40L);
+
+                mockPerformanceReports(
+                                player,
+                                5);
+
+                OpponentDifficulty difficulty = new OpponentDifficulty(
+                                50.0,
+                                100.0,
+                                0.0,
+                                MatchdayVenue.HOME);
+
+                Double defenderRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.DF,
+                                Map.of(
+                                                40L,
+                                                difficulty));
+
+                Double midfielderRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                Map.of(
+                                                40L,
+                                                difficulty));
+
+                Double forwardRating = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.DL,
+                                Map.of(
+                                                40L,
+                                                difficulty));
+
+                assertEquals(
+                                4.72,
+                                defenderRating,
+                                0.000001);
+
+                assertEquals(
+                                5.0,
+                                midfielderRating,
+                                0.000001);
+
+                assertEquals(
+                                5.28,
+                                forwardRating,
+                                0.000001);
+
+                assertTrue(
+                                forwardRating > midfielderRating);
+
+                assertTrue(
+                                midfielderRating > defenderRating);
         }
 
         private void mockPerformanceReports(

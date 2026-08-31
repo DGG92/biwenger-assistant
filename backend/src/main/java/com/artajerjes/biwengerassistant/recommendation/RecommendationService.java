@@ -81,6 +81,7 @@ public class RecommendationService {
         private final MatchdayDifficultyService matchdayDifficultyService;
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
+        private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -719,6 +720,10 @@ public class RecommendationService {
                                                 .contains(PlayerPosition.E))
                                 .toList();
 
+                Map<Long, OpponentDifficulty> difficultyByTeamId = resolveMatchdayDifficulties(
+                                leagueId,
+                                squadPlayers);
+
                 if (squadPlayers.isEmpty()) {
 
                         return new FormationRecommendationResponse(
@@ -761,7 +766,8 @@ public class RecommendationService {
 
                 double currentScore = calculateFormationPerformanceScore(
                                 squadPlayers,
-                                current);
+                                current,
+                                difficultyByTeamId);
 
                 boolean currentFormationIsFeasible = currentScore != IMPOSSIBLE_FORMATION_SCORE;
 
@@ -779,7 +785,8 @@ public class RecommendationService {
 
                         double score = calculateFormationPerformanceScore(
                                         squadPlayers,
-                                        formation);
+                                        formation,
+                                        difficultyByTeamId);
 
                         if (score > bestScore) {
 
@@ -852,15 +859,9 @@ public class RecommendationService {
 
                 String currentFormation = manager.getCurrentFormation();
 
-                List<Long> teamIds = squadPlayers.stream()
-                                .map(Player::getTeamId)
-                                .filter(java.util.Objects::nonNull)
-                                .distinct()
-                                .toList();
-
-                Map<Long, OpponentDifficulty> difficultyByTeamId = matchdayDifficultyService.resolveForTeams(
+                Map<Long, OpponentDifficulty> difficultyByTeamId = resolveMatchdayDifficulties(
                                 leagueId,
-                                teamIds);
+                                squadPlayers);
 
                 double currentScore = calculateCurrentLineupScore(
                                 squadPlayers,
@@ -953,6 +954,32 @@ public class RecommendationService {
                                 changes);
         }
 
+        private Map<Long, OpponentDifficulty> resolveMatchdayDifficulties(
+                        Long leagueId,
+                        List<Player> players) {
+
+                if (leagueId == null
+                                || players == null
+                                || players.isEmpty()) {
+
+                        return Map.of();
+                }
+
+                List<Long> teamIds = players.stream()
+                                .map(Player::getTeamId)
+                                .filter(java.util.Objects::nonNull)
+                                .distinct()
+                                .toList();
+
+                if (teamIds.isEmpty()) {
+                        return Map.of();
+                }
+
+                return matchdayDifficultyService.resolveForTeams(
+                                leagueId,
+                                teamIds);
+        }
+
         private double calculateCurrentLineupScore(
                         List<Player> squadPlayers,
                         Map<Long, OpponentDifficulty> difficultyByTeamId) {
@@ -961,6 +988,11 @@ public class RecommendationService {
                                 .filter(Player::isStarter)
                                 .mapToDouble(player -> calculateFormationPlayerRating(
                                                 player,
+                                                player.getPositions()
+                                                                .stream()
+                                                                .filter(position -> position != PlayerPosition.E)
+                                                                .findFirst()
+                                                                .orElse(PlayerPosition.MC),
                                                 difficultyByTeamId))
                                 .sum();
         }
@@ -1163,7 +1195,8 @@ public class RecommendationService {
 
         private double calculateFormationPerformanceScore(
                         List<Player> players,
-                        Formation formation) {
+                        Formation formation,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
 
@@ -1178,21 +1211,15 @@ public class RecommendationService {
                         return IMPOSSIBLE_FORMATION_SCORE;
                 }
 
-                List<Double> playerRatings = players.stream()
-                                .map(player -> calculateFormationPlayerRating(
-                                                player,
-                                                Map.of()))
-                                .toList();
-
                 Map<Long, Double> memo = new HashMap<>();
 
                 return maximizeFormationPerformance(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 0,
                                 0,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
         }
 
         private FormationLineup calculateBestFormationLineup(
@@ -1212,21 +1239,15 @@ public class RecommendationService {
                                         List.of());
                 }
 
-                List<Double> playerRatings = players.stream()
-                                .map(player -> calculateFormationPlayerRating(
-                                                player,
-                                                difficultyByTeamId))
-                                .toList();
-
                 Map<Long, Double> memo = new HashMap<>();
 
                 double score = maximizeFormationPerformance(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 0,
                                 0,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
 
                 if (score == IMPOSSIBLE_FORMATION_SCORE) {
                         return new FormationLineup(
@@ -1237,11 +1258,11 @@ public class RecommendationService {
 
                 List<FormationAssignment> assignments = reconstructFormationAssignments(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 0,
                                 0,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
 
                 return new FormationLineup(
                                 formation,
@@ -1251,11 +1272,11 @@ public class RecommendationService {
 
         private double maximizeFormationPerformance(
                         List<Player> players,
-                        List<Double> playerRatings,
                         List<PlayerPosition> requiredPositions,
                         int playerIndex,
                         int occupiedSlotsMask,
-                        Map<Long, Double> memo) {
+                        Map<Long, Double> memo,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 int allSlotsMask = (1 << requiredPositions.size()) - 1;
 
@@ -1283,11 +1304,11 @@ public class RecommendationService {
                  */
                 double best = maximizeFormationPerformance(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 playerIndex + 1,
                                 occupiedSlotsMask,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
 
                 Player player = players.get(playerIndex);
 
@@ -1319,17 +1340,22 @@ public class RecommendationService {
 
                                 double remainingScore = maximizeFormationPerformance(
                                                 players,
-                                                playerRatings,
                                                 requiredPositions,
                                                 playerIndex + 1,
                                                 occupiedSlotsMask | slotBit,
-                                                memo);
+                                                memo,
+                                                difficultyByTeamId);
 
                                 if (remainingScore <= -999_999) {
                                         continue;
                                 }
 
-                                double candidateScore = playerRatings.get(playerIndex)
+                                double playerRating = calculateFormationPlayerRating(
+                                                player,
+                                                requiredPosition,
+                                                difficultyByTeamId);
+
+                                double candidateScore = playerRating
                                                 + remainingScore;
 
                                 best = Math.max(
@@ -1347,11 +1373,11 @@ public class RecommendationService {
 
         private List<FormationAssignment> reconstructFormationAssignments(
                         List<Player> players,
-                        List<Double> playerRatings,
                         List<PlayerPosition> requiredPositions,
                         int playerIndex,
                         int occupiedSlotsMask,
-                        Map<Long, Double> memo) {
+                        Map<Long, Double> memo,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 int allSlotsMask = (1 << requiredPositions.size()) - 1;
 
@@ -1365,11 +1391,11 @@ public class RecommendationService {
 
                 double bestScore = maximizeFormationPerformance(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 playerIndex,
                                 occupiedSlotsMask,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
 
                 /*
                  * Primero comprobamos si la solución óptima
@@ -1377,11 +1403,11 @@ public class RecommendationService {
                  */
                 double skipScore = maximizeFormationPerformance(
                                 players,
-                                playerRatings,
                                 requiredPositions,
                                 playerIndex + 1,
                                 occupiedSlotsMask,
-                                memo);
+                                memo,
+                                difficultyByTeamId);
 
                 if (scoresAreEqual(
                                 bestScore,
@@ -1389,11 +1415,11 @@ public class RecommendationService {
 
                         return reconstructFormationAssignments(
                                         players,
-                                        playerRatings,
                                         requiredPositions,
                                         playerIndex + 1,
                                         occupiedSlotsMask,
-                                        memo);
+                                        memo,
+                                        difficultyByTeamId);
                 }
 
                 Player player = players.get(playerIndex);
@@ -1421,17 +1447,22 @@ public class RecommendationService {
 
                                 double remainingScore = maximizeFormationPerformance(
                                                 players,
-                                                playerRatings,
                                                 requiredPositions,
                                                 playerIndex + 1,
                                                 occupiedSlotsMask | slotBit,
-                                                memo);
+                                                memo,
+                                                difficultyByTeamId);
 
                                 if (remainingScore <= -999_999) {
                                         continue;
                                 }
 
-                                double candidateScore = playerRatings.get(playerIndex)
+                                double playerRating = calculateFormationPlayerRating(
+                                                player,
+                                                requiredPosition,
+                                                difficultyByTeamId);
+
+                                double candidateScore = playerRating
                                                 + remainingScore;
 
                                 if (!scoresAreEqual(
@@ -1447,16 +1478,16 @@ public class RecommendationService {
                                                 new FormationAssignment(
                                                                 player,
                                                                 requiredPosition,
-                                                                playerRatings.get(playerIndex)));
+                                                                playerRating));
 
                                 assignments.addAll(
                                                 reconstructFormationAssignments(
                                                                 players,
-                                                                playerRatings,
                                                                 requiredPositions,
                                                                 playerIndex + 1,
                                                                 occupiedSlotsMask | slotBit,
-                                                                memo));
+                                                                memo,
+                                                                difficultyByTeamId));
 
                                 return assignments;
                         }
@@ -1477,7 +1508,9 @@ public class RecommendationService {
         }
 
         private double calculateFormationPlayerRating(
-                        Player player, Map<Long, OpponentDifficulty> difficultyByTeamId) {
+                        Player player,
+                        PlayerPosition position,
+                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
 
                 PlayerPerformanceSignals performance = playerPerformanceSignalService
                                 .analyze(player);
@@ -1513,9 +1546,52 @@ public class RecommendationService {
                         rating = 0;
                 }
 
-                return rating
+                double availabilityAdjustedRating = rating
                                 * calculateAvailabilityWeight(
                                                 player.getStatus());
+
+                if (availabilityAdjustedRating == 0) {
+                        return 0;
+                }
+
+                if (difficultyByTeamId == null
+                                || difficultyByTeamId.isEmpty()
+                                || player.getTeamId() == null) {
+
+                        return availabilityAdjustedRating;
+                }
+
+                OpponentDifficulty difficulty = difficultyByTeamId.get(
+                                player.getTeamId());
+
+                if (difficulty == null) {
+                        return availabilityAdjustedRating;
+                }
+
+                double positionDifficulty = switch (position) {
+                        case PT, DF ->
+                                difficulty.attackingStrength() * 0.70
+                                                + difficulty.overallDifficulty() * 0.30;
+
+                        case MC ->
+                                difficulty.overallDifficulty();
+
+                        case DL ->
+                                difficulty.defensiveStrength() * 0.70
+                                                + difficulty.overallDifficulty() * 0.30;
+
+                        default ->
+                                difficulty.overallDifficulty();
+                };
+
+                double difficultyMultiplier = 1
+                                + ((50
+                                                - positionDifficulty)
+                                                / 50.0)
+                                                * MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT;
+
+                return availabilityAdjustedRating
+                                * difficultyMultiplier;
         }
 
         private int calculateFormationRecommendationConfidence(
