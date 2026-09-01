@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.history.PlayerSnapshotService;
 import com.artajerjes.biwengerassistant.manager.ManagerService;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
@@ -41,6 +42,7 @@ public class BiwengerSyncService {
         private final MatchdayContextService matchdayContextService;
         private final MatchdayRoundSyncService matchdayRoundSyncService;
         private final PlayerMatchReportService playerMatchReportService;
+        private final PlayerSnapshotService playerSnapshotService;
 
         public BiwengerSyncService(
                         PlayerService playerService,
@@ -50,7 +52,8 @@ public class BiwengerSyncService {
                         ManagerService managerService,
                         MatchdayContextService matchdayContextService,
                         MatchdayRoundSyncService matchdayRoundSyncService,
-                        PlayerMatchReportService playerMatchReportService) {
+                        PlayerMatchReportService playerMatchReportService,
+                        PlayerSnapshotService playerSnapshotService) {
 
                 this.playerService = playerService;
                 this.marketService = marketService;
@@ -60,6 +63,7 @@ public class BiwengerSyncService {
                 this.matchdayContextService = matchdayContextService;
                 this.matchdayRoundSyncService = matchdayRoundSyncService;
                 this.playerMatchReportService = playerMatchReportService;
+                this.playerSnapshotService = playerSnapshotService;
         }
 
         public BiwengerSyncResponse syncAll(Long leagueId) {
@@ -84,6 +88,13 @@ public class BiwengerSyncService {
                         log.info("Syncing player ownership for league {}", leagueId);
                         PlayerOwnershipSyncResponse ownership = playerService.syncPlayerOwnership(leagueId);
                         log.info("Player ownership synced for league {}", leagueId);
+
+                        log.info("Capturing player snapshots for league {}", leagueId);
+                        int snapshots = playerSnapshotService.captureDailySnapshots(leagueId);
+                        log.info(
+                                        "Player snapshots captured for league {}: {}",
+                                        leagueId,
+                                        snapshots);
 
                         log.info("Syncing market for league {}", leagueId);
                         MarketSyncResponse market = marketService.sync(leagueId);
@@ -185,6 +196,11 @@ public class BiwengerSyncService {
                         playerService.syncPlayerOwnership(leagueId);
                         log.info(
                                         "Player ownership synced for league {}",
+                                        leagueId);
+
+                        playerSnapshotService.captureDailySnapshots(leagueId);
+                        log.info(
+                                        "Player snapshots captured for league {}",
                                         leagueId);
 
                         /*

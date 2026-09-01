@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.history.PlayerSnapshotService;
 import com.artajerjes.biwengerassistant.manager.ManagerService;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
 import com.artajerjes.biwengerassistant.market.MarketService;
@@ -44,6 +45,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private MarketService marketService;
+
+        @Mock
+        private PlayerSnapshotService playerSnapshotService;
 
         @Mock
         private OfferService offerService;
@@ -152,6 +156,7 @@ class BiwengerSyncServiceTest {
                 InOrder inOrder = inOrder(
                                 playerService,
                                 managerService,
+                                playerSnapshotService,
                                 marketService,
                                 offerService,
                                 movementService,
@@ -166,6 +171,9 @@ class BiwengerSyncServiceTest {
 
                 inOrder.verify(playerService)
                                 .syncPlayerOwnership(LEAGUE_ID);
+
+                inOrder.verify(playerSnapshotService)
+                                .captureDailySnapshots(LEAGUE_ID);
 
                 inOrder.verify(marketService)
                                 .sync(LEAGUE_ID);
@@ -412,6 +420,9 @@ class BiwengerSyncServiceTest {
                                 .syncPlayerOwnership(
                                                 customLeagueId);
 
+                verify(playerSnapshotService)
+                                .captureDailySnapshots(customLeagueId);
+
                 verify(marketService)
                                 .sync(
                                                 customLeagueId);
@@ -473,6 +484,12 @@ class BiwengerSyncServiceTest {
 
                 verify(playerService)
                                 .syncPlayerOwnership(
+                                                LEAGUE_ID);
+
+                verify(
+                                playerSnapshotService,
+                                never())
+                                .captureDailySnapshots(
                                                 LEAGUE_ID);
 
                 verify(
@@ -712,6 +729,12 @@ class BiwengerSyncServiceTest {
                                 playerService,
                                 never())
                                 .syncPlayerOwnership(LEAGUE_ID);
+
+                verify(
+                                playerSnapshotService,
+                                never())
+                                .captureDailySnapshots(
+                                                LEAGUE_ID);
 
                 verify(
                                 marketService,
