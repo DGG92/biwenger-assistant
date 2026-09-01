@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.history.MarketListingSnapshotService;
 import com.artajerjes.biwengerassistant.history.PlayerSnapshotService;
 import com.artajerjes.biwengerassistant.manager.ManagerService;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
@@ -43,6 +44,7 @@ public class BiwengerSyncService {
         private final MatchdayRoundSyncService matchdayRoundSyncService;
         private final PlayerMatchReportService playerMatchReportService;
         private final PlayerSnapshotService playerSnapshotService;
+        private final MarketListingSnapshotService marketListingSnapshotService;
 
         public BiwengerSyncService(
                         PlayerService playerService,
@@ -53,7 +55,8 @@ public class BiwengerSyncService {
                         MatchdayContextService matchdayContextService,
                         MatchdayRoundSyncService matchdayRoundSyncService,
                         PlayerMatchReportService playerMatchReportService,
-                        PlayerSnapshotService playerSnapshotService) {
+                        PlayerSnapshotService playerSnapshotService,
+                        MarketListingSnapshotService marketListingSnapshotService) {
 
                 this.playerService = playerService;
                 this.marketService = marketService;
@@ -64,6 +67,7 @@ public class BiwengerSyncService {
                 this.matchdayRoundSyncService = matchdayRoundSyncService;
                 this.playerMatchReportService = playerMatchReportService;
                 this.playerSnapshotService = playerSnapshotService;
+                this.marketListingSnapshotService = marketListingSnapshotService;
         }
 
         public BiwengerSyncResponse syncAll(Long leagueId) {
@@ -99,6 +103,11 @@ public class BiwengerSyncService {
                         log.info("Syncing market for league {}", leagueId);
                         MarketSyncResponse market = marketService.sync(leagueId);
                         log.info("Market synced for league {}", leagueId);
+
+                        log.info("Capturing market listing snapshots for league {}", leagueId);
+                        int marketListingSnapshots = marketListingSnapshotService.captureSnapshots(leagueId);
+                        log.info("Market listing snapshots captured for league {}: {}", leagueId,
+                                        marketListingSnapshots);
 
                         log.info("Syncing movements for league {}", leagueId);
                         MovementSyncResponse movements = movementService.sync(leagueId);
@@ -212,7 +221,17 @@ public class BiwengerSyncService {
                         runScheduledPhase(
                                         leagueId,
                                         "market",
-                                        () -> marketService.sync(leagueId));
+                                        () -> {
+                                                marketService.sync(leagueId);
+
+                                                int marketListingSnapshots = marketListingSnapshotService
+                                                                .captureSnapshots(leagueId);
+
+                                                log.info(
+                                                                "Scheduled market listing snapshots captured for league {}: {}",
+                                                                leagueId,
+                                                                marketListingSnapshots);
+                                        });
 
                         runScheduledPhase(
                                         leagueId,
