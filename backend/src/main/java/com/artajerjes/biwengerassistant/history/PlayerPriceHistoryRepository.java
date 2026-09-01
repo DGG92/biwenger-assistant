@@ -9,41 +9,45 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PlayerPriceHistoryRepository
-        extends JpaRepository<PlayerPriceHistory, Long> {
+                extends JpaRepository<PlayerPriceHistory, Long> {
 
-    Optional<PlayerPriceHistory> findByPlayerIdAndPriceDate(
-            Long playerId,
-            LocalDate priceDate);
+        Optional<PlayerPriceHistory> findByPlayerIdAndPriceDate(
+                        Long playerId,
+                        LocalDate priceDate);
 
-    List<PlayerPriceHistory> findAllByPlayerIdOrderByPriceDateAsc(
-            Long playerId);
+        List<PlayerPriceHistory> findAllByPlayerIdOrderByPriceDateAsc(
+                        Long playerId);
 
-    List<PlayerPriceHistory> findAllByLeagueIdAndPriceDateOrderByPlayerId(
-            Long leagueId,
-            LocalDate priceDate);
+        Optional<PlayerPriceHistory> findTopByPlayerIdAndPriceDateLessThanEqualOrderByPriceDateDesc(
+                        Long playerId,
+                        LocalDate priceDate);
 
-    @Query("""
-            SELECT MAX(p.priceDate)
-            FROM PlayerPriceHistory p
-            WHERE p.playerId = :playerId
-            """)
-    Optional<LocalDate> findLatestPriceDateByPlayerId(
-            @Param("playerId") Long playerId);
+        List<PlayerPriceHistory> findAllByLeagueIdAndPriceDateOrderByPlayerId(
+                        Long leagueId,
+                        LocalDate priceDate);
 
-    @Query("""
-            SELECT p.playerId, MAX(p.priceDate)
-            FROM PlayerPriceHistory p
-            WHERE p.leagueId = :leagueId
-            GROUP BY p.playerId
-            """)
-    List<Object[]> findLatestPriceDatesByLeagueId(
-            @Param("leagueId") Long leagueId);
+        @Query("""
+                        SELECT MAX(p.priceDate)
+                        FROM PlayerPriceHistory p
+                        WHERE p.playerId = :playerId
+                        """)
+        Optional<LocalDate> findLatestPriceDateByPlayerId(
+                        @Param("playerId") Long playerId);
 
-    @Query("""
-            SELECT DISTINCT p.playerId
-            FROM PlayerPriceHistory p
-            WHERE p.leagueId = :leagueId
-            """)
-    List<Long> findPlayerIdsWithHistoryByLeagueId(
-            @Param("leagueId") Long leagueId);
+        @Query("""
+                        SELECT p.playerId, MAX(p.priceDate)
+                        FROM PlayerPriceHistory p
+                        WHERE p.leagueId = :leagueId
+                        GROUP BY p.playerId
+                        """)
+        List<Object[]> findLatestPriceDatesByLeagueId(
+                        @Param("leagueId") Long leagueId);
+
+        @Query("""
+                        SELECT DISTINCT p.playerId
+                        FROM PlayerPriceHistory p
+                        WHERE p.leagueId = :leagueId
+                        """)
+        List<Long> findPlayerIdsWithHistoryByLeagueId(
+                        @Param("leagueId") Long leagueId);
 }

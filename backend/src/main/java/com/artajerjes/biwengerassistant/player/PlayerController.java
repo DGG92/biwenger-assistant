@@ -17,6 +17,7 @@ import com.artajerjes.biwengerassistant.biwenger.PlayerDetailSyncService;
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
 import com.artajerjes.biwengerassistant.history.dto.PlayerPriceHistorySyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.PlayerAnalyticsResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
@@ -32,10 +33,13 @@ public class PlayerController {
 
         private final PlayerService playerService;
         private final PlayerDetailSyncService playerDetailSyncService;
+        private final PlayerAnalyticsService playerAnalyticsService;
 
-        public PlayerController(PlayerService playerService, PlayerDetailSyncService playerDetailSyncService) {
+        public PlayerController(PlayerService playerService, PlayerDetailSyncService playerDetailSyncService,
+                        PlayerAnalyticsService playerAnalyticsService) {
                 this.playerService = playerService;
                 this.playerDetailSyncService = playerDetailSyncService;
+                this.playerAnalyticsService = playerAnalyticsService;
         }
 
         @PostMapping
@@ -57,6 +61,16 @@ public class PlayerController {
                         @PathVariable Long leagueId,
                         @PathVariable Long playerId) {
                 return playerService.findById(
+                                leagueId,
+                                playerId);
+        }
+
+        @GetMapping("/{playerId}/analytics")
+        public PlayerAnalyticsResponse getPlayerAnalytics(
+                        @PathVariable Long leagueId,
+                        @PathVariable Long playerId) {
+
+                return playerAnalyticsService.getPlayerAnalytics(
                                 leagueId,
                                 playerId);
         }

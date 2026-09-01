@@ -31,346 +31,418 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerReportScoreConfig;
 
 class PlayerDetailSyncServiceTest {
 
-    private BiwengerClient biwengerClient;
-    private PlayerRepository playerRepository;
-    private PlayerPriceHistoryRepository playerPriceHistoryRepository;
-    private PlayerPriceHistoryService playerPriceHistoryService;
-    private PlayerMatchReportService playerMatchReportService;
+        private BiwengerClient biwengerClient;
+        private PlayerRepository playerRepository;
+        private PlayerPriceHistoryRepository playerPriceHistoryRepository;
+        private PlayerPriceHistoryService playerPriceHistoryService;
+        private PlayerMatchReportService playerMatchReportService;
 
-    private PlayerDetailSyncService service;
+        private PlayerDetailSyncService service;
 
-    @BeforeEach
-    void setUp() {
+        @BeforeEach
+        void setUp() {
 
-        biwengerClient = mock(BiwengerClient.class);
-        playerRepository = mock(PlayerRepository.class);
-        playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
-        playerPriceHistoryService = mock(PlayerPriceHistoryService.class);
-        playerMatchReportService = mock(PlayerMatchReportService.class);
+                biwengerClient = mock(BiwengerClient.class);
+                playerRepository = mock(PlayerRepository.class);
+                playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
+                playerPriceHistoryService = mock(PlayerPriceHistoryService.class);
+                playerMatchReportService = mock(PlayerMatchReportService.class);
 
-        service = new PlayerDetailSyncService(
-                biwengerClient,
-                playerRepository,
-                playerPriceHistoryRepository,
-                playerPriceHistoryService,
-                playerMatchReportService);
+                service = new PlayerDetailSyncService(
+                                biwengerClient,
+                                playerRepository,
+                                playerPriceHistoryRepository,
+                                playerPriceHistoryService,
+                                playerMatchReportService);
 
-        ReflectionTestUtils.setField(
-                service,
-                "batchSize",
-                25);
-    }
+                ReflectionTestUtils.setField(
+                                service,
+                                "batchSize",
+                                25);
+        }
 
-    @Test
-    void syncLeaguePlayerDetailsShouldUseOneDetailResponseForPricesAndReports() {
+        @Test
+        void syncLeaguePlayerDetailsShouldUseOneDetailResponseForPricesAndReports() {
 
-        Player player = player(
-                10L,
-                "raphinha");
+                Player player = player(
+                                10L,
+                                "raphinha");
 
-        BiwengerPlayerDetailResponse response = mock(
-                BiwengerPlayerDetailResponse.class);
+                BiwengerPlayerDetailResponse response = mock(
+                                BiwengerPlayerDetailResponse.class);
 
-        PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
-                100,
-                "custom-score");
+                PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
+                                100,
+                                "custom-score");
 
-        when(playerMatchReportService.loadLeagueScoreConfig())
-                .thenReturn(scoreConfig);
+                when(playerMatchReportService.loadLeagueScoreConfig())
+                                .thenReturn(scoreConfig);
 
-        when(playerRepository.findAllByLeague_Id(1L))
-                .thenReturn(
-                        List.of(player));
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(
+                                                List.of(player));
 
-        when(playerPriceHistoryRepository
-                .findPlayerIdsWithHistoryByLeagueId(1L))
-                .thenReturn(
-                        List.of());
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(
+                                                List.of());
 
-        when(biwengerClient.getPlayerDetail("raphinha"))
-                .thenReturn(response);
+                when(biwengerClient.getPlayerDetail("raphinha"))
+                                .thenReturn(response);
 
-        when(playerPriceHistoryService.syncPlayerPriceHistory(
-                player,
-                response))
-                .thenReturn(366);
+                when(playerPriceHistoryService.syncPlayerPriceHistory(
+                                player,
+                                response))
+                                .thenReturn(366);
 
-        when(playerMatchReportService.syncPlayerReports(
-                player,
-                response,
-                scoreConfig))
-                .thenReturn(20);
+                when(playerMatchReportService.syncPlayerReports(
+                                player,
+                                response,
+                                scoreConfig))
+                                .thenReturn(20);
 
-        PlayerDetailSyncResponse result = service
-                .syncLeaguePlayerDetails(1L);
+                PlayerDetailSyncResponse result = service
+                                .syncLeaguePlayerDetails(1L);
 
-        assertEquals(
-                1,
-                result.playersTotal());
+                assertEquals(
+                                1,
+                                result.playersTotal());
 
-        assertEquals(
-                1,
-                result.playersEligible());
+                assertEquals(
+                                1,
+                                result.playersEligible());
 
-        assertEquals(
-                1,
-                result.playersAttempted());
+                assertEquals(
+                                1,
+                                result.playersAttempted());
 
-        assertEquals(
-                1,
-                result.playersCompleted());
+                assertEquals(
+                                1,
+                                result.playersCompleted());
 
-        assertEquals(
-                366,
-                result.pricesProcessed());
+                assertEquals(
+                                366,
+                                result.pricesProcessed());
 
-        assertEquals(
-                20,
-                result.reportsProcessed());
+                assertEquals(
+                                20,
+                                result.reportsProcessed());
 
-        assertTrue(
-                result.completed());
+                assertTrue(
+                                result.completed());
 
-        assertNull(
-                result.stopReason());
+                assertNull(
+                                result.stopReason());
 
-        assertEquals(
-                10L,
-                result.lastCompletedPlayerId());
+                assertEquals(
+                                10L,
+                                result.lastCompletedPlayerId());
 
-        assertNull(
-                result.rateLimitedPlayerId());
+                assertNull(
+                                result.rateLimitedPlayerId());
 
-        /*
-         * La comprobación fundamental:
-         *
-         * el coordinador realiza UNA única petición HTTP
-         * de detalle.
-         */
-        verify(biwengerClient)
-                .getPlayerDetail(
-                        "raphinha");
+                /*
+                 * La comprobación fundamental:
+                 *
+                 * el coordinador realiza UNA única petición HTTP
+                 * de detalle.
+                 */
+                verify(biwengerClient)
+                                .getPlayerDetail(
+                                                "raphinha");
 
-        /*
-         * Y exactamente esa misma respuesta se entrega
-         * a los dos subsistemas.
-         */
-        verify(playerPriceHistoryService)
-                .syncPlayerPriceHistory(
-                        player,
-                        response);
+                /*
+                 * Y exactamente esa misma respuesta se entrega
+                 * a los dos subsistemas.
+                 */
+                verify(playerPriceHistoryService)
+                                .syncPlayerPriceHistory(
+                                                player,
+                                                response);
 
-        verify(playerMatchReportService)
-                .syncPlayerReports(
-                        player,
-                        response,
-                        scoreConfig);
+                verify(playerMatchReportService)
+                                .syncPlayerReports(
+                                                player,
+                                                response,
+                                                scoreConfig);
 
-        verify(playerMatchReportService, times(1))
-                .loadLeagueScoreConfig();
-    }
+                verify(playerMatchReportService, times(1))
+                                .loadLeagueScoreConfig();
+        }
 
-    @Test
-    void syncLeaguePlayerDetailsShouldPrioritizePlayersWithoutPriceHistory() {
+        @Test
+        void syncLeaguePlayerDetailsShouldPrioritizePlayersWithoutPriceHistory() {
 
-        Player withHistory = player(
-                1L,
-                "with-history");
+                Player withHistory = player(
+                                1L,
+                                "with-history");
 
-        Player withoutHistory = player(
-                2L,
-                "without-history");
+                Player withoutHistory = player(
+                                2L,
+                                "without-history");
 
-        when(playerRepository.findAllByLeague_Id(1L))
-                .thenReturn(
-                        List.of(
-                                withHistory,
-                                withoutHistory));
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(
+                                                List.of(
+                                                                withHistory,
+                                                                withoutHistory));
 
-        when(playerPriceHistoryRepository
-                .findPlayerIdsWithHistoryByLeagueId(1L))
-                .thenReturn(
-                        List.of(1L));
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(
+                                                List.of(1L));
 
-        ReflectionTestUtils.setField(
-                service,
-                "batchSize",
-                1);
+                ReflectionTestUtils.setField(
+                                service,
+                                "batchSize",
+                                1);
 
-        BiwengerPlayerDetailResponse response = mock(
-                BiwengerPlayerDetailResponse.class);
+                BiwengerPlayerDetailResponse response = mock(
+                                BiwengerPlayerDetailResponse.class);
 
-        PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
-                100,
-                "custom-score");
+                PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
+                                100,
+                                "custom-score");
 
-        when(playerMatchReportService.loadLeagueScoreConfig())
-                .thenReturn(scoreConfig);
+                when(playerMatchReportService.loadLeagueScoreConfig())
+                                .thenReturn(scoreConfig);
 
-        when(biwengerClient.getPlayerDetail("without-history"))
-                .thenReturn(response);
+                when(biwengerClient.getPlayerDetail("without-history"))
+                                .thenReturn(response);
 
-        PlayerDetailSyncResponse result = service
-                .syncLeaguePlayerDetails(1L);
+                PlayerDetailSyncResponse result = service
+                                .syncLeaguePlayerDetails(1L);
 
-        assertEquals(
-                1,
-                result.playersAttempted());
+                assertEquals(
+                                1,
+                                result.playersAttempted());
 
-        assertEquals(
-                1,
-                result.playersCompleted());
+                assertEquals(
+                                1,
+                                result.playersCompleted());
 
-        assertEquals(
-                2L,
-                result.lastCompletedPlayerId());
+                assertEquals(
+                                2L,
+                                result.lastCompletedPlayerId());
 
-        verify(biwengerClient)
-                .getPlayerDetail(
-                        "without-history");
+                verify(biwengerClient)
+                                .getPlayerDetail(
+                                                "without-history");
 
-        verify(biwengerClient, never())
-                .getPlayerDetail(
-                        "with-history");
-    }
+                verify(biwengerClient, never())
+                                .getPlayerDetail(
+                                                "with-history");
+        }
 
-    @Test
-    void syncLeaguePlayerDetailsShouldStopOnRateLimitWithoutSkippingPlayer() {
+        @Test
+        void syncLeaguePlayerDetailsShouldStopOnRateLimitWithoutSkippingPlayer() {
 
-        Player first = player(
-                1L,
-                "first");
+                Player first = player(
+                                1L,
+                                "first");
 
-        Player rateLimited = player(
-                2L,
-                "rate-limited");
+                Player rateLimited = player(
+                                2L,
+                                "rate-limited");
 
-        Player third = player(
-                3L,
-                "third");
+                Player third = player(
+                                3L,
+                                "third");
 
-        when(playerRepository.findAllByLeague_Id(1L))
-                .thenReturn(
-                        List.of(
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(
+                                                List.of(
+                                                                first,
+                                                                rateLimited,
+                                                                third));
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(
+                                                List.of());
+
+                BiwengerPlayerDetailResponse firstResponse = mock(
+                                BiwengerPlayerDetailResponse.class);
+
+                PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
+                                100,
+                                "custom-score");
+
+                when(playerMatchReportService.loadLeagueScoreConfig())
+                                .thenReturn(scoreConfig);
+
+                when(biwengerClient.getPlayerDetail("first"))
+                                .thenReturn(firstResponse);
+
+                when(playerPriceHistoryService.syncPlayerPriceHistory(
                                 first,
-                                rateLimited,
-                                third));
+                                firstResponse))
+                                .thenReturn(10);
 
-        when(playerPriceHistoryRepository
-                .findPlayerIdsWithHistoryByLeagueId(1L))
-                .thenReturn(
-                        List.of());
+                when(playerMatchReportService.syncPlayerReports(
+                                first,
+                                firstResponse,
+                                scoreConfig))
+                                .thenReturn(5);
 
-        BiwengerPlayerDetailResponse firstResponse = mock(
-                BiwengerPlayerDetailResponse.class);
+                when(biwengerClient.getPlayerDetail("rate-limited"))
+                                .thenThrow(
+                                                HttpClientErrorException.create(
+                                                                HttpStatus.TOO_MANY_REQUESTS,
+                                                                "Too Many Requests",
+                                                                HttpHeaders.EMPTY,
+                                                                null,
+                                                                null));
 
-        PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
-                100,
-                "custom-score");
+                PlayerDetailSyncResponse result = service
+                                .syncLeaguePlayerDetails(1L);
 
-        when(playerMatchReportService.loadLeagueScoreConfig())
-                .thenReturn(scoreConfig);
+                assertFalse(
+                                result.completed());
 
-        when(biwengerClient.getPlayerDetail("first"))
-                .thenReturn(firstResponse);
+                assertEquals(
+                                "RATE_LIMIT",
+                                result.stopReason());
 
-        when(playerPriceHistoryService.syncPlayerPriceHistory(
-                first,
-                firstResponse))
-                .thenReturn(10);
+                assertEquals(
+                                2,
+                                result.playersAttempted());
 
-        when(playerMatchReportService.syncPlayerReports(
-                first,
-                firstResponse,
-                scoreConfig))
-                .thenReturn(5);
+                assertEquals(
+                                1,
+                                result.playersCompleted());
 
-        when(biwengerClient.getPlayerDetail("rate-limited"))
-                .thenThrow(
-                        HttpClientErrorException.create(
-                                HttpStatus.TOO_MANY_REQUESTS,
-                                "Too Many Requests",
-                                HttpHeaders.EMPTY,
-                                null,
-                                null));
+                assertEquals(
+                                10,
+                                result.pricesProcessed());
 
-        PlayerDetailSyncResponse result = service
-                .syncLeaguePlayerDetails(1L);
+                assertEquals(
+                                5,
+                                result.reportsProcessed());
 
-        assertFalse(
-                result.completed());
+                assertEquals(
+                                1L,
+                                result.lastCompletedPlayerId());
 
-        assertEquals(
-                "RATE_LIMIT",
-                result.stopReason());
+                assertEquals(
+                                2L,
+                                result.rateLimitedPlayerId());
 
-        assertEquals(
-                2,
-                result.playersAttempted());
+                /*
+                 * El primer jugador sí se persistió correctamente.
+                 */
+                verify(playerPriceHistoryService)
+                                .syncPlayerPriceHistory(
+                                                first,
+                                                firstResponse);
 
-        assertEquals(
-                1,
-                result.playersCompleted());
+                verify(playerMatchReportService)
+                                .syncPlayerReports(
+                                                first,
+                                                firstResponse,
+                                                scoreConfig);
 
-        assertEquals(
-                10,
-                result.pricesProcessed());
+                /*
+                 * Como el 429 ocurre en getPlayerDetail(), para el segundo
+                 * jugador nunca existe una response que pueda enviarse a
+                 * los servicios de persistencia.
+                 *
+                 * El hecho de que el tercer jugador tampoco sea consultado
+                 * demuestra que la tanda se detuvo exactamente en el 429.
+                 */
+                verify(biwengerClient, never())
+                                .getPlayerDetail(
+                                                "third");
+        }
 
-        assertEquals(
-                5,
-                result.reportsProcessed());
+        @Test
+        void syncLeaguePlayerDetailsShouldStopWhenScoreConfigIsRateLimited() {
 
-        assertEquals(
-                1L,
-                result.lastCompletedPlayerId());
+                Player player = player(
+                                1L,
+                                "player-one");
 
-        assertEquals(
-                2L,
-                result.rateLimitedPlayerId());
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(
+                                                List.of(player));
 
-        /*
-         * El primer jugador sí se persistió correctamente.
-         */
-        verify(playerPriceHistoryService)
-                .syncPlayerPriceHistory(
-                        first,
-                        firstResponse);
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(
+                                                List.of());
 
-        verify(playerMatchReportService)
-                .syncPlayerReports(
-                        first,
-                        firstResponse,
-                        scoreConfig);
+                when(playerMatchReportService.loadLeagueScoreConfig())
+                                .thenThrow(
+                                                HttpClientErrorException.create(
+                                                                HttpStatus.TOO_MANY_REQUESTS,
+                                                                "Too Many Requests",
+                                                                HttpHeaders.EMPTY,
+                                                                null,
+                                                                null));
 
-        /*
-         * Como el 429 ocurre en getPlayerDetail(), para el segundo
-         * jugador nunca existe una response que pueda enviarse a
-         * los servicios de persistencia.
-         *
-         * El hecho de que el tercer jugador tampoco sea consultado
-         * demuestra que la tanda se detuvo exactamente en el 429.
-         */
-        verify(biwengerClient, never())
-                .getPlayerDetail(
-                        "third");
-    }
+                PlayerDetailSyncResponse result = service
+                                .syncLeaguePlayerDetails(1L);
 
-    private Player player(
-            Long id,
-            String slug) {
+                assertFalse(
+                                result.completed());
 
-        Player player = mock(
-                Player.class);
+                assertEquals(
+                                "RATE_LIMIT",
+                                result.stopReason());
 
-        when(player.getId())
-                .thenReturn(id);
+                assertEquals(
+                                0,
+                                result.playersAttempted());
 
-        when(player.getSlug())
-                .thenReturn(slug);
+                assertEquals(
+                                0,
+                                result.playersCompleted());
 
-        when(player.getReportsLastSyncSuccessAt())
-                .thenReturn(null);
+                assertEquals(
+                                0,
+                                result.pricesProcessed());
 
-        return player;
-    }
+                assertEquals(
+                                0,
+                                result.reportsProcessed());
+
+                assertNull(
+                                result.lastCompletedPlayerId());
+
+                assertNull(
+                                result.rateLimitedPlayerId());
+
+                verify(biwengerClient, never())
+                                .getPlayerDetail(any());
+
+                verify(playerPriceHistoryService, never())
+                                .syncPlayerPriceHistory(
+                                                any(Player.class),
+                                                any(BiwengerPlayerDetailResponse.class));
+
+                verify(playerMatchReportService, never())
+                                .syncPlayerReports(
+                                                any(),
+                                                any(),
+                                                any());
+        }
+
+        private Player player(
+                        Long id,
+                        String slug) {
+
+                Player player = mock(
+                                Player.class);
+
+                when(player.getId())
+                                .thenReturn(id);
+
+                when(player.getSlug())
+                                .thenReturn(slug);
+
+                when(player.getReportsLastSyncSuccessAt())
+                                .thenReturn(null);
+
+                return player;
+        }
 }
