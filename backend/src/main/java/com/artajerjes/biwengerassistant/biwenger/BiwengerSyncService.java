@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
 import com.artajerjes.biwengerassistant.history.MarketListingSnapshotService;
 import com.artajerjes.biwengerassistant.history.PlayerSnapshotService;
 import com.artajerjes.biwengerassistant.manager.ManagerService;
@@ -25,8 +26,6 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
-import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @Service
 public class BiwengerSyncService {
@@ -42,9 +41,9 @@ public class BiwengerSyncService {
         private final ManagerService managerService;
         private final MatchdayContextService matchdayContextService;
         private final MatchdayRoundSyncService matchdayRoundSyncService;
-        private final PlayerMatchReportService playerMatchReportService;
         private final PlayerSnapshotService playerSnapshotService;
         private final MarketListingSnapshotService marketListingSnapshotService;
+        private final PlayerDetailSyncService playerDetailSyncService;
 
         public BiwengerSyncService(
                         PlayerService playerService,
@@ -54,9 +53,9 @@ public class BiwengerSyncService {
                         ManagerService managerService,
                         MatchdayContextService matchdayContextService,
                         MatchdayRoundSyncService matchdayRoundSyncService,
-                        PlayerMatchReportService playerMatchReportService,
                         PlayerSnapshotService playerSnapshotService,
-                        MarketListingSnapshotService marketListingSnapshotService) {
+                        MarketListingSnapshotService marketListingSnapshotService,
+                        PlayerDetailSyncService playerDetailSyncService) {
 
                 this.playerService = playerService;
                 this.marketService = marketService;
@@ -65,9 +64,9 @@ public class BiwengerSyncService {
                 this.managerService = managerService;
                 this.matchdayContextService = matchdayContextService;
                 this.matchdayRoundSyncService = matchdayRoundSyncService;
-                this.playerMatchReportService = playerMatchReportService;
                 this.playerSnapshotService = playerSnapshotService;
                 this.marketListingSnapshotService = marketListingSnapshotService;
+                this.playerDetailSyncService = playerDetailSyncService;
         }
 
         public BiwengerSyncResponse syncAll(Long leagueId) {
@@ -260,8 +259,8 @@ public class BiwengerSyncService {
 
                         runScheduledPhase(
                                         leagueId,
-                                        "player reports",
-                                        () -> syncPlayerReportsBatch(leagueId));
+                                        "player details",
+                                        () -> syncPlayerDetailsBatch(leagueId));
 
                         long elapsed = System.currentTimeMillis() - startedAt;
 
@@ -321,32 +320,36 @@ public class BiwengerSyncService {
                 }
         }
 
-        private void syncPlayerReportsBatch(
+        private void syncPlayerDetailsBatch(
                         Long leagueId) {
 
-                PlayerReportSyncResponse result = playerMatchReportService
-                                .syncLeagueReports(leagueId);
+                PlayerDetailSyncResponse result = playerDetailSyncService
+                                .syncLeaguePlayerDetails(
+                                                leagueId);
 
                 if (result.completed()) {
 
                         log.info(
-                                        "Player reports batch completed for league {}: attempted={}, completed={}, reportsProcessed={}, eligible={}",
+                                        "Player details batch completed for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, eligible={}",
                                         leagueId,
                                         result.playersAttempted(),
                                         result.playersCompleted(),
+                                        result.pricesProcessed(),
                                         result.reportsProcessed(),
                                         result.playersEligible());
 
                         return;
                 }
 
-                if ("RATE_LIMIT".equals(result.stopReason())) {
+                if ("RATE_LIMIT".equals(
+                                result.stopReason())) {
 
                         log.warn(
-                                        "Player reports batch stopped by Biwenger rate limit for league {}: attempted={}, completed={}, reportsProcessed={}, rateLimitedPlayerId={}",
+                                        "Player details batch stopped by Biwenger rate limit for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, rateLimitedPlayerId={}",
                                         leagueId,
                                         result.playersAttempted(),
                                         result.playersCompleted(),
+                                        result.pricesProcessed(),
                                         result.reportsProcessed(),
                                         result.rateLimitedPlayerId());
 
@@ -354,10 +357,11 @@ public class BiwengerSyncService {
                 }
 
                 log.warn(
-                                "Player reports batch finished partially for league {}: attempted={}, completed={}, reportsProcessed={}, stopReason={}",
+                                "Player details batch finished partially for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, stopReason={}",
                                 leagueId,
                                 result.playersAttempted(),
                                 result.playersCompleted(),
+                                result.pricesProcessed(),
                                 result.reportsProcessed(),
                                 result.stopReason());
         }

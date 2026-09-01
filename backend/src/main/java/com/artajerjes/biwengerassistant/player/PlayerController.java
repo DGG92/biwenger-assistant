@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.artajerjes.biwengerassistant.biwenger.PlayerDetailSyncService;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
+import com.artajerjes.biwengerassistant.history.dto.PlayerPriceHistorySyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
@@ -28,9 +31,11 @@ import jakarta.validation.Valid;
 public class PlayerController {
 
         private final PlayerService playerService;
+        private final PlayerDetailSyncService playerDetailSyncService;
 
-        public PlayerController(PlayerService playerService) {
+        public PlayerController(PlayerService playerService, PlayerDetailSyncService playerDetailSyncService) {
                 this.playerService = playerService;
+                this.playerDetailSyncService = playerDetailSyncService;
         }
 
         @PostMapping
@@ -111,5 +116,31 @@ public class PlayerController {
 
                 return playerService
                                 .syncLeagueReports(leagueId);
+        }
+
+        @PostMapping("/prices/sync")
+        public PlayerPriceHistorySyncResponse syncLeaguePriceHistory(
+                        @PathVariable Long leagueId) {
+
+                return playerService.syncLeaguePriceHistory(
+                                leagueId);
+        }
+
+        @PostMapping("/{playerId}/prices/sync")
+        public int syncPlayerPriceHistory(
+                        @PathVariable Long leagueId,
+                        @PathVariable Long playerId) {
+
+                return playerService.syncPlayerPriceHistory(
+                                leagueId,
+                                playerId);
+        }
+
+        @PostMapping("/details/sync")
+        public PlayerDetailSyncResponse syncPlayerDetails(
+                        @PathVariable Long leagueId) {
+
+                return playerDetailSyncService
+                                .syncLeaguePlayerDetails(leagueId);
         }
 }

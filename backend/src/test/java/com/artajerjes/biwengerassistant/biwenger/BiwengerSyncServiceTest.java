@@ -33,8 +33,8 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
-import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
 import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
 
 @ExtendWith(MockitoExtension.class)
 class BiwengerSyncServiceTest {
@@ -69,7 +69,7 @@ class BiwengerSyncServiceTest {
         private MatchdayRoundSyncService matchdayRoundSyncService;
 
         @Mock
-        private PlayerMatchReportService playerMatchReportService;
+        private PlayerDetailSyncService playerDetailSyncService;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
@@ -674,8 +674,8 @@ class BiwengerSyncServiceTest {
                 verify(offerService)
                                 .sync(LEAGUE_ID);
 
-                verify(playerMatchReportService)
-                                .syncLeagueReports(LEAGUE_ID);
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
         }
 
         @Test
@@ -717,8 +717,8 @@ class BiwengerSyncServiceTest {
                 verify(offerService)
                                 .sync(LEAGUE_ID);
 
-                verify(playerMatchReportService)
-                                .syncLeagueReports(LEAGUE_ID);
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
         }
 
         @Test
@@ -776,9 +776,9 @@ class BiwengerSyncServiceTest {
                                 .sync(LEAGUE_ID);
 
                 verify(
-                                playerMatchReportService,
+                                playerDetailSyncService,
                                 never())
-                                .syncLeagueReports(LEAGUE_ID);
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
 
                 verify(
                                 matchdayContextService,
@@ -830,58 +830,60 @@ class BiwengerSyncServiceTest {
                 verify(offerService)
                                 .sync(LEAGUE_ID);
 
-                verify(playerMatchReportService)
-                                .syncLeagueReports(LEAGUE_ID);
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
         }
 
         @Test
-        void syncScheduledShouldExecutePlayerReportsBatch() {
+        void syncScheduledShouldExecutePlayerDetailsBatch() {
 
-                PlayerReportSyncResponse reports = new PlayerReportSyncResponse(
-                                587,
-                                586,
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
                                 25,
                                 25,
-                                40,
+                                6344,
+                                67,
                                 true,
                                 null,
-                                29L,
+                                79L,
                                 null);
 
-                when(playerMatchReportService.syncLeagueReports(LEAGUE_ID))
-                                .thenReturn(reports);
+                when(playerDetailSyncService.syncLeaguePlayerDetails(LEAGUE_ID))
+                                .thenReturn(details);
 
                 assertDoesNotThrow(
                                 () -> biwengerSyncService.syncScheduled(
                                                 LEAGUE_ID));
 
-                verify(playerMatchReportService)
-                                .syncLeagueReports(LEAGUE_ID);
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
         }
 
         @Test
-        void syncScheduledShouldContinueWhenPlayerReportsHitRateLimit() {
+        void syncScheduledShouldContinueWhenPlayerDetailsHitRateLimit() {
 
-                PlayerReportSyncResponse reports = new PlayerReportSyncResponse(
-                                587,
-                                586,
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
                                 4,
                                 3,
+                                900,
                                 12,
                                 false,
                                 "RATE_LIMIT",
                                 28L,
                                 29L);
 
-                when(playerMatchReportService.syncLeagueReports(LEAGUE_ID))
-                                .thenReturn(reports);
+                when(playerDetailSyncService.syncLeaguePlayerDetails(LEAGUE_ID))
+                                .thenReturn(details);
 
                 assertDoesNotThrow(
                                 () -> biwengerSyncService.syncScheduled(
                                                 LEAGUE_ID));
 
-                verify(playerMatchReportService)
-                                .syncLeagueReports(LEAGUE_ID);
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetails(LEAGUE_ID);
         }
 
 }

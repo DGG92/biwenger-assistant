@@ -21,6 +21,8 @@ import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerPlayerOwner;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserLineup;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
+import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryService;
+import com.artajerjes.biwengerassistant.history.dto.PlayerPriceHistorySyncResponse;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -44,6 +46,7 @@ public class PlayerService {
         private final ManagerRepository managerRepository;
         private final PlayerMatchReportService playerMatchReportService;
         private final PlayerProtectionService playerProtectionService;
+        private final PlayerPriceHistoryService playerPriceHistoryService;
         private final BiwengerClient biwengerClient;
 
         public PlayerService(
@@ -52,13 +55,15 @@ public class PlayerService {
                         ManagerRepository managerRepository,
                         BiwengerClient biwengerClient,
                         PlayerMatchReportService playerMatchReportService,
-                        PlayerProtectionService playerProtectionService) {
+                        PlayerProtectionService playerProtectionService,
+                        PlayerPriceHistoryService playerPriceHistoryService) {
                 this.playerRepository = playerRepository;
                 this.leagueRepository = leagueRepository;
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
                 this.playerMatchReportService = playerMatchReportService;
                 this.playerProtectionService = playerProtectionService;
+                this.playerPriceHistoryService = playerPriceHistoryService;
         }
 
         @Transactional
@@ -174,6 +179,16 @@ public class PlayerService {
 
                 return playerMatchReportService
                                 .syncPlayerReports(player);
+        }
+
+        public int syncPlayerPriceHistory(
+                        Long leagueId,
+                        Long playerId) {
+
+                return playerPriceHistoryService
+                                .syncPlayerPriceHistory(
+                                                leagueId,
+                                                playerId);
         }
 
         public PlayerReportSyncResponse syncLeagueReports(Long leagueId) {
@@ -659,5 +674,13 @@ public class PlayerService {
                                 captainId,
                                 ramId,
                                 coachId);
+        }
+
+        public PlayerPriceHistorySyncResponse syncLeaguePriceHistory(
+                        Long leagueId) {
+
+                return playerPriceHistoryService
+                                .syncLeaguePriceHistory(
+                                                leagueId);
         }
 }

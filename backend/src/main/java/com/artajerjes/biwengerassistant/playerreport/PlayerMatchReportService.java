@@ -4,10 +4,10 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.beans.factory.annotation.Value;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.league.BiwengerLeagueApiResponse;
@@ -45,16 +45,29 @@ public class PlayerMatchReportService {
         @Transactional
         public int syncPlayerReports(Player player) {
 
-                LeagueScoreConfig scoreConfig = loadLeagueScoreConfig();
+                PlayerReportScoreConfig scoreConfig = loadLeagueScoreConfig();
 
                 return syncPlayerReports(
                                 player,
                                 scoreConfig);
         }
 
+        @Transactional
+        public int syncPlayerReports(
+                        Player player,
+                        BiwengerPlayerDetailResponse response) {
+
+                PlayerReportScoreConfig scoreConfig = loadLeagueScoreConfig();
+
+                return syncPlayerReports(
+                                player,
+                                response,
+                                scoreConfig);
+        }
+
         private int syncPlayerReports(
                         Player player,
-                        LeagueScoreConfig scoreConfig) {
+                        PlayerReportScoreConfig scoreConfig) {
 
                 if (player == null
                                 || player.getSlug() == null
@@ -63,10 +76,24 @@ public class PlayerMatchReportService {
                         return 0;
                 }
 
-                BiwengerPlayerDetailResponse response = biwengerClient.getPlayerDetail(
-                                player.getSlug());
+                BiwengerPlayerDetailResponse response = biwengerClient
+                                .getPlayerDetail(
+                                                player.getSlug());
 
-                if (response == null
+                return syncPlayerReports(
+                                player,
+                                response,
+                                scoreConfig);
+        }
+
+        @Transactional
+        public int syncPlayerReports(
+                        Player player,
+                        BiwengerPlayerDetailResponse response,
+                        PlayerReportScoreConfig scoreConfig) {
+
+                if (player == null
+                                || response == null
                                 || response.data() == null
                                 || response.data().reports() == null) {
 
@@ -133,7 +160,7 @@ public class PlayerMatchReportService {
                  * La configuración se consulta una sola vez
                  * para toda la sincronización.
                  */
-                LeagueScoreConfig scoreConfig = loadLeagueScoreConfig();
+                PlayerReportScoreConfig scoreConfig = loadLeagueScoreConfig();
 
                 List<Player> players = playerRepository.findAllByLeague_Id(
                                 leagueId);
@@ -274,7 +301,7 @@ public class PlayerMatchReportService {
                                 String.valueOf(scoreId));
         }
 
-        private LeagueScoreConfig loadLeagueScoreConfig() {
+        public PlayerReportScoreConfig loadLeagueScoreConfig() {
 
                 BiwengerLeagueApiResponse response = biwengerClient.getLeague();
 
@@ -302,13 +329,8 @@ public class PlayerMatchReportService {
                                         "Biwenger league uses custom scoring but customScore is missing");
                 }
 
-                return new LeagueScoreConfig(
+                return new PlayerReportScoreConfig(
                                 scoreId,
                                 customScore);
-        }
-
-        private record LeagueScoreConfig(
-                        Integer scoreId,
-                        String customScore) {
         }
 }
