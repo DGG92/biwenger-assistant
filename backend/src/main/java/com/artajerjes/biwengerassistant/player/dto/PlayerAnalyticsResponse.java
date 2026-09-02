@@ -18,11 +18,14 @@ public record PlayerAnalyticsResponse(
                 Long change7Days,
                 Long change30Days,
 
+                Double changePercent1Day,
                 Double changePercent7Days,
                 Double changePercent30Days,
 
                 Long historicalMinValue,
                 Long historicalMaxValue,
+                Long distanceFromHistoricalMin,
+                Long distanceFromHistoricalMax,
 
                 Long purchasePrice,
                 Long unrealizedProfit,
@@ -32,5 +35,7 @@ public record PlayerAnalyticsResponse(
                 Integer totalPoints,
                 Integer matchesPlayed,
                 Double averagePoints,
-                Double recentAveragePoints) {
+                Double recentAveragePoints,
+                Double recentFormDifference,
+                Double pointsPerMillion) {
 }

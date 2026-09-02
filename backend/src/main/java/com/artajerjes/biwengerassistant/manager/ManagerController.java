@@ -10,15 +10,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artajerjes.biwengerassistant.manager.dto.ManagerResponse;
 import com.artajerjes.biwengerassistant.manager.dto.ManagerSyncResponse;
+import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityResponse;
 
 @RestController
 @RequestMapping("/api/leagues/{leagueId}/managers")
 public class ManagerController {
 
     private final ManagerService managerService;
+    private final SquadProfitabilityService squadProfitabilityService;
 
-    public ManagerController(ManagerService managerService) {
+    public ManagerController(
+            ManagerService managerService,
+            SquadProfitabilityService squadProfitabilityService) {
+
         this.managerService = managerService;
+        this.squadProfitabilityService = squadProfitabilityService;
     }
 
     @PostMapping("/sync")
@@ -31,5 +37,15 @@ public class ManagerController {
     public List<ManagerResponse> findAll(
             @PathVariable Long leagueId) {
         return managerService.findAll(leagueId);
+    }
+
+    @GetMapping("/{managerId}/profitability")
+    public SquadProfitabilityResponse getSquadProfitability(
+            @PathVariable Long leagueId,
+            @PathVariable Long managerId) {
+
+        return squadProfitabilityService.getSquadProfitability(
+                leagueId,
+                managerId);
     }
 }

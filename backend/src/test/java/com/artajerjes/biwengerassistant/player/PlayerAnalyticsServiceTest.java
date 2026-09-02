@@ -167,6 +167,11 @@ class PlayerAnalyticsServiceTest {
                                 result.change1Day());
 
                 assertEquals(
+                                2.564102564102564,
+                                result.changePercent1Day(),
+                                0.000001);
+
+                assertEquals(
                                 2_000_000L,
                                 result.change7Days());
 
@@ -191,6 +196,14 @@ class PlayerAnalyticsServiceTest {
                 assertEquals(
                                 22_000_000L,
                                 result.historicalMaxValue());
+
+                assertEquals(
+                                6_000_000L,
+                                result.distanceFromHistoricalMin());
+
+                assertEquals(
+                                -2_000_000L,
+                                result.distanceFromHistoricalMax());
 
                 assertEquals(
                                 15_000_000L,
@@ -231,6 +244,16 @@ class PlayerAnalyticsServiceTest {
                 assertEquals(
                                 6.0,
                                 result.recentAveragePoints(),
+                                0.000001);
+
+                assertEquals(
+                                1.0,
+                                result.recentFormDifference(),
+                                0.000001);
+
+                assertEquals(
+                                1.5,
+                                result.pointsPerMillion(),
                                 0.000001);
         }
 
@@ -273,6 +296,14 @@ class PlayerAnalyticsServiceTest {
                 assertEquals(
                                 5_000_000L,
                                 result.currentValue());
+
+                assertEquals(
+                                0L,
+                                result.distanceFromHistoricalMin());
+
+                assertEquals(
+                                0L,
+                                result.distanceFromHistoricalMax());
 
                 assertNull(
                                 result.value1DayAgo());
@@ -335,6 +366,14 @@ class PlayerAnalyticsServiceTest {
 
                 assertNull(
                                 result.recentAveragePoints());
+
+                assertNull(
+                                result.recentFormDifference());
+
+                assertEquals(
+                                0.0,
+                                result.pointsPerMillion(),
+                                0.000001);
         }
 
         @Test
@@ -413,6 +452,16 @@ class PlayerAnalyticsServiceTest {
                 assertEquals(
                                 8.0,
                                 result.recentAveragePoints(),
+                                0.000001);
+
+                assertEquals(
+                                0.0,
+                                result.recentFormDifference(),
+                                0.000001);
+
+                assertEquals(
+                                2.4,
+                                result.pointsPerMillion(),
                                 0.000001);
         }
 

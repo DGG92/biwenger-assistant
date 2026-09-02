@@ -74,6 +74,14 @@ public class PlayerAnalyticsService {
                                 .max(Comparator.naturalOrder())
                                 .orElse(currentValue);
 
+                Long distanceFromHistoricalMin = calculateAbsoluteChange(
+                                historicalMinValue,
+                                currentValue);
+
+                Long distanceFromHistoricalMax = calculateAbsoluteChange(
+                                historicalMaxValue,
+                                currentValue);
+
                 Long purchasePrice = player.getPurchasePrice();
 
                 Long unrealizedProfit = player.getProfitability();
@@ -120,45 +128,43 @@ public class PlayerAnalyticsService {
                                                 .average()
                                                 .orElse(0.0);
 
+                Double recentFormDifference = averagePoints == null
+                                || recentAveragePoints == null
+                                                ? null
+                                                : recentAveragePoints - averagePoints;
+
+                Double pointsPerMillion = calculatePointsPerMillion(
+                                totalPoints,
+                                currentValue);
+
                 return new PlayerAnalyticsResponse(
                                 player.getId(),
                                 player.getName(),
                                 player.getPositions(),
-
                                 currentValue,
                                 value1DayAgo,
                                 value7DaysAgo,
                                 value30DaysAgo,
-
-                                calculateAbsoluteChange(
-                                                value1DayAgo,
-                                                currentValue),
-                                calculateAbsoluteChange(
-                                                value7DaysAgo,
-                                                currentValue),
-                                calculateAbsoluteChange(
-                                                value30DaysAgo,
-                                                currentValue),
-
-                                calculatePercentageChange(
-                                                value7DaysAgo,
-                                                currentValue),
-                                calculatePercentageChange(
-                                                value30DaysAgo,
-                                                currentValue),
-
+                                calculateAbsoluteChange(value1DayAgo, currentValue),
+                                calculateAbsoluteChange(value7DaysAgo, currentValue),
+                                calculateAbsoluteChange(value30DaysAgo, currentValue),
+                                calculatePercentageChange(value1DayAgo, currentValue),
+                                calculatePercentageChange(value7DaysAgo, currentValue),
+                                calculatePercentageChange(value30DaysAgo, currentValue),
                                 historicalMinValue,
                                 historicalMaxValue,
-
+                                distanceFromHistoricalMin,
+                                distanceFromHistoricalMax,
                                 purchasePrice,
                                 unrealizedProfit,
                                 unrealizedProfitPercent,
-
                                 season,
                                 totalPoints,
                                 matchesPlayed,
                                 averagePoints,
-                                recentAveragePoints);
+                                recentAveragePoints,
+                                recentFormDifference,
+                                pointsPerMillion);
         }
 
         private Long findHistoricalValue(
@@ -198,5 +204,18 @@ public class PlayerAnalyticsService {
                 return ((double) (currentValue - previousValue)
                                 / previousValue)
                                 * 100.0;
+        }
+
+        private Double calculatePointsPerMillion(
+                        Integer points,
+                        Long marketValue) {
+
+                if (points == null
+                                || marketValue == null
+                                || marketValue <= 0) {
+                        return null;
+                }
+
+                return points / (marketValue / 1_000_000.0);
         }
 }
