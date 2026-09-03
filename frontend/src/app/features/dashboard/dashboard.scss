@@ -204,10 +204,9 @@
 }
 
 .recommendation-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
     padding: 18px 20px;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
@@ -613,8 +612,8 @@
 /* RESPONSIVE DE LAS ACCIONES */
 
 @media (max-width: 900px) {
-    .attention-grid {
-        grid-template-columns: 1fr;
+    .market-insights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -795,4 +794,314 @@
 
 .profitability-card strong {
     transition: color 0.2s ease;
+}
+
+.decision-summary {
+    display: grid;
+    grid-template-columns: 160px 160px 1fr;
+    gap: 0.75rem;
+    align-items: stretch;
+    margin-bottom: 1rem;
+}
+
+.decision-summary-item {
+    padding: 0.8rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    background: #fff;
+
+    span {
+        display: block;
+        margin-bottom: 0.2rem;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    strong {
+        font-size: 1.25rem;
+        color: #0f172a;
+    }
+
+    &.has-critical {
+        border-color: #fecaca;
+        background: #fff7f7;
+
+        strong {
+            color: #dc2626;
+        }
+    }
+}
+
+.decision-summary-message {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    background: #f8fafc;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.action-attention.primary-decision {
+    position: relative;
+    border-width: 2px;
+}
+
+.primary-decision-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 800px) {
+    .decision-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .decision-summary-message {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 520px) {
+    .decision-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .decision-summary-message {
+        grid-column: auto;
+    }
+}
+
+.market-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.market-player-context {
+    margin: 0.35rem 0 0;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.market-score {
+    display: flex;
+    align-items: baseline;
+    flex-shrink: 0;
+
+    span {
+        display: block;
+        margin-right: 0.45rem;
+        font-size: 0.7rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    strong {
+        font-size: 1.45rem;
+        color: #0f172a;
+    }
+
+    small {
+        margin-left: 0.1rem;
+        color: #64748b;
+    }
+}
+
+.market-insights {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+    min-width: 0;
+}
+
+.market-insight {
+    min-width: 0;
+    padding: 0.7rem;
+    border-radius: 0.7rem;
+    background: #f8fafc;
+
+    span {
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.68rem;
+        color: #64748b;
+    }
+
+    strong {
+        display: block;
+        min-width: 0;
+        font-size: 0.9rem;
+        color: #0f172a;
+    }
+}
+
+.market-analysis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    padding-top: 0.9rem;
+    margin-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+
+    >div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    span {
+        font-size: 0.68rem;
+        color: #64748b;
+    }
+
+    strong {
+        font-size: 0.9rem;
+        color: #0f172a;
+    }
+
+    small {
+        font-size: 0.68rem;
+        color: #94a3b8;
+    }
+}
+
+.market-positive {
+    color: #16a34a !important;
+}
+
+.market-negative {
+    color: #dc2626 !important;
+}
+
+.market-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    padding-top: 0.9rem;
+    margin-top: 0.9rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    color: #64748b;
+
+    >span strong {
+        color: #0f172a;
+    }
+}
+
+.market-detail-link {
+    flex-shrink: 0;
+    color: #15803d;
+}
+
+@media (max-width: 900px) {
+    .market-insights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .market-analysis {
+        grid-template-columns: 1fr;
+    }
+
+    .market-card-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+.squad-insights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.squad-insight-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    background: #ffffff;
+}
+
+.squad-insight-label {
+    margin-bottom: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.squad-insight-player {
+    margin-bottom: 0.65rem;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.squad-insight-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.squad-insight-detail {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.needs-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    margin-bottom: 0.85rem;
+    border-top: 1px solid #e2e8f0;
+
+    h3 {
+        margin: 0.2rem 0 0;
+        font-size: 1.15rem;
+        color: #0f172a;
+    }
+}
+
+.needs-heading-detail {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+@media (max-width: 850px) {
+    .squad-insights {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .needs-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }

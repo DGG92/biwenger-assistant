@@ -277,13 +277,40 @@
         </div>
 
         @if (data.topActions.length > 0) {
+        <div class="decision-summary">
+            <div class="decision-summary-item">
+                <span>Decisiones detectadas</span>
+                <strong>{{ data.actions.length }}</strong>
+            </div>
+
+            <div class="decision-summary-item" [class.has-critical]="data.highPriorityActionCount > 0">
+                <span>Prioridad alta</span>
+                <strong>{{ data.highPriorityActionCount }}</strong>
+            </div>
+
+            <div class="decision-summary-message">
+                @if (data.highPriorityActionCount > 0) {
+                Hay decisiones importantes que conviene revisar.
+                } @else {
+                No hay decisiones de prioridad alta ahora mismo.
+                }
+            </div>
+        </div>
+
         <div class="attention-grid">
             @for (
             action of data.topActions;
-            track action.type + '-' + (action.playerId ?? 'general')
+            track action.type + '-' + (action.playerId ?? 'general');
+            let index = $index
             ) {
             <article class="attention-card action-attention" [class.priority-high]="action.priority === 'HIGH'"
-                [class.priority-medium]="action.priority === 'MEDIUM'" [class.priority-low]="action.priority === 'LOW'">
+                [class.priority-medium]="action.priority === 'MEDIUM'" [class.priority-low]="action.priority === 'LOW'"
+                [class.primary-decision]="index === 0">
+                @if (index === 0) {
+                <div class="primary-decision-label">
+                    Decisión principal
+                </div>
+                }
                 <div class="action-card-header">
                     <div class="action-badges">
                         <span class="priority-badge" [class.high]="action.priority === 'HIGH'"
@@ -364,42 +391,61 @@
             <a class="recommendation-card recommendation-link" routerLink="/market" [queryParams]="{
         search: recommendation.playerName
     }">
-                <div>
-                    <div class="player-heading">
-                        <strong>{{ recommendation.playerName }}</strong>
+                <div class="market-card-header">
+                    <div>
+                        <div class="player-heading">
+                            <strong>
+                                {{ recommendation.playerName }}
+                            </strong>
 
-                        <span class="recommendation-badge"
-                            [class.strong-buy]="recommendation.recommendation === 'STRONG_BUY'"
-                            [class.buy]="recommendation.recommendation === 'BUY'"
-                            [class.watch]="recommendation.recommendation === 'WATCH'"
-                            [class.avoid]="recommendation.recommendation === 'AVOID'">
-                            {{
-                            recommendation.recommendation === 'STRONG_BUY'
-                            ? 'STRONG BUY'
-                            : recommendation.recommendation
-                            }}
-                        </span>
+                            <span class="recommendation-badge" [class.strong-buy]="
+                        recommendation.recommendation === 'STRONG_BUY'
+                    " [class.buy]="
+                        recommendation.recommendation === 'BUY'
+                    " [class.watch]="
+                        recommendation.recommendation === 'WATCH'
+                    " [class.avoid]="
+                        recommendation.recommendation === 'AVOID'
+                    ">
+                                {{
+                                recommendation.recommendation === 'STRONG_BUY'
+                                ? 'STRONG BUY'
+                                : recommendation.recommendation
+                                }}
+                            </span>
+                        </div>
+
+                        <p class="market-player-context">
+                            {{ recommendation.teamName }}
+                            ·
+                            {{ recommendation.positions.join(' / ') }}
+                        </p>
                     </div>
 
-                    <p>
-                        {{ recommendation.teamName }}
-                        ·
-                        {{ recommendation.positions.join(' / ') }}
-                    </p>
+                    <div class="market-score">
+                        <span>Score</span>
+                        <strong>
+                            {{ recommendation.score }}
+                        </strong>
+                        <small>/100</small>
+                    </div>
                 </div>
 
                 @if (recommendation.reasons.length > 0) {
                 <div class="dashboard-reasons">
-                    @for (reason of topReasons(recommendation.reasons); track reason) {
+                    @for (
+                    reason of topReasons(recommendation.reasons);
+                    track reason
+                    ) {
                     <span [class.positive]="
-            reason === 'PRICE_BELOW_MARKET'
-            || reason === 'VALUE_RISING'
-            || reason === 'VALUE_RISING_FAST'
-            || reason === 'GOOD_RECENT_FORM'
-            || reason === 'EXCELLENT_RECENT_FORM'
-            || reason === 'STRONG_HISTORICAL_PERFORMANCE'
-            || reason === 'SQUAD_POSITION_NEEDED'
-                    " [class.negative]="
+                reason === 'PRICE_BELOW_MARKET'
+                || reason === 'VALUE_RISING'
+                || reason === 'VALUE_RISING_FAST'
+                || reason === 'GOOD_RECENT_FORM'
+                || reason === 'EXCELLENT_RECENT_FORM'
+                || reason === 'STRONG_HISTORICAL_PERFORMANCE'
+                || reason === 'SQUAD_POSITION_NEEDED'
+            " [class.negative]="
                 reason === 'PRICE_ABOVE_MARKET'
                 || reason === 'VALUE_FALLING'
                 || reason === 'POOR_HISTORICAL_PERFORMANCE'
@@ -412,21 +458,149 @@
                 </div>
                 }
 
-                <div class="recommendation-values">
-                    <span>
-                        Precio
+                <div class="market-insights">
+                    <div class="market-insight">
+                        <span>Precio pedido</span>
+
                         <strong>
                             {{
                             recommendation.askingPrice
                             | currency:'EUR':'symbol':'1.0-0':'es-ES'
                             }}
                         </strong>
-                    </span>
+                    </div>
 
+                    <div class="market-insight">
+                        <span>Valor de mercado</span>
+
+                        <strong>
+                            {{
+                            recommendation.marketValue
+                            | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                            }}
+                        </strong>
+                    </div>
+
+                    <div class="market-insight" [class.market-positive]="
+                recommendation.priceDifferencePercentage < 0
+            " [class.market-negative]="
+                recommendation.priceDifferencePercentage > 0
+            ">
+                        <span>Respecto al valor</span>
+
+                        <strong>
+                            @if (
+                            recommendation.priceDifferencePercentage > 0
+                            ) {
+                            +
+                            }{{
+                            recommendation.priceDifferencePercentage.toFixed(1)
+                            }}%
+                        </strong>
+                    </div>
+
+                    <div class="market-insight">
+                        <span>Puntos</span>
+
+                        <strong>
+                            {{ recommendation.points }}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="market-analysis">
+                    <div>
+                        <span>Forma reciente</span>
+
+                        @if (
+                        recommendation.scoreBreakdown.recentFormSampleSize > 0
+                        ) {
+                        <strong>
+                            {{
+                            recommendation.scoreBreakdown.recentForm
+                            .toFixed(1)
+                            }}
+                        </strong>
+
+                        <small>
+                            {{
+                            recommendation.scoreBreakdown
+                            .recentFormSampleSize
+                            }}
+                            partidos
+                        </small>
+                        } @else {
+                        <strong>—</strong>
+                        <small>Sin muestra</small>
+                        }
+                    </div>
+
+                    <div>
+                        <span>Media histórica</span>
+
+                        @if (
+                        recommendation.scoreBreakdown.historicalSampleSize > 0
+                        ) {
+                        <strong>
+                            {{
+                            recommendation.scoreBreakdown
+                            .historicalAveragePoints
+                            .toFixed(1)
+                            }}
+                        </strong>
+
+                        <small>
+                            {{
+                            recommendation.scoreBreakdown
+                            .historicalSampleSize
+                            }}
+                            partidos
+                        </small>
+                        } @else {
+                        <strong>—</strong>
+                        <small>Sin muestra</small>
+                        }
+                    </div>
+
+                    <div>
+                        <span>Disponible</span>
+
+                        <strong [class.market-positive]="
+                    recommendation.affordable
+                " [class.market-negative]="
+                    !recommendation.affordable
+                ">
+                            {{
+                            recommendation.affordable
+                            ? 'Sí'
+                            : 'No'
+                            }}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="market-card-footer">
+                    @if (
+                    recommendation.maximumRecommendedBid !== null
+                    ) {
                     <span>
-                        Score
-                        <strong>{{ recommendation.score }}/100</strong>
+                        Puja máxima:
+                        <strong>
+                            {{
+                            recommendation.maximumRecommendedBid
+                            | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                            }}
+                        </strong>
                     </span>
+                    } @else {
+                    <span>
+                        Analizar oportunidad
+                    </span>
+                    }
+
+                    <strong class="market-detail-link">
+                        Ver en Mercado →
+                    </strong>
                 </div>
             </a>
             }
@@ -434,8 +608,144 @@
     </section>
 
     <section class="dashboard-section">
-        <p class="eyebrow">Plantilla</p>
-        <h2>Necesidades por posición</h2>
+        <div class="section-header">
+            <div>
+                <p class="eyebrow">Plantilla</p>
+                <h2>Análisis de tu equipo</h2>
+            </div>
+
+            <a class="section-link" routerLink="/squad">
+                Ver plantilla completa
+            </a>
+        </div>
+
+        <div class="squad-insights">
+            @if (
+            data.profitability.bestInvestment;
+            as player
+            ) {
+            <article class="squad-insight-card">
+                <span class="squad-insight-label">
+                    Mejor inversión
+                </span>
+
+                <strong class="squad-insight-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="squad-insight-value" [class.positive-value]="
+                    player.unrealizedProfit !== null
+                    && player.unrealizedProfit > 0
+                ">
+                    @if (
+                    player.unrealizedProfit !== null
+                    && player.unrealizedProfit > 0
+                    ) {
+                    +
+                    }{{
+                    player.unrealizedProfit
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+
+                @if (
+                player.unrealizedProfitPercent !== null
+                ) {
+                <span class="squad-insight-detail">
+                    @if (
+                    player.unrealizedProfitPercent > 0
+                    ) {
+                    +
+                    }{{
+                    player.unrealizedProfitPercent.toFixed(1)
+                    }}%
+                    sobre la compra
+                </span>
+                }
+            </article>
+            }
+
+            @if (
+            data.profitability.worstInvestment;
+            as player
+            ) {
+            <article class="squad-insight-card">
+                <span class="squad-insight-label">
+                    Peor inversión
+                </span>
+
+                <strong class="squad-insight-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="squad-insight-value" [class.negative-value]="
+                    player.unrealizedProfit !== null
+                    && player.unrealizedProfit < 0
+                ">
+                    {{
+                    player.unrealizedProfit
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+
+                @if (
+                player.unrealizedProfitPercent !== null
+                ) {
+                <span class="squad-insight-detail">
+                    {{
+                    player.unrealizedProfitPercent.toFixed(1)
+                    }}%
+                    sobre la compra
+                </span>
+                }
+            </article>
+            }
+
+            @if (
+            data.profitability.mostEfficientPlayer;
+            as player
+            ) {
+            <article class="squad-insight-card">
+                <span class="squad-insight-label">
+                    Mayor eficiencia
+                </span>
+
+                <strong class="squad-insight-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="squad-insight-value">
+                    @if (player.pointsPerMillion !== null) {
+                    {{
+                    player.pointsPerMillion.toFixed(1)
+                    }}
+                    } @else {
+                    —
+                    }
+                </span>
+
+                <span class="squad-insight-detail">
+                    puntos por millón
+                </span>
+            </article>
+            }
+        </div>
+
+        <div class="needs-heading">
+            <div>
+                <span class="section-eyebrow">
+                    Equilibrio deportivo
+                </span>
+
+                <h3>
+                    Necesidades por posición
+                </h3>
+            </div>
+
+            <span class="needs-heading-detail">
+                Prioridad calculada por el asistente
+            </span>
+        </div>
 
         <div class="needs-grid">
             @for (
