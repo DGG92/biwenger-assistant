@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
 import { Player } from '../models/player.model';
+import { LeagueStatistics } from '../models/league-statistics.model';
 
 @Injectable({
     providedIn: 'root',
@@ -14,6 +15,12 @@ export class PlayerService {
     getPlayers(): Observable<Player[]> {
         return this.http.get<Player[]>(
             `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/players`
+        );
+    }
+
+    getStatistics(): Observable<LeagueStatistics> {
+        return this.http.get<LeagueStatistics>(
+            `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/players/statistics`
         );
     }
 }

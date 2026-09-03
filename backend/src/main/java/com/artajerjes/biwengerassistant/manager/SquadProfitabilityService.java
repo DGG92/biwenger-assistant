@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityPlayerResponse;
 import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityResponse;
 import com.artajerjes.biwengerassistant.player.Player;
+import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
@@ -18,217 +19,221 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 @Service
 public class SquadProfitabilityService {
 
-    private final ManagerRepository managerRepository;
-    private final PlayerRepository playerRepository;
-    private final PlayerMatchReportRepository playerMatchReportRepository;
+        private final ManagerRepository managerRepository;
+        private final PlayerRepository playerRepository;
+        private final PlayerMatchReportRepository playerMatchReportRepository;
 
-    public SquadProfitabilityService(
-            ManagerRepository managerRepository,
-            PlayerRepository playerRepository,
-            PlayerMatchReportRepository playerMatchReportRepository) {
+        public SquadProfitabilityService(
+                        ManagerRepository managerRepository,
+                        PlayerRepository playerRepository,
+                        PlayerMatchReportRepository playerMatchReportRepository) {
 
-        this.managerRepository = managerRepository;
-        this.playerRepository = playerRepository;
-        this.playerMatchReportRepository = playerMatchReportRepository;
-    }
-
-    @Transactional(readOnly = true)
-    public SquadProfitabilityResponse getSquadProfitability(
-            Long leagueId,
-            Long managerId) {
-
-        Manager manager = managerRepository
-                .findByIdAndLeague_Id(
-                        managerId,
-                        leagueId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Manager not found in league"));
-
-        List<Player> players = playerRepository
-                .findAllByOwner_IdAndLeague_Id(
-                        managerId,
-                        leagueId);
-
-        Map<Long, Integer> currentSeasonPointsByPlayer = new HashMap<>();
-
-        for (Player player : players) {
-            currentSeasonPointsByPlayer.put(
-                    player.getId(),
-                    calculateCurrentSeasonPoints(player.getId()));
+                this.managerRepository = managerRepository;
+                this.playerRepository = playerRepository;
+                this.playerMatchReportRepository = playerMatchReportRepository;
         }
 
-        List<Player> playersWithPurchasePrice = players.stream()
-                .filter(player -> player.getPurchasePrice() != null)
-                .toList();
+        @Transactional(readOnly = true)
+        public SquadProfitabilityResponse getSquadProfitability(
+                        Long leagueId,
+                        Long managerId) {
 
-        long currentSquadValue = players.stream()
-                .map(Player::getMarketValue)
-                .filter(value -> value != null)
-                .mapToLong(Long::longValue)
-                .sum();
+                Manager manager = managerRepository
+                                .findByIdAndLeague_Id(
+                                                managerId,
+                                                leagueId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Manager not found in league"));
 
-        long analyzedSquadValue = playersWithPurchasePrice.stream()
-                .map(Player::getMarketValue)
-                .filter(value -> value != null)
-                .mapToLong(Long::longValue)
-                .sum();
+                List<Player> players = playerRepository
+                                .findAllByOwner_IdAndLeague_Id(
+                                                managerId,
+                                                leagueId)
+                                .stream()
+                                .filter(player -> !player.getPositions().contains(
+                                                PlayerPosition.E))
+                                .toList();
 
-        long totalInvestment = playersWithPurchasePrice.stream()
-                .map(Player::getPurchasePrice)
-                .mapToLong(Long::longValue)
-                .sum();
+                Map<Long, Integer> currentSeasonPointsByPlayer = new HashMap<>();
 
-        long unrealizedProfit = analyzedSquadValue
-                - totalInvestment;
+                for (Player player : players) {
+                        currentSeasonPointsByPlayer.put(
+                                        player.getId(),
+                                        calculateCurrentSeasonPoints(player.getId()));
+                }
 
-        Double unrealizedProfitPercent = calculatePercentage(
-                totalInvestment,
-                analyzedSquadValue);
+                List<Player> playersWithPurchasePrice = players.stream()
+                                .filter(player -> player.getPurchasePrice() != null)
+                                .toList();
 
-        int profitablePlayers = (int) playersWithPurchasePrice.stream()
-                .filter(player -> player.getProfitability() != null
-                        && player.getProfitability() > 0)
-                .count();
+                long currentSquadValue = players.stream()
+                                .map(Player::getMarketValue)
+                                .filter(value -> value != null)
+                                .mapToLong(Long::longValue)
+                                .sum();
 
-        int losingPlayers = (int) playersWithPurchasePrice.stream()
-                .filter(player -> player.getProfitability() != null
-                        && player.getProfitability() < 0)
-                .count();
+                long analyzedSquadValue = playersWithPurchasePrice.stream()
+                                .map(Player::getMarketValue)
+                                .filter(value -> value != null)
+                                .mapToLong(Long::longValue)
+                                .sum();
 
-        int breakEvenPlayers = (int) playersWithPurchasePrice.stream()
-                .filter(player -> player.getProfitability() != null
-                        && player.getProfitability() == 0)
-                .count();
+                long totalInvestment = playersWithPurchasePrice.stream()
+                                .map(Player::getPurchasePrice)
+                                .mapToLong(Long::longValue)
+                                .sum();
 
-        SquadProfitabilityPlayerResponse bestInvestment = playersWithPurchasePrice.stream()
-                .filter(player -> player.getProfitability() != null)
-                .max(Comparator.comparingLong(
-                        Player::getProfitability))
-                .map(player -> toPlayerResponse(
-                        player,
-                        currentSeasonPointsByPlayer.get(player.getId())))
-                .orElse(null);
+                long unrealizedProfit = analyzedSquadValue
+                                - totalInvestment;
 
-        SquadProfitabilityPlayerResponse worstInvestment = playersWithPurchasePrice.stream()
-                .filter(player -> player.getProfitability() != null)
-                .min(Comparator.comparingLong(
-                        Player::getProfitability))
-                .map(player -> toPlayerResponse(
-                        player,
-                        currentSeasonPointsByPlayer.get(player.getId())))
-                .orElse(null);
+                Double unrealizedProfitPercent = calculatePercentage(
+                                totalInvestment,
+                                analyzedSquadValue);
 
-        SquadProfitabilityPlayerResponse mostEfficientPlayer = players.stream()
-                .filter(player -> player.getMarketValue() != null
-                        && player.getMarketValue() > 0)
-                .max(Comparator.comparingDouble(
-                        player -> calculatePointsPerMillion(
-                                currentSeasonPointsByPlayer.get(player.getId()),
-                                player.getMarketValue())))
-                .map(player -> toPlayerResponse(
-                        player,
-                        currentSeasonPointsByPlayer.get(player.getId())))
-                .orElse(null);
+                int profitablePlayers = (int) playersWithPurchasePrice.stream()
+                                .filter(player -> player.getProfitability() != null
+                                                && player.getProfitability() > 0)
+                                .count();
 
-        return new SquadProfitabilityResponse(
-                manager.getId(),
-                manager.getName(),
-                players.size(),
-                playersWithPurchasePrice.size(),
-                currentSquadValue,
-                analyzedSquadValue,
-                totalInvestment,
-                unrealizedProfit,
-                unrealizedProfitPercent,
-                profitablePlayers,
-                losingPlayers,
-                breakEvenPlayers,
-                bestInvestment,
-                worstInvestment,
-                mostEfficientPlayer);
-    }
+                int losingPlayers = (int) playersWithPurchasePrice.stream()
+                                .filter(player -> player.getProfitability() != null
+                                                && player.getProfitability() < 0)
+                                .count();
 
-    private SquadProfitabilityPlayerResponse toPlayerResponse(
-            Player player,
-            Integer points) {
+                int breakEvenPlayers = (int) playersWithPurchasePrice.stream()
+                                .filter(player -> player.getProfitability() != null
+                                                && player.getProfitability() == 0)
+                                .count();
 
-        Long purchasePrice = player.getPurchasePrice();
-        Long currentValue = player.getMarketValue();
-        Long unrealizedProfit = player.getProfitability();
+                SquadProfitabilityPlayerResponse bestInvestment = playersWithPurchasePrice.stream()
+                                .filter(player -> player.getProfitability() != null)
+                                .max(Comparator.comparingLong(
+                                                Player::getProfitability))
+                                .map(player -> toPlayerResponse(
+                                                player,
+                                                currentSeasonPointsByPlayer.get(player.getId())))
+                                .orElse(null);
 
-        Double unrealizedProfitPercent = calculatePercentage(
-                purchasePrice,
-                currentValue);
+                SquadProfitabilityPlayerResponse worstInvestment = playersWithPurchasePrice.stream()
+                                .filter(player -> player.getProfitability() != null)
+                                .min(Comparator.comparingLong(
+                                                Player::getProfitability))
+                                .map(player -> toPlayerResponse(
+                                                player,
+                                                currentSeasonPointsByPlayer.get(player.getId())))
+                                .orElse(null);
 
-        Double pointsPerMillion = currentValue == null
-                || currentValue <= 0
-                        ? null
-                        : calculatePointsPerMillion(
-                                points,
+                SquadProfitabilityPlayerResponse mostEfficientPlayer = players.stream()
+                                .filter(player -> player.getMarketValue() != null
+                                                && player.getMarketValue() > 0)
+                                .max(Comparator.comparingDouble(
+                                                player -> calculatePointsPerMillion(
+                                                                currentSeasonPointsByPlayer.get(player.getId()),
+                                                                player.getMarketValue())))
+                                .map(player -> toPlayerResponse(
+                                                player,
+                                                currentSeasonPointsByPlayer.get(player.getId())))
+                                .orElse(null);
+
+                return new SquadProfitabilityResponse(
+                                manager.getId(),
+                                manager.getName(),
+                                players.size(),
+                                playersWithPurchasePrice.size(),
+                                currentSquadValue,
+                                analyzedSquadValue,
+                                totalInvestment,
+                                unrealizedProfit,
+                                unrealizedProfitPercent,
+                                profitablePlayers,
+                                losingPlayers,
+                                breakEvenPlayers,
+                                bestInvestment,
+                                worstInvestment,
+                                mostEfficientPlayer);
+        }
+
+        private SquadProfitabilityPlayerResponse toPlayerResponse(
+                        Player player,
+                        Integer points) {
+
+                Long purchasePrice = player.getPurchasePrice();
+                Long currentValue = player.getMarketValue();
+                Long unrealizedProfit = player.getProfitability();
+
+                Double unrealizedProfitPercent = calculatePercentage(
+                                purchasePrice,
                                 currentValue);
 
-        return new SquadProfitabilityPlayerResponse(
-                player.getId(),
-                player.getName(),
-                currentValue,
-                purchasePrice,
-                unrealizedProfit,
-                unrealizedProfitPercent,
-                points,
-                pointsPerMillion);
-    }
+                Double pointsPerMillion = currentValue == null
+                                || currentValue <= 0
+                                                ? null
+                                                : calculatePointsPerMillion(
+                                                                points,
+                                                                currentValue);
 
-    private Double calculatePercentage(
-            Long initialValue,
-            Long currentValue) {
-
-        if (initialValue == null
-                || currentValue == null
-                || initialValue == 0) {
-            return null;
+                return new SquadProfitabilityPlayerResponse(
+                                player.getId(),
+                                player.getName(),
+                                currentValue,
+                                purchasePrice,
+                                unrealizedProfit,
+                                unrealizedProfitPercent,
+                                points,
+                                pointsPerMillion);
         }
 
-        return ((double) (currentValue - initialValue)
-                / initialValue)
-                * 100.0;
-    }
+        private Double calculatePercentage(
+                        Long initialValue,
+                        Long currentValue) {
 
-    private double calculatePointsPerMillion(
-            Integer points,
-            Long marketValue) {
+                if (initialValue == null
+                                || currentValue == null
+                                || initialValue == 0) {
+                        return null;
+                }
 
-        if (points == null
-                || marketValue == null
-                || marketValue <= 0) {
-            return 0.0;
+                return ((double) (currentValue - initialValue)
+                                / initialValue)
+                                * 100.0;
         }
 
-        return points
-                / (marketValue / 1_000_000.0);
-    }
+        private double calculatePointsPerMillion(
+                        Integer points,
+                        Long marketValue) {
 
-    private int calculateCurrentSeasonPoints(
-            Long playerId) {
+                if (points == null
+                                || marketValue == null
+                                || marketValue <= 0) {
+                        return 0.0;
+                }
 
-        List<PlayerMatchReport> reports = playerMatchReportRepository
-                .findAllByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                        playerId);
-
-        String season = reports.stream()
-                .map(PlayerMatchReport::getSeason)
-                .filter(reportSeason -> reportSeason != null
-                        && !reportSeason.isBlank())
-                .findFirst()
-                .orElse(null);
-
-        if (season == null) {
-            return 0;
+                return points
+                                / (marketValue / 1_000_000.0);
         }
 
-        return reports.stream()
-                .filter(report -> season.equals(
-                        report.getSeason()))
-                .mapToInt(PlayerMatchReport::getPoints)
-                .sum();
-    }
+        private int calculateCurrentSeasonPoints(
+                        Long playerId) {
+
+                List<PlayerMatchReport> reports = playerMatchReportRepository
+                                .findAllByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                playerId);
+
+                String season = reports.stream()
+                                .map(PlayerMatchReport::getSeason)
+                                .filter(reportSeason -> reportSeason != null
+                                                && !reportSeason.isBlank())
+                                .findFirst()
+                                .orElse(null);
+
+                if (season == null) {
+                        return 0;
+                }
+
+                return reports.stream()
+                                .filter(report -> season.equals(
+                                                report.getSeason()))
+                                .mapToInt(PlayerMatchReport::getPoints)
+                                .sum();
+        }
 }

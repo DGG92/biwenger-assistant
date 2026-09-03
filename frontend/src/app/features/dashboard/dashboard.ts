@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
-import { combineLatest, map } from 'rxjs';
+import { combineLatest, map, switchMap } from 'rxjs';
 
 import { RecommendationService } from '../../core/services/recommendation';
 import { PlayerService } from '../../core/services/player';
@@ -25,24 +25,32 @@ export class Dashboard {
   private readonly playerService =
     inject(PlayerService);
 
-  readonly dashboard$ = combineLatest({
-    squad: this.recommendationService.getSquadNeeds(),
-    economy: this.recommendationService.getEconomicStatus(),
-    market: this.recommendationService.getMarketRecommendations(),
-    players: this.playerService.getPlayers(),
-    actions: this.recommendationService.getActions(),
-  }).pipe(
-    map((data) => {
-      return {
-        ...data,
-        topActions: data.actions.slice(0, 5),
-        highPriorityActionCount: data.actions.filter(
-          action => action.priority === 'HIGH'
-        ).length,
-        topRecommendations: data.market.slice(0, 5),
-      };
-    })
-  );
+  readonly dashboard$ =
+    this.recommendationService.getSquadNeeds().pipe(
+      switchMap(squad =>
+        combineLatest({
+          economy: this.recommendationService.getEconomicStatus(),
+          market: this.recommendationService.getMarketRecommendations(),
+          players: this.playerService.getPlayers(),
+          statistics: this.playerService.getStatistics(),
+          actions: this.recommendationService.getActions(),
+          profitability:
+            this.recommendationService.getSquadProfitability(
+              squad.managerId
+            ),
+        }).pipe(
+          map(data => ({
+            squad,
+            ...data,
+            topActions: data.actions.slice(0, 5),
+            highPriorityActionCount: data.actions.filter(
+              action => action.priority === 'HIGH'
+            ).length,
+            topRecommendations: data.market.slice(0, 5),
+          }))
+        )
+      )
+    );
 
   reasonLabel(
     reason: MarketRecommendationReason

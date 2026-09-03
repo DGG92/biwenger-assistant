@@ -12,37 +12,248 @@
 
     <div class="summary-grid">
         <article class="summary-card">
-            <span class="label">Jugadores</span>
-            <strong>{{ data.squad.totalPlayers }}</strong>
-        </article>
+            <span class="label">
+                Plantilla
+            </span>
 
-        <article class="summary-card">
-            <span class="label">Saldo</span>
             <strong>
-                {{ data.economy.balance | currency:'EUR':'symbol':'1.0-0':'es-ES' }}
+                {{ data.squad.totalPlayers }}
             </strong>
+
+            <span class="summary-detail">
+                jugadores
+            </span>
         </article>
 
-        <article class="summary-card">
-            <span class="label">Puja máxima</span>
-            <strong>
-                {{ data.economy.maximumBid | currency:'EUR':'symbol':'1.0-0':'es-ES' }}
-            </strong>
-        </article>
+        <article class="summary-card" [class.summary-negative]="data.economy.balance < 0">
+            <span class="label">
+                Saldo
+            </span>
 
-        <article class="summary-card">
-            <span class="label">Oportunidades de compra</span>
             <strong>
                 {{
-                data.market.filter(
-                recommendation =>
-                recommendation.recommendation === 'BUY'
-                || recommendation.recommendation === 'STRONG_BUY'
-                ).length
+                data.economy.balance
+                | currency:'EUR':'symbol':'1.0-0':'es-ES'
                 }}
             </strong>
+
+            <span class="summary-detail">
+                Disponible actualmente
+            </span>
+        </article>
+
+        <article class="summary-card">
+            <span class="label">
+                Valor de plantilla
+            </span>
+
+            <strong>
+                {{
+                data.profitability.currentSquadValue
+                | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                }}
+            </strong>
+
+            <span class="summary-detail">
+                {{ data.profitability.players }} jugadores
+            </span>
+        </article>
+
+        <article class="summary-card profitability-card" [class.summary-positive]="
+            data.profitability.unrealizedProfit > 0
+        " [class.summary-negative]="
+            data.profitability.unrealizedProfit < 0
+        ">
+            <span class="label">
+                Rentabilidad
+            </span>
+
+            <strong>
+                @if (data.profitability.unrealizedProfit > 0) {
+                +
+                }{{
+                data.profitability.unrealizedProfit
+                | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                }}
+            </strong>
+
+            <span class="summary-detail">
+                @if (
+                data.profitability.unrealizedProfitPercent !== null
+                ) {
+                @if (
+                data.profitability.unrealizedProfitPercent > 0
+                ) {
+                +
+                }{{
+                data.profitability.unrealizedProfitPercent.toFixed(1)
+                }}%
+                sobre la inversión
+                } @else {
+                Sin datos suficientes
+                }
+            </span>
         </article>
     </div>
+
+    <section class="league-intelligence">
+        <div class="league-intelligence-header">
+            <div>
+                <span class="section-eyebrow">
+                    Inteligencia de liga
+                </span>
+
+                <h2>
+                    Qué está ocurriendo ahora mismo
+                </h2>
+            </div>
+
+            @if (data.statistics.season) {
+            <span class="season-badge">
+                {{ data.statistics.season }}
+            </span>
+            }
+        </div>
+
+        <div class="league-intelligence-grid">
+            @if (data.statistics.topPoints[0]; as player) {
+            <article class="intelligence-card">
+                <span class="intelligence-label">
+                    Líder en puntos
+                </span>
+
+                <strong class="intelligence-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="intelligence-value">
+                    {{ player.totalPoints }} pts
+                </span>
+
+                <span class="intelligence-detail">
+                    {{ player.matchesPlayed }}
+                    partidos ·
+                    {{ player.averagePoints.toFixed(1) }}
+                    pts/partido
+                </span>
+            </article>
+            }
+
+            @if (data.statistics.biggestRisers[0]; as player) {
+            <article class="intelligence-card">
+                <span class="intelligence-label">
+                    Mayor subida · 7 días
+                </span>
+
+                <strong class="intelligence-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="intelligence-value positive-value">
+                    +{{ player.changePercent7Days?.toFixed(1) }}%
+                </span>
+
+                <span class="intelligence-detail">
+                    {{
+                    player.change7Days
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+            </article>
+            }
+
+            @if (data.statistics.biggestFallers[0]; as player) {
+            <article class="intelligence-card">
+                <span class="intelligence-label">
+                    Mayor caída · 7 días
+                </span>
+
+                <strong class="intelligence-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="intelligence-value negative-value">
+                    {{ player.changePercent7Days?.toFixed(1) }}%
+                </span>
+
+                <span class="intelligence-detail">
+                    {{
+                    player.change7Days
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+            </article>
+            }
+
+            @if (data.statistics.mostValuable[0]; as player) {
+            <article class="intelligence-card">
+                <span class="intelligence-label">
+                    Jugador más valioso
+                </span>
+
+                <strong class="intelligence-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="intelligence-value">
+                    {{
+                    player.currentValue
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+
+                <span class="intelligence-detail">
+                    Valor de mercado actual
+                </span>
+            </article>
+            }
+
+            @if (data.statistics.bestInvestments[0]; as player) {
+            <article class="intelligence-card">
+                <span class="intelligence-label">
+                    Mejor inversión
+                </span>
+
+                <strong class="intelligence-player">
+                    {{ player.name }}
+                </strong>
+
+                <span class="intelligence-value positive-value">
+                    +{{
+                    player.unrealizedProfit
+                    | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                    }}
+                </span>
+
+                <span class="intelligence-detail">
+                    {{
+                    player.unrealizedProfitPercent?.toFixed(1)
+                    }}% de rentabilidad
+                </span>
+            </article>
+            }
+        </div>
+
+        <div class="coverage-footer">
+            <span>
+                Datos deportivos
+                <strong>
+                    {{ data.statistics.coveragePercent.toFixed(1) }}%
+                </strong>
+            </span>
+
+            <span class="coverage-separator">·</span>
+
+            <span>
+                Histórico de precios
+                <strong>
+                    {{
+                    data.statistics.priceHistoryCoveragePercent.toFixed(1)
+                    }}%
+                </strong>
+            </span>
+        </div>
+    </section>
 
     <section class="attention-section">
         <div class="section-heading">
