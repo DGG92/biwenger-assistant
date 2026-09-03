@@ -1,5 +1,6 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,9 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.history.PlayerPriceHistory;
+import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
+import com.artajerjes.biwengerassistant.history.PlayerPriceSource;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
@@ -72,6 +76,9 @@ class RecommendationServiceTest {
         @Mock
         private MatchdayChangeEligibilityService matchdayChangeEligibilityService;
 
+        @Mock
+        private PlayerPriceHistoryRepository playerPriceHistoryRepository;
+
         private RecommendationService recommendationService;
 
         @BeforeEach
@@ -93,7 +100,15 @@ class RecommendationServiceTest {
                                 playerRepository,
                                 playerPerformanceSignalService,
                                 matchdayDifficultyService,
-                                matchdayChangeEligibilityService);
+                                matchdayChangeEligibilityService,
+                                playerPriceHistoryRepository);
+
+                lenient()
+                                .when(
+                                                playerPriceHistoryRepository
+                                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
+                                                                                anyLong()))
+                                .thenReturn(List.of());
 
                 lenient().when(
                                 matchdayDifficultyService.resolveForTeams(
@@ -160,6 +175,188 @@ class RecommendationServiceTest {
                 assertEquals(
                                 RecommendationType.STRONG_BUY,
                                 result.recommendation());
+        }
+
+        @Test
+        void marketRecommendationShouldExposeSevenDayPriceChangeAndPointsPerMillion() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                90L,
+                                "900",
+                                "Jugador analítico",
+                                List.of(PlayerPosition.DL),
+                                1_200_000L,
+                                0L,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                player,
+                                "points",
+                                24);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_200_000L,
+                                null,
+                                league);
+
+                PlayerPriceHistory historicalPrice = new PlayerPriceHistory(
+                                90L,
+                                LEAGUE_ID,
+                                LocalDate.now().minusDays(7),
+                                1_000_000L,
+                                PlayerPriceSource.BIWENGER_DETAIL,
+                                LocalDateTime.now().minusDays(7));
+
+                when(
+                                playerPriceHistoryRepository
+                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
+                                                                LEAGUE_ID))
+                                .thenReturn(List.of(historicalPrice));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                1_000_000L,
+                                result.value7DaysAgo());
+
+                assertEquals(
+                                200_000L,
+                                result.change7Days());
+
+                assertEquals(
+                                20.0,
+                                result.changePercent7Days(),
+                                0.0001);
+
+                assertEquals(
+                                20.0,
+                                result.pointsPerMillion(),
+                                0.0001);
+        }
+
+        @Test
+        void marketRecommendationShouldUseSevenDayRiseForValueTrendWhenHistoryExists() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                91L,
+                                "901",
+                                "Jugador subida semanal",
+                                List.of(PlayerPosition.DL),
+                                1_200_000L,
+                                10_000L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_200_000L,
+                                null,
+                                league);
+
+                PlayerPriceHistory historicalPrice = new PlayerPriceHistory(
+                                91L,
+                                LEAGUE_ID,
+                                LocalDate.now().minusDays(7),
+                                1_000_000L,
+                                PlayerPriceSource.BIWENGER_DETAIL,
+                                LocalDateTime.now().minusDays(7));
+
+                when(
+                                playerPriceHistoryRepository
+                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
+                                                                LEAGUE_ID))
+                                .thenReturn(List.of(historicalPrice));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                20.0,
+                                result.changePercent7Days(),
+                                0.0001);
+
+                assertEquals(
+                                25.0,
+                                result.scoreBreakdown().valueTrend());
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.VALUE_RISING_FAST));
+        }
+
+        @Test
+        void marketRecommendationShouldPreferFlatSevenDayHistoryOverImmediateNegativeFluctuation() {
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                92L,
+                                "902",
+                                "Jugador estable semanal",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                -10_000L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                PlayerPriceHistory historicalPrice = new PlayerPriceHistory(
+                                92L,
+                                LEAGUE_ID,
+                                LocalDate.now().minusDays(7),
+                                1_000_000L,
+                                PlayerPriceSource.BIWENGER_DETAIL,
+                                LocalDateTime.now().minusDays(7));
+
+                when(
+                                playerPriceHistoryRepository
+                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
+                                                                LEAGUE_ID))
+                                .thenReturn(List.of(historicalPrice));
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertEquals(
+                                0L,
+                                result.change7Days());
+
+                assertEquals(
+                                0.0,
+                                result.changePercent7Days(),
+                                0.0001);
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().valueTrend());
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.VALUE_FALLING));
         }
 
         @Test

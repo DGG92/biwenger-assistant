@@ -157,6 +157,18 @@
                     <strong>
                         {{ action.confidence }}/100
                     </strong>
+
+                    <small>
+                        @if (action.confidence >= 85) {
+                        Muy alta
+                        } @else if (action.confidence >= 70) {
+                        Alta
+                        } @else if (action.confidence >= 55) {
+                        Media
+                        } @else {
+                        Baja
+                        }
+                    </small>
                 </div>
                 }
             </div>
@@ -172,7 +184,7 @@
                     action.type === 'BID'
                     ? 'Puja máxima recomendada'
                     : action.type === 'BUY'
-                    ? 'Precio recomendado'
+                    ? 'Precio de compra'
                     : 'Importe sugerido'
                     }}
                 </span>
@@ -187,16 +199,24 @@
             }
 
             @if (action.sourceSignals.length > 0) {
-            <div class="signals">
-                @for (
-                signal of action.sourceSignals;
-                track signal
-                ) {
-                <span>
-                    {{ signalLabel(signal) }}
+            <section class="action-evidence">
+                <span class="evidence-label">
+                    Señales detectadas
                 </span>
-                }
-            </div>
+
+                <div class="signals">
+                    @for (
+                    signal of action.sourceSignals;
+                    track signal
+                    ) {
+                    <span [class.positive-signal]="isPositiveSignal(signal)"
+                        [class.negative-signal]="isNegativeSignal(signal)"
+                        [class.neutral-signal]="isNeutralSignal(signal)">
+                        {{ signalLabel(signal) }}
+                    </span>
+                    }
+                </div>
+            </section>
             }
         </article>
         } @empty {

@@ -23,7 +23,8 @@ type SortOption =
   | 'SCORE_DESC'
   | 'PRICE_ASC'
   | 'PRICE_DESC'
-  | 'VALUE_FLUCTUATION_DESC'
+  | 'CHANGE_7D_DESC'
+  | 'CHANGE_7D_ASC'
   | 'POINTS_DESC';
 
 @Component({
@@ -388,8 +389,19 @@ export class Market {
       case 'PRICE_DESC':
         return b.askingPrice - a.askingPrice;
 
-      case 'VALUE_FLUCTUATION_DESC':
-        return b.valueFluctuation - a.valueFluctuation;
+      case 'CHANGE_7D_DESC':
+        return this.compareNullableNumbers(
+          a.changePercent7Days,
+          b.changePercent7Days,
+          'DESC'
+        );
+
+      case 'CHANGE_7D_ASC':
+        return this.compareNullableNumbers(
+          a.changePercent7Days,
+          b.changePercent7Days,
+          'ASC'
+        );
 
       case 'POINTS_DESC':
         return b.points - a.points;
@@ -398,5 +410,27 @@ export class Market {
       default:
         return b.score - a.score;
     }
+  }
+
+  private compareNullableNumbers(
+    a: number | null,
+    b: number | null,
+    direction: 'ASC' | 'DESC'
+  ): number {
+    if (a === null && b === null) {
+      return 0;
+    }
+
+    if (a === null) {
+      return 1;
+    }
+
+    if (b === null) {
+      return -1;
+    }
+
+    return direction === 'ASC'
+      ? a - b
+      : b - a;
   }
 }

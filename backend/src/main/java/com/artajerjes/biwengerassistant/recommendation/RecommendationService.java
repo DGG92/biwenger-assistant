@@ -1,5 +1,6 @@
 package com.artajerjes.biwengerassistant.recommendation;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -7,19 +8,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.history.PlayerPriceHistory;
+import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.market.MarketListing;
 import com.artajerjes.biwengerassistant.market.MarketListingRepository;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
-import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
 import com.artajerjes.biwengerassistant.matchday.MatchdayChangeEligibilityService;
+import com.artajerjes.biwengerassistant.matchday.MatchdayDifficultyService;
 import com.artajerjes.biwengerassistant.matchday.OpponentDifficulty;
 import com.artajerjes.biwengerassistant.offer.OfferService;
 import com.artajerjes.biwengerassistant.offer.dto.EconomicStatusResponse;
@@ -82,10 +86,12 @@ public class RecommendationService {
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
         private final MatchdayDifficultyService matchdayDifficultyService;
         private final MatchdayChangeEligibilityService matchdayChangeEligibilityService;
+        private final PlayerPriceHistoryRepository playerPriceHistoryRepository;
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
         private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
         private static final double MIN_FORMATION_CHANGE_IMPROVEMENT = 1.0;
+        private static final int ECONOMIC_CHANGE_DAYS = 7;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -97,7 +103,8 @@ public class RecommendationService {
                         PlayerRepository playerRepository,
                         PlayerPerformanceSignalService playerPerformanceSignalService,
                         MatchdayDifficultyService matchdayDifficultyService,
-                        MatchdayChangeEligibilityService matchdayChangeEligibilityService) {
+                        MatchdayChangeEligibilityService matchdayChangeEligibilityService,
+                        PlayerPriceHistoryRepository playerPriceHistoryRepository) {
 
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
@@ -106,6 +113,7 @@ public class RecommendationService {
                 this.playerPerformanceSignalService = playerPerformanceSignalService;
                 this.matchdayDifficultyService = matchdayDifficultyService;
                 this.matchdayChangeEligibilityService = matchdayChangeEligibilityService;
+                this.playerPriceHistoryRepository = playerPriceHistoryRepository;
         }
 
         private double clampDouble(
@@ -120,6 +128,7 @@ public class RecommendationService {
         @Transactional(readOnly = true)
         public List<MarketRecommendationResponse> getMarketRecommendations(
                         Long leagueId) {
+
                 if (!leagueRepository.existsById(leagueId)) {
                         throw new LeagueNotFoundException(leagueId);
                 }
@@ -127,6 +136,20 @@ public class RecommendationService {
                 EconomicStatusResponse economicStatus = offerService.getEconomicStatus(leagueId);
 
                 SquadNeedsResponse squadNeeds = getSquadNeeds(leagueId);
+
+                LocalDate referenceDate = LocalDate.now()
+                                .minusDays(ECONOMIC_CHANGE_DAYS);
+
+                Map<Long, Long> value7DaysAgoByPlayer = playerPriceHistoryRepository
+                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId)
+                                .stream()
+                                .filter(history -> !history.getPriceDate()
+                                                .isAfter(referenceDate))
+                                .collect(
+                                                Collectors.toMap(
+                                                                PlayerPriceHistory::getPlayerId,
+                                                                PlayerPriceHistory::getMarketValue,
+                                                                (previousValue, currentValue) -> currentValue));
 
                 return marketListingRepository
                                 .findAllByLeague_Id(leagueId)
@@ -138,20 +161,39 @@ public class RecommendationService {
                                 .map(listing -> toRecommendation(
                                                 listing,
                                                 economicStatus.maximumBid(),
-                                                squadNeeds.needScoreByPosition()))
+                                                squadNeeds.needScoreByPosition(),
+                                                value7DaysAgoByPlayer))
                                 .sorted(
                                                 Comparator.comparingInt(
-                                                                MarketRecommendationResponse::score).reversed())
+                                                                MarketRecommendationResponse::score)
+                                                                .reversed())
                                 .toList();
         }
 
         private MarketRecommendationResponse toRecommendation(
                         MarketListing listing,
                         Long maximumBid,
-                        Map<String, Integer> needScoreByPosition) {
+                        Map<String, Integer> needScoreByPosition,
+                        Map<Long, Long> value7DaysAgoByPlayer) {
                 Player player = listing.getPlayer();
 
                 Long marketValue = player.getMarketValue();
+
+                Long value7DaysAgo = value7DaysAgoByPlayer.get(
+                                player.getId());
+
+                Long change7Days = calculateEconomicChange(
+                                marketValue,
+                                value7DaysAgo);
+
+                Double changePercent7Days = calculateEconomicChangePercent(
+                                marketValue,
+                                value7DaysAgo);
+
+                Double pointsPerMillion = calculatePointsPerMillion(
+                                player.getPoints(),
+                                marketValue);
+
                 Long askingPrice = listing.getPrice();
 
                 Long currentBid = listing.getType() == MarketListingType.AUCTION
@@ -161,7 +203,8 @@ public class RecommendationService {
                 Long maximumRecommendedBid = listing.getType() == MarketListingType.AUCTION
                                 ? calculateMaximumRecommendedBid(
                                                 player,
-                                                maximumBid)
+                                                maximumBid,
+                                                changePercent7Days)
                                 : null;
 
                 long effectivePrice;
@@ -209,7 +252,8 @@ public class RecommendationService {
                                 performance.recentSampleSize(),
                                 performance.historicalAveragePoints(),
                                 performance.historicalSampleSize(),
-                                historicalPerformanceScore);
+                                historicalPerformanceScore,
+                                changePercent7Days);
 
                 int score = calculateScore(
                                 scoreBreakdown,
@@ -230,7 +274,8 @@ public class RecommendationService {
                                 affordable,
                                 squadNeedScore,
                                 recentFormScore,
-                                historicalPerformanceScore);
+                                historicalPerformanceScore,
+                                changePercent7Days);
 
                 /*
                  * En una subasta que ya ha superado nuestro límite
@@ -276,6 +321,14 @@ public class RecommendationService {
                                 difference,
                                 round(differencePercentage),
                                 player.getValueFluctuation(),
+                                value7DaysAgo,
+                                change7Days,
+                                changePercent7Days == null
+                                                ? null
+                                                : round(changePercent7Days),
+                                pointsPerMillion == null
+                                                ? null
+                                                : round(pointsPerMillion),
                                 player.getPoints(),
                                 player.getStatus(),
                                 affordable,
@@ -288,13 +341,75 @@ public class RecommendationService {
 
         }
 
+        private Long calculateEconomicChange(
+                        Long currentValue,
+                        Long previousValue) {
+
+                if (currentValue == null || previousValue == null) {
+                        return null;
+                }
+
+                return currentValue - previousValue;
+        }
+
+        private Double calculateEconomicChangePercent(
+                        Long currentValue,
+                        Long previousValue) {
+
+                if (currentValue == null
+                                || previousValue == null
+                                || previousValue <= 0) {
+
+                        return null;
+                }
+
+                return ((double) (currentValue - previousValue)
+                                / previousValue) * 100.0;
+        }
+
+        private Double calculatePointsPerMillion(
+                        Integer points,
+                        Long marketValue) {
+
+                if (points == null
+                                || marketValue == null
+                                || marketValue <= 0) {
+
+                        return null;
+                }
+
+                return points
+                                / (marketValue / 1_000_000.0);
+        }
+
+        private double resolveMarketTrendPercentage(
+                        Player player,
+                        Double changePercent7Days) {
+
+                if (changePercent7Days != null) {
+                        return changePercent7Days;
+                }
+
+                if (player.getMarketValue() == null
+                                || player.getMarketValue() <= 0
+                                || player.getValueFluctuation() == null) {
+
+                        return 0;
+                }
+
+                return ((double) player.getValueFluctuation()
+                                / player.getMarketValue())
+                                * 100;
+        }
+
         private List<MarketRecommendationReason> calculateReasons(
                         Player player,
                         double differencePercentage,
                         boolean affordable,
                         int squadNeedScore,
                         int recentFormScore,
-                        int historicalPerformanceScore) {
+                        int historicalPerformanceScore,
+                        Double changePercent7Days) {
 
                 List<MarketRecommendationReason> reasons = new java.util.ArrayList<>();
 
@@ -308,24 +423,23 @@ public class RecommendationService {
                                         MarketRecommendationReason.PRICE_ABOVE_MARKET);
                 }
 
-                if (player.getMarketValue() != null
-                                && player.getMarketValue() > 0
-                                && player.getValueFluctuation() != null) {
+                double marketTrendPercentage = resolveMarketTrendPercentage(
+                                player,
+                                changePercent7Days);
 
-                        double fluctuationPercentage = ((double) player.getValueFluctuation()
-                                        / player.getMarketValue())
-                                        * 100;
+                double strongRiseThreshold = changePercent7Days != null
+                                ? 5.0
+                                : 3.0;
 
-                        if (fluctuationPercentage >= 3) {
-                                reasons.add(
-                                                MarketRecommendationReason.VALUE_RISING_FAST);
-                        } else if (fluctuationPercentage > 0) {
-                                reasons.add(
-                                                MarketRecommendationReason.VALUE_RISING);
-                        } else if (fluctuationPercentage < 0) {
-                                reasons.add(
-                                                MarketRecommendationReason.VALUE_FALLING);
-                        }
+                if (marketTrendPercentage >= strongRiseThreshold) {
+                        reasons.add(
+                                        MarketRecommendationReason.VALUE_RISING_FAST);
+                } else if (marketTrendPercentage > 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.VALUE_RISING);
+                } else if (marketTrendPercentage < 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.VALUE_FALLING);
                 }
 
                 if (squadNeedScore >= 50) {
@@ -366,7 +480,8 @@ public class RecommendationService {
 
         private Long calculateMaximumRecommendedBid(
                         Player player,
-                        Long userMaximumBid) {
+                        Long userMaximumBid,
+                        Double changePercent7Days) {
                 if (player.getMarketValue() == null
                                 || player.getMarketValue() <= 0) {
                         return 0L;
@@ -374,37 +489,28 @@ public class RecommendationService {
 
                 double multiplier = 1.0;
 
-                /*
-                 * Tendencia positiva:
-                 * permitimos pagar algo por encima del valor actual,
-                 * pero con un máximo del 10 % adicional.
-                 */
-                if (player.getValueFluctuation() != null
-                                && player.getValueFluctuation() > 0) {
-                        double fluctuationPercentage = ((double) player.getValueFluctuation()
-                                        / player.getMarketValue())
-                                        * 100;
+                double marketTrendPercentage = resolveMarketTrendPercentage(
+                                player,
+                                changePercent7Days);
+
+                double bidTrendMultiplier = changePercent7Days != null
+                                ? 0.75
+                                : 2.5;
+
+                if (marketTrendPercentage > 0) {
 
                         double premiumPercentage = Math.min(
-                                        fluctuationPercentage * 2.5,
+                                        marketTrendPercentage * bidTrendMultiplier,
                                         12);
 
                         multiplier += premiumPercentage / 100;
                 }
 
-                /*
-                 * Si está perdiendo valor no pagamos prima:
-                 * reducimos el límite hasta un máximo del 10 %.
-                 */
-                if (player.getValueFluctuation() != null
-                                && player.getValueFluctuation() < 0) {
-                        double fluctuationPercentage = Math.abs(
-                                        ((double) player.getValueFluctuation()
-                                                        / player.getMarketValue())
-                                                        * 100);
+                if (marketTrendPercentage < 0) {
 
                         double discountPercentage = Math.min(
-                                        fluctuationPercentage * 2.5,
+                                        Math.abs(marketTrendPercentage)
+                                                        * bidTrendMultiplier,
                                         12);
 
                         multiplier -= discountPercentage / 100;
@@ -446,7 +552,8 @@ public class RecommendationService {
                         int recentFormSampleSize,
                         double historicalAveragePoints,
                         int historicalSampleSize,
-                        int historicalPerformanceScore) {
+                        int historicalPerformanceScore,
+                        Double changePercent7Days) {
 
                 double baseScore = 50;
 
@@ -455,22 +562,19 @@ public class RecommendationService {
                                 -30,
                                 30);
 
-                double valueTrendScore = 0;
+                double marketTrendPercentage = resolveMarketTrendPercentage(
+                                player,
+                                changePercent7Days);
 
-                if (player.getMarketValue() != null
-                                && player.getMarketValue() > 0
-                                && player.getValueFluctuation() != null) {
+                double trendMultiplier = changePercent7Days != null
+                                ? 2.0
+                                : 7.0;
 
-                        double fluctuationPercentage = ((double) player.getValueFluctuation()
-                                        / player.getMarketValue())
-                                        * 100;
-
-                        valueTrendScore = (int) Math.round(
-                                        clampDouble(
-                                                        fluctuationPercentage * 7,
-                                                        -25,
-                                                        25));
-                }
+                double valueTrendScore = Math.round(
+                                clampDouble(
+                                                marketTrendPercentage * trendMultiplier,
+                                                -25,
+                                                25));
 
                 double squadNeedContribution = (int) Math.round(
                                 squadNeedScore * 0.20);

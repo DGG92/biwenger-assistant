@@ -36,8 +36,12 @@
                             Precio: mayor a menor
                         </option>
 
-                        <option value="VALUE_FLUCTUATION_DESC">
-                            Mayor subida de valor
+                        <option value="CHANGE_7D_DESC">
+                            Mayor subida en 7 días
+                        </option>
+
+                        <option value="CHANGE_7D_ASC">
+                            Mayor caída en 7 días
                         </option>
 
                         <option value="POINTS_DESC">
@@ -212,12 +216,21 @@
                 <div class="player-data">
                     <div>
                         <span>Precio</span>
+
                         <strong>
                             {{
                             player.askingPrice
                             | currency:'EUR':'symbol':'1.0-0':'es-ES'
                             }}
                         </strong>
+
+                        <small class="metric-context" [class.positive]="player.priceDifference > 0"
+                            [class.negative]="player.priceDifference < 0">
+                            @if (player.priceDifference > 0) {
+                            {{ player.priceDifferencePercentage | number:'1.0-1':'es-ES' }}%
+                            por debajo de mercado
+                            } @else if (player.priceDifference < 0) { {{ -player.priceDifferencePercentage |
+                                number:'1.0-1':'es-ES' }}% por encima de mercado } @else { A valor de mercado } </small>
                     </div>
 
                     <div>
@@ -231,21 +244,58 @@
                     </div>
 
                     <div>
-                        <span>Puntos</span>
-                        <strong>{{ player.points }}</strong>
+                        <span>Tendencia 7 días</span>
+
+                        @if (
+                        player.change7Days !== null
+                        && player.changePercent7Days !== null
+                        ) {
+                        <strong [class.positive]="player.change7Days > 0" [class.negative]="player.change7Days < 0">
+                            {{ player.changePercent7Days > 0 ? '+' : '' }}
+                            {{
+                            player.changePercent7Days
+                            | number:'1.0-2':'es-ES'
+                            }}%
+                        </strong>
+
+                        <small class="metric-context" [class.positive]="player.change7Days > 0"
+                            [class.negative]="player.change7Days < 0">
+                            {{ player.change7Days > 0 ? '+' : '' }}
+                            {{
+                            player.change7Days
+                            | currency:'EUR':'symbol':'1.0-0':'es-ES'
+                            }}
+                        </small>
+                        } @else {
+                        <strong class="metric-unavailable">
+                            Sin histórico
+                        </strong>
+
+                        <small class="metric-context">
+                            Necesitamos al menos 7 días
+                        </small>
+                        }
                     </div>
 
-                    <div>
-                        <span>Variación</span>
+                    @if (
+                    player.marketType === 'AUCTION'
+                    && player.maximumRecommendedBid !== null
+                    ) {
+                    <div class="bid-limit-data">
+                        <span>Puja máxima</span>
 
-                        <strong [class.positive]="player.valueFluctuation > 0"
-                            [class.negative]="player.valueFluctuation < 0">
+                        <strong>
                             {{
-                            player.valueFluctuation
+                            player.maximumRecommendedBid
                             | currency:'EUR':'symbol':'1.0-0':'es-ES'
                             }}
                         </strong>
+
+                        <small class="metric-context">
+                            Límite recomendado
+                        </small>
                     </div>
+                    }
 
                     <div class="score-data">
                         <span>Score</span>
@@ -350,7 +400,13 @@
                         </div>
 
                         <div>
-                            <span>Evolución de valor</span>
+                            <span>
+                                @if (player.changePercent7Days !== null) {
+                                Tendencia de valor · 7 días
+                                } @else {
+                                Tendencia de valor · reciente
+                                }
+                            </span>
                             <strong [class.positive]="player.scoreBreakdown.valueTrend > 0"
                                 [class.negative]="player.scoreBreakdown.valueTrend < 0">
                                 {{ player.scoreBreakdown.valueTrend > 0 ? '+' : '' }}
@@ -497,16 +553,6 @@
                         Puja actual:
                         {{
                         player.currentBid
-                        | currency:'EUR':'symbol':'1.0-0':'es-ES'
-                        }}
-                    </span>
-                    }
-
-                    @if (player.maximumRecommendedBid !== null) {
-                    <span>
-                        Máx. recomendada:
-                        {{
-                        player.maximumRecommendedBid
                         | currency:'EUR':'symbol':'1.0-0':'es-ES'
                         }}
                     </span>

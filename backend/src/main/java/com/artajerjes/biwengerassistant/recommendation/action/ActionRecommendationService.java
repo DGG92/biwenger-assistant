@@ -163,17 +163,10 @@ public class ActionRecommendationService {
                                 : "Valora comprar a "
                                                 + recommendation.playerName();
 
-                String explanation = actionType == ActionType.BID
-                                ? "Es una oportunidad de mercado con una puntuación de "
-                                                + recommendation.score()
-                                                + "/100. La puja máxima recomendada es "
-                                                + suggestedAmount
-                                                + " €."
-                                : "Es una oportunidad de mercado con una puntuación de "
-                                                + recommendation.score()
-                                                + "/100 y un precio de "
-                                                + recommendation.askingPrice()
-                                                + " €.";
+                String explanation = buildMarketActionExplanation(
+                                actionType,
+                                recommendation,
+                                suggestedAmount);
 
                 return new ActionCandidate(
                                 actionType,
@@ -188,6 +181,72 @@ public class ActionRecommendationService {
                                                 .stream()
                                                 .map(Enum::name)
                                                 .toList());
+        }
+
+        private String buildMarketActionExplanation(
+                        ActionType actionType,
+                        MarketRecommendationResponse recommendation,
+                        Long suggestedAmount) {
+
+                String base = actionType == ActionType.BID
+                                ? "Es una oportunidad de mercado con una puntuación de "
+                                                + recommendation.score()
+                                                + "/100. La puja máxima recomendada es "
+                                                + suggestedAmount
+                                                + " €."
+                                : "Es una oportunidad de mercado con una puntuación de "
+                                                + recommendation.score()
+                                                + "/100 y un precio de "
+                                                + recommendation.askingPrice()
+                                                + " €.";
+
+                List<String> reasons = recommendation.reasons()
+                                .stream()
+                                .map(Enum::name)
+                                .map(this::marketReasonExplanation)
+                                .filter(java.util.Objects::nonNull)
+                                .limit(2)
+                                .toList();
+
+                if (reasons.isEmpty()) {
+                        return base;
+                }
+
+                return base
+                                + " Destaca porque "
+                                + String.join(
+                                                " y ",
+                                                reasons)
+                                + ".";
+        }
+
+        private String marketReasonExplanation(
+                        String reason) {
+
+                return switch (reason) {
+                        case "PRICE_BELOW_MARKET" ->
+                                "su precio está por debajo del valor de mercado";
+
+                        case "VALUE_RISING_FAST" ->
+                                "su valor está subiendo con fuerza";
+
+                        case "VALUE_RISING" ->
+                                "su valor está en subida";
+
+                        case "GOOD_RECENT_FORM" ->
+                                "atraviesa una buena forma reciente";
+
+                        case "EXCELLENT_RECENT_FORM" ->
+                                "atraviesa una forma reciente excelente";
+
+                        case "STRONG_HISTORICAL_PERFORMANCE" ->
+                                "presenta un rendimiento histórico sólido";
+
+                        case "SQUAD_POSITION_NEEDED" ->
+                                "refuerza una posición necesaria en tu plantilla";
+
+                        default -> null;
+                };
         }
 
         private List<ActionCandidate> evaluateRecommendedLineupActions(
@@ -736,8 +795,12 @@ public class ActionRecommendationService {
                                                         player.getId(),
                                                         player.getName(),
                                                         "Sigue de cerca a " + player.getName(),
-                                                        "Las señales económicas, deportivas y de plantilla "
-                                                                        + "todavía no justifican una decisión clara.",
+                                                        buildWatchExplanation(
+                                                                        profit,
+                                                                        dailyChange,
+                                                                        performance,
+                                                                        positionNeed,
+                                                                        signals),
                                                         calculateConfidence(
                                                                         performance,
                                                                         Math.abs(difference)),
@@ -782,16 +845,13 @@ public class ActionRecommendationService {
                         PlayerPerformanceSignals performance,
                         int positionNeed) {
 
-                String recentFormText = performance.recentSampleSize() >= 2
-                                ? round(performance.recentWeightedAverage())
-                                                + " puntos de media reciente"
-                                : "datos recientes todavía insuficientes";
+                String recentFormText = buildRecentFormText(performance);
 
                 return "Acumula "
-                                + profit
-                                + " € de beneficio/pérdida, cambia "
-                                + dailyChange
-                                + " € al día, tiene "
+                                + buildProfitText(profit)
+                                + ", su valor "
+                                + buildValueTrendText(dailyChange)
+                                + ", tiene "
                                 + recentFormText
                                 + " y la necesidad de su posición es "
                                 + positionNeed
@@ -804,18 +864,134 @@ public class ActionRecommendationService {
                         PlayerPerformanceSignals performance,
                         int positionNeed) {
 
-                String recentFormText = performance.recentSampleSize() >= 2
-                                ? round(performance.recentWeightedAverage())
-                                                + " puntos de media reciente"
-                                : "datos recientes todavía insuficientes";
-
                 return "Mantenerlo sigue teniendo valor deportivo y económico: "
-                                + profit
-                                + " € de beneficio/pérdida, "
-                                + dailyChange
-                                + " € diarios y "
-                                + recentFormText
+                                + buildProfitText(profit)
+                                + ", su valor "
+                                + buildValueTrendText(dailyChange)
+                                + " y tiene "
+                                + buildRecentFormText(performance)
                                 + ".";
+        }
+
+        private String buildWatchExplanation(
+                        long profit,
+                        long dailyChange,
+                        PlayerPerformanceSignals performance,
+                        int positionNeed,
+                        List<String> signals) {
+
+                List<String> reasons = new ArrayList<>();
+
+                if (dailyChange > 0) {
+                        reasons.add(
+                                        "su valor "
+                                                        + buildValueTrendText(dailyChange));
+
+                } else if (dailyChange < 0) {
+                        reasons.add(
+                                        "su valor "
+                                                        + buildValueTrendText(dailyChange));
+                }
+
+                if (profit > 0) {
+                        reasons.add(buildProfitText(profit));
+
+                } else if (profit < 0) {
+                        reasons.add(buildProfitText(profit));
+                }
+
+                if (performance.recentSampleSize() >= 2) {
+                        reasons.add(
+                                        "su forma reciente es de "
+                                                        + round(performance.recentWeightedAverage())
+                                                        + " puntos");
+
+                } else if (signals.contains("RECENT_FORM_INSUFFICIENT_DATA")) {
+                        reasons.add(
+                                        "todavía hay pocos datos recientes");
+                }
+
+                if (signals.contains("POSITION_NEEDED")) {
+                        reasons.add(
+                                        "su posición tiene una necesidad de "
+                                                        + positionNeed
+                                                        + "/100");
+
+                } else if (signals.contains("POSITION_WELL_COVERED")) {
+                        reasons.add(
+                                        "su posición está bien cubierta");
+                }
+
+                if (signals.contains("STARTER")) {
+                        reasons.add("es titular");
+                }
+
+                if (signals.contains("UNAVAILABLE")) {
+                        reasons.add(
+                                        "actualmente no está disponible");
+
+                } else if (signals.contains("DOUBT")) {
+                        reasons.add(
+                                        "su disponibilidad genera dudas");
+                }
+
+                if (reasons.isEmpty()) {
+                        return "No hay todavía suficientes señales para recomendar "
+                                        + "mantenerlo o venderlo.";
+                }
+
+                return "Conviene seguir su evolución: "
+                                + String.join(
+                                                ", ",
+                                                reasons)
+                                + ".";
+        }
+
+        private String buildProfitText(
+                        long profit) {
+
+                if (profit > 0) {
+                        return "una plusvalía de "
+                                        + profit
+                                        + " €";
+                }
+
+                if (profit < 0) {
+                        return "una pérdida de "
+                                        + Math.abs(profit)
+                                        + " €";
+                }
+
+                return "sin plusvalía ni pérdida respecto al precio de compra";
+        }
+
+        private String buildValueTrendText(
+                        long dailyChange) {
+
+                if (dailyChange > 0) {
+                        return "está subiendo "
+                                        + dailyChange
+                                        + " €";
+                }
+
+                if (dailyChange < 0) {
+                        return "está bajando "
+                                        + Math.abs(dailyChange)
+                                        + " €";
+                }
+
+                return "se mantiene estable";
+        }
+
+        private String buildRecentFormText(
+                        PlayerPerformanceSignals performance) {
+
+                if (performance.recentSampleSize() >= 2) {
+                        return round(performance.recentWeightedAverage())
+                                        + " puntos de media reciente";
+                }
+
+                return "datos recientes todavía insuficientes";
         }
 
         private double round(

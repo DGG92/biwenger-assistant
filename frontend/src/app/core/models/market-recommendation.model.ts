@@ -49,6 +49,12 @@ export interface MarketRecommendation {
     priceDifference: number;
     priceDifferencePercentage: number;
     valueFluctuation: number;
+
+    value7DaysAgo: number | null;
+    change7Days: number | null;
+    changePercent7Days: number | null;
+    pointsPerMillion: number | null;
+
     points: number;
     status: PlayerStatus;
     affordable: boolean;

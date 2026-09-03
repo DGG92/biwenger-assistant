@@ -28,6 +28,7 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlert;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationService;
 import com.artajerjes.biwengerassistant.recommendation.RecommendationType;
+import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationReason;
 import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupChangeResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupPlayerResponse;
@@ -172,6 +173,31 @@ class ActionRecommendationServiceTest {
                 assertFalse(
                                 action.sourceSignals()
                                                 .contains("PROFIT_CAN_BE_REALIZED"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "una plusvalía de 840000 €"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "su valor está subiendo 40000 €"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "9.0 puntos de media reciente"));
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "beneficio/pérdida"));
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "€ diarios"));
         }
 
         @Test
@@ -259,6 +285,26 @@ class ActionRecommendationServiceTest {
                 assertTrue(
                                 action.sourceSignals()
                                                 .contains("PROFIT_CAN_BE_REALIZED"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "una plusvalía de 1000000 €"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "su valor está bajando 60000 €"));
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "beneficio/pérdida"));
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "€ al día"));
         }
 
         @Test
@@ -462,6 +508,30 @@ class ActionRecommendationServiceTest {
                 assertFalse(
                                 action.sourceSignals()
                                                 .contains("VALUE_FALLING"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "todavía hay pocos datos recientes"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "todavía hay pocos datos recientes"));
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "todavía no justifican una decisión clara"));
+
+                assertEquals(
+                                "Conviene seguir su evolución: todavía hay pocos datos recientes.",
+                                action.explanation());
+
+                assertFalse(
+                                action.explanation()
+                                                .contains(
+                                                                "todavía no justifican una decisión clara"));
         }
 
         @Test
@@ -879,6 +949,10 @@ class ActionRecommendationServiceTest {
                                 -10_000L,
                                 -2.86,
                                 10_000L,
+                                null,
+                                null,
+                                null,
+                                null,
                                 0,
                                 PlayerStatus.OK,
                                 true,
@@ -925,6 +999,11 @@ class ActionRecommendationServiceTest {
                 assertEquals(
                                 81,
                                 action.confidence());
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "puja máxima recomendada"));
         }
 
         @Test
@@ -944,6 +1023,10 @@ class ActionRecommendationServiceTest {
                                 20_000L,
                                 5.56,
                                 10_000L,
+                                null,
+                                null,
+                                null,
+                                null,
                                 0,
                                 PlayerStatus.OK,
                                 true,
@@ -951,7 +1034,9 @@ class ActionRecommendationServiceTest {
                                 RecommendationType.BUY,
                                 null,
                                 null,
-                                List.of(),
+                                List.of(
+                                                MarketRecommendationReason.PRICE_BELOW_MARKET,
+                                                MarketRecommendationReason.VALUE_RISING_FAST),
                                 null);
 
                 when(
@@ -990,6 +1075,21 @@ class ActionRecommendationServiceTest {
                 assertEquals(
                                 75,
                                 action.confidence());
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "su precio está por debajo del valor de mercado"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "su valor está subiendo con fuerza"));
+
+                assertTrue(
+                                action.explanation()
+                                                .contains(
+                                                                "un precio de 340000 €"));
         }
 
         @Test
@@ -1049,6 +1149,10 @@ class ActionRecommendationServiceTest {
                                 -10_000L,
                                 -2.86,
                                 10_000L,
+                                null,
+                                null,
+                                null,
+                                null,
                                 0,
                                 PlayerStatus.OK,
                                 true,
@@ -1073,6 +1177,10 @@ class ActionRecommendationServiceTest {
                                 20_000L,
                                 5.56,
                                 10_000L,
+                                null,
+                                null,
+                                null,
+                                null,
                                 0,
                                 PlayerStatus.OK,
                                 true,
