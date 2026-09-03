@@ -50,4 +50,13 @@ public interface PlayerPriceHistoryRepository
                         """)
         List<Long> findPlayerIdsWithHistoryByLeagueId(
                         @Param("leagueId") Long leagueId);
+
+        @Query("""
+                        SELECT p
+                        FROM PlayerPriceHistory p
+                        WHERE p.leagueId = :leagueId
+                        ORDER BY p.playerId ASC, p.priceDate ASC
+                        """)
+        List<PlayerPriceHistory> findAllByLeagueIdOrderByPlayerAndPriceDate(
+                        @Param("leagueId") Long leagueId);
 }

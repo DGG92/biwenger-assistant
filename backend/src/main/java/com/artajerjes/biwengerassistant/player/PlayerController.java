@@ -17,6 +17,7 @@ import com.artajerjes.biwengerassistant.biwenger.PlayerDetailSyncService;
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
 import com.artajerjes.biwengerassistant.history.dto.PlayerPriceHistorySyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.CreatePlayerRequest;
+import com.artajerjes.biwengerassistant.player.dto.LeagueStatisticsResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerAnalyticsResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
@@ -34,12 +35,15 @@ public class PlayerController {
         private final PlayerService playerService;
         private final PlayerDetailSyncService playerDetailSyncService;
         private final PlayerAnalyticsService playerAnalyticsService;
+        private final LeagueStatisticsService leagueStatisticsService;
 
         public PlayerController(PlayerService playerService, PlayerDetailSyncService playerDetailSyncService,
-                        PlayerAnalyticsService playerAnalyticsService) {
+                        PlayerAnalyticsService playerAnalyticsService,
+                        LeagueStatisticsService leagueStatisticsService) {
                 this.playerService = playerService;
                 this.playerDetailSyncService = playerDetailSyncService;
                 this.playerAnalyticsService = playerAnalyticsService;
+                this.leagueStatisticsService = leagueStatisticsService;
         }
 
         @PostMapping
@@ -156,5 +160,12 @@ public class PlayerController {
 
                 return playerDetailSyncService
                                 .syncLeaguePlayerDetails(leagueId);
+        }
+
+        @GetMapping("/statistics")
+        public LeagueStatisticsResponse getLeagueStatistics(
+                        @PathVariable Long leagueId) {
+
+                return leagueStatisticsService.getLeagueStatistics(leagueId);
         }
 }
