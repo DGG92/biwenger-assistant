@@ -27,7 +27,7 @@ public class BiwengerSyncScheduler {
                 this.syncExecutionService = syncExecutionService;
         }
 
-        @Scheduled(fixedDelayString = "${biwenger.sync.interval-ms:300000}")
+        @Scheduled(fixedDelayString = "${biwenger.sync.interval-ms:900000}")
         public void sync() {
 
                 try {

@@ -90,7 +90,7 @@ class SyncStatusServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService,
                                 false,
-                                300000L);
+                                900000L);
 
                 SyncStatusResponse response = service.getStatus(1L);
 
@@ -98,7 +98,7 @@ class SyncStatusServiceTest {
 
                 assertThat(response.scheduler().enabled()).isFalse();
                 assertThat(response.scheduler().intervalMs())
-                                .isEqualTo(300000L);
+                                .isEqualTo(900000L);
 
                 assertThat(response.execution().status())
                                 .isEqualTo(SyncExecutionStatus.IDLE);
@@ -209,7 +209,7 @@ class SyncStatusServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService,
                                 false,
-                                300000L);
+                                900000L);
 
                 SyncStatusResponse response = service.getStatus(1L);
 
@@ -272,7 +272,7 @@ class SyncStatusServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService,
                                 false,
-                                300000L);
+                                900000L);
 
                 SyncStatusResponse response = service.getStatus(1L);
 
@@ -322,7 +322,7 @@ class SyncStatusServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService,
                                 false,
-                                300000L);
+                                900000L);
 
                 SyncStatusResponse response = service.getStatus(1L);
 
@@ -383,7 +383,7 @@ class SyncStatusServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService,
                                 false,
-                                300000L);
+                                900000L);
 
                 SyncStatusResponse response = service.getStatus(1L);
 

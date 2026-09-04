@@ -31,7 +31,7 @@ public class SyncStatusService {
                         BiwengerSyncService biwengerSyncService,
                         SyncExecutionStateService syncExecutionStateService,
                         @Value("${biwenger.sync.enabled:false}") boolean schedulerEnabled,
-                        @Value("${biwenger.sync.interval-ms:300000}") long schedulerIntervalMs) {
+                        @Value("${biwenger.sync.interval-ms:900000}") long schedulerIntervalMs) {
 
                 this.playerRepository = playerRepository;
                 this.playerPriceHistoryRepository = playerPriceHistoryRepository;
