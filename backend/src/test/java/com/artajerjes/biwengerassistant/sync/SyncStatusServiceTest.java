@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.artajerjes.biwengerassistant.biwenger.BiwengerSyncService;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
@@ -22,6 +23,10 @@ class SyncStatusServiceTest {
                 PlayerPriceHistoryRepository playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
 
                 SyncStateService syncStateService = mock(SyncStateService.class);
+
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
 
                 LocalDateTime oldestSuccess = LocalDateTime.of(2026, 9, 1, 10, 0);
 
@@ -82,6 +87,8 @@ class SyncStatusServiceTest {
                                 playerRepository,
                                 playerPriceHistoryRepository,
                                 syncStateService,
+                                biwengerSyncService,
+                                syncExecutionStateService,
                                 false,
                                 300000L);
 
@@ -92,6 +99,18 @@ class SyncStatusServiceTest {
                 assertThat(response.scheduler().enabled()).isFalse();
                 assertThat(response.scheduler().intervalMs())
                                 .isEqualTo(300000L);
+
+                assertThat(response.execution().status())
+                                .isEqualTo(SyncExecutionStatus.IDLE);
+
+                assertThat(response.execution().startedAt())
+                                .isNull();
+
+                assertThat(response.execution().finishedAt())
+                                .isNull();
+
+                assertThat(response.execution().lastError())
+                                .isNull();
 
                 assertThat(response.details().state())
                                 .isEqualTo("READY");
@@ -148,6 +167,10 @@ class SyncStatusServiceTest {
 
                 SyncStateService syncStateService = mock(SyncStateService.class);
 
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
+
                 LocalDateTime lastRateLimitAt = LocalDateTime.of(2026, 9, 4, 12, 0);
 
                 LocalDateTime cooldownUntil = LocalDateTime.of(2026, 9, 4, 13, 0);
@@ -183,6 +206,8 @@ class SyncStatusServiceTest {
                                 playerRepository,
                                 playerPriceHistoryRepository,
                                 syncStateService,
+                                biwengerSyncService,
+                                syncExecutionStateService,
                                 false,
                                 300000L);
 
@@ -202,5 +227,176 @@ class SyncStatusServiceTest {
 
                 assertThat(response.details().cooldownUntil())
                                 .isEqualTo(cooldownUntil);
+
+                assertThat(response.execution().status())
+                                .isEqualTo(SyncExecutionStatus.IDLE);
+        }
+
+        @Test
+        void shouldExposeRunningSync() {
+
+                PlayerRepository playerRepository = mock(PlayerRepository.class);
+
+                PlayerPriceHistoryRepository playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
+
+                SyncStateService syncStateService = mock(SyncStateService.class);
+
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
+
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(List.of());
+
+                when(syncStateService.findState(
+                                1L,
+                                SyncType.PLAYER_DETAILS))
+                                .thenReturn(null);
+
+                when(syncStateService.isInCooldown(
+                                1L,
+                                SyncType.PLAYER_DETAILS))
+                                .thenReturn(false);
+
+                when(biwengerSyncService.isSyncRunning(1L))
+                                .thenReturn(true);
+
+                SyncStatusService service = new SyncStatusService(
+                                playerRepository,
+                                playerPriceHistoryRepository,
+                                syncStateService,
+                                biwengerSyncService,
+                                syncExecutionStateService,
+                                false,
+                                300000L);
+
+                SyncStatusResponse response = service.getStatus(1L);
+
+                assertThat(response.execution().status())
+                                .isEqualTo(SyncExecutionStatus.RUNNING);
+        }
+
+        @Test
+        void shouldExposeLastSuccessfulSync() {
+
+                PlayerRepository playerRepository = mock(PlayerRepository.class);
+
+                PlayerPriceHistoryRepository playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
+
+                SyncStateService syncStateService = mock(SyncStateService.class);
+
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
+
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(List.of());
+
+                LocalDateTime startedAt = LocalDateTime.of(2026, 9, 4, 18, 0);
+
+                LocalDateTime finishedAt = LocalDateTime.of(2026, 9, 4, 18, 2);
+
+                SyncExecutionState executionState = new SyncExecutionState(1L);
+
+                executionState.markRunning(startedAt);
+                executionState.markSuccess(finishedAt);
+
+                when(syncExecutionStateService.findState(1L))
+                                .thenReturn(executionState);
+
+                when(biwengerSyncService.isSyncRunning(1L))
+                                .thenReturn(false);
+
+                SyncStatusService service = new SyncStatusService(
+                                playerRepository,
+                                playerPriceHistoryRepository,
+                                syncStateService,
+                                biwengerSyncService,
+                                syncExecutionStateService,
+                                false,
+                                300000L);
+
+                SyncStatusResponse response = service.getStatus(1L);
+
+                assertThat(response.execution().status())
+                                .isEqualTo(SyncExecutionStatus.SUCCESS);
+
+                assertThat(response.execution().startedAt())
+                                .isEqualTo(startedAt);
+
+                assertThat(response.execution().finishedAt())
+                                .isEqualTo(finishedAt);
+
+                assertThat(response.execution().lastError())
+                                .isNull();
+        }
+
+        @Test
+        void shouldExposeLastFailedSync() {
+
+                PlayerRepository playerRepository = mock(PlayerRepository.class);
+
+                PlayerPriceHistoryRepository playerPriceHistoryRepository = mock(PlayerPriceHistoryRepository.class);
+
+                SyncStateService syncStateService = mock(SyncStateService.class);
+
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
+
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(List.of());
+
+                LocalDateTime startedAt = LocalDateTime.of(2026, 9, 4, 18, 0);
+
+                LocalDateTime finishedAt = LocalDateTime.of(2026, 9, 4, 18, 1);
+
+                SyncExecutionState executionState = new SyncExecutionState(1L);
+
+                executionState.markRunning(startedAt);
+                executionState.markFailed(
+                                finishedAt,
+                                "Biwenger unavailable");
+
+                when(syncExecutionStateService.findState(1L))
+                                .thenReturn(executionState);
+
+                when(biwengerSyncService.isSyncRunning(1L))
+                                .thenReturn(false);
+
+                SyncStatusService service = new SyncStatusService(
+                                playerRepository,
+                                playerPriceHistoryRepository,
+                                syncStateService,
+                                biwengerSyncService,
+                                syncExecutionStateService,
+                                false,
+                                300000L);
+
+                SyncStatusResponse response = service.getStatus(1L);
+
+                assertThat(response.execution().status())
+                                .isEqualTo(SyncExecutionStatus.FAILED);
+
+                assertThat(response.execution().startedAt())
+                                .isEqualTo(startedAt);
+
+                assertThat(response.execution().finishedAt())
+                                .isEqualTo(finishedAt);
+
+                assertThat(response.execution().lastError())
+                                .isEqualTo("Biwenger unavailable");
         }
 }

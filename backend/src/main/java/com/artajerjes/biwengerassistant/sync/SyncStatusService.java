@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.artajerjes.biwengerassistant.biwenger.BiwengerSyncService;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
@@ -18,6 +19,8 @@ public class SyncStatusService {
         private final PlayerRepository playerRepository;
         private final PlayerPriceHistoryRepository playerPriceHistoryRepository;
         private final SyncStateService syncStateService;
+        private final BiwengerSyncService biwengerSyncService;
+        private final SyncExecutionStateService syncExecutionStateService;
         private final boolean schedulerEnabled;
         private final long schedulerIntervalMs;
 
@@ -25,12 +28,16 @@ public class SyncStatusService {
                         PlayerRepository playerRepository,
                         PlayerPriceHistoryRepository playerPriceHistoryRepository,
                         SyncStateService syncStateService,
+                        BiwengerSyncService biwengerSyncService,
+                        SyncExecutionStateService syncExecutionStateService,
                         @Value("${biwenger.sync.enabled:false}") boolean schedulerEnabled,
                         @Value("${biwenger.sync.interval-ms:300000}") long schedulerIntervalMs) {
 
                 this.playerRepository = playerRepository;
                 this.playerPriceHistoryRepository = playerPriceHistoryRepository;
                 this.syncStateService = syncStateService;
+                this.biwengerSyncService = biwengerSyncService;
+                this.syncExecutionStateService = syncExecutionStateService;
                 this.schedulerEnabled = schedulerEnabled;
                 this.schedulerIntervalMs = schedulerIntervalMs;
         }
@@ -43,6 +50,10 @@ public class SyncStatusService {
                 SyncState detailSyncState = syncStateService.findState(
                                 leagueId,
                                 SyncType.PLAYER_DETAILS);
+
+                SyncExecutionState executionState = syncExecutionStateService.findState(leagueId);
+
+                boolean syncRunning = biwengerSyncService.isSyncRunning(leagueId);
 
                 boolean detailSyncInCooldown = syncStateService.isInCooldown(
                                 leagueId,
@@ -86,11 +97,32 @@ public class SyncStatusService {
                                 .max(LocalDateTime::compareTo)
                                 .orElse(null);
 
+                SyncExecutionStatus executionStatus;
+
+                if (syncRunning) {
+                        executionStatus = SyncExecutionStatus.RUNNING;
+                } else if (executionState != null) {
+                        executionStatus = executionState.getStatus();
+                } else {
+                        executionStatus = SyncExecutionStatus.IDLE;
+                }
+
                 return new SyncStatusResponse(
                                 leagueId,
                                 new SyncStatusResponse.SchedulerStatus(
                                                 schedulerEnabled,
                                                 schedulerIntervalMs),
+                                new SyncStatusResponse.ExecutionStatus(
+                                                executionStatus,
+                                                executionState == null
+                                                                ? null
+                                                                : executionState.getStartedAt(),
+                                                executionState == null
+                                                                ? null
+                                                                : executionState.getFinishedAt(),
+                                                executionState == null
+                                                                ? null
+                                                                : executionState.getLastError()),
                                 new SyncStatusResponse.DetailSyncStatus(
                                                 detailSyncInCooldown
                                                                 ? "RATE_LIMITED"

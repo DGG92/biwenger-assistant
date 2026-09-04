@@ -6,6 +6,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.artajerjes.biwengerassistant.sync.SyncExecutionService;
+import com.artajerjes.biwengerassistant.sync.SyncExecutionStatus;
+import com.artajerjes.biwengerassistant.sync.SyncNowResponse;
+
 @Component
 @ConditionalOnProperty(name = "biwenger.sync.enabled", havingValue = "true")
 public class BiwengerSyncScheduler {
@@ -15,22 +19,34 @@ public class BiwengerSyncScheduler {
 
         private static final Long DEFAULT_LEAGUE_ID = 1L;
 
-        private final BiwengerSyncService biwengerSyncService;
+        private final SyncExecutionService syncExecutionService;
 
         public BiwengerSyncScheduler(
-                        BiwengerSyncService biwengerSyncService) {
-                this.biwengerSyncService = biwengerSyncService;
+                        SyncExecutionService syncExecutionService) {
+
+                this.syncExecutionService = syncExecutionService;
         }
 
         @Scheduled(fixedDelayString = "${biwenger.sync.interval-ms:300000}")
         public void sync() {
+
                 try {
                         log.info(
                                         "Starting automatic Biwenger sync for league {}",
                                         DEFAULT_LEAGUE_ID);
 
-                        biwengerSyncService.syncScheduled(
+                        SyncNowResponse response = syncExecutionService.syncNow(
                                         DEFAULT_LEAGUE_ID);
+
+                        if (response.status() == SyncExecutionStatus.RUNNING
+                                        && !response.started()) {
+
+                                log.info(
+                                                "Automatic Biwenger sync skipped for league {} because another sync is already running",
+                                                DEFAULT_LEAGUE_ID);
+
+                                return;
+                        }
 
                         log.info(
                                         "Automatic Biwenger sync completed successfully for league {}",

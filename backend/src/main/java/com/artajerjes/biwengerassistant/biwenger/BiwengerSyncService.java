@@ -173,13 +173,19 @@ public class BiwengerSyncService {
                 }
         }
 
-        public void syncScheduled(Long leagueId) {
+        public boolean isSyncRunning(
+                        Long leagueId) {
+
+                return leaguesBeingSynced.contains(leagueId);
+        }
+
+        public boolean syncScheduled(Long leagueId) {
 
                 if (!leaguesBeingSynced.add(leagueId)) {
                         log.warn(
                                         "Skipping scheduled Biwenger sync for league {} because another sync is already running",
                                         leagueId);
-                        return;
+                        return false;
                 }
 
                 long startedAt = System.currentTimeMillis();
@@ -284,9 +290,13 @@ public class BiwengerSyncService {
                                         elapsed,
                                         exception);
 
+                        throw exception;
+
                 } finally {
                         leaguesBeingSynced.remove(leagueId);
                 }
+
+                return true;
         }
 
         private void runScheduledPhase(

@@ -733,9 +733,14 @@ class BiwengerSyncServiceTest {
                                                 new IllegalStateException(
                                                                 "Players unavailable"));
 
-                assertDoesNotThrow(
+                IllegalStateException exception = assertThrows(
+                                IllegalStateException.class,
                                 () -> biwengerSyncService.syncScheduled(
                                                 LEAGUE_ID));
+
+                assertEquals(
+                                "Players unavailable",
+                                exception.getMessage());
 
                 verify(managerService)
                                 .sync(LEAGUE_ID);

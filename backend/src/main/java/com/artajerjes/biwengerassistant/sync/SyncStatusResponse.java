@@ -5,12 +5,20 @@ import java.time.LocalDateTime;
 public record SyncStatusResponse(
                 Long leagueId,
                 SchedulerStatus scheduler,
+                ExecutionStatus execution,
                 DetailSyncStatus details,
                 PlayerSyncStatus players) {
 
         public record SchedulerStatus(
                         boolean enabled,
                         long intervalMs) {
+        }
+
+        public record ExecutionStatus(
+                        SyncExecutionStatus status,
+                        LocalDateTime startedAt,
+                        LocalDateTime finishedAt,
+                        String lastError) {
         }
 
         public record DetailSyncStatus(
