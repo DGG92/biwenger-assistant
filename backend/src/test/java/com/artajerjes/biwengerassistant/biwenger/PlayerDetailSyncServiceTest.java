@@ -1,24 +1,23 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.playerdetail.BiwengerPlayerDetailResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
@@ -140,6 +139,9 @@ class PlayerDetailSyncServiceTest {
 
                 assertNull(
                                 result.rateLimitedPlayerId());
+
+                assertNull(
+                                result.retryAfterSeconds());
 
                 /*
                  * La comprobación fundamental:
@@ -328,6 +330,9 @@ class PlayerDetailSyncServiceTest {
                                 2L,
                                 result.rateLimitedPlayerId());
 
+                assertNull(
+                                result.retryAfterSeconds());
+
                 /*
                  * El primer jugador sí se persistió correctamente.
                  */
@@ -425,6 +430,60 @@ class PlayerDetailSyncServiceTest {
                                                 any(),
                                                 any(),
                                                 any());
+        }
+
+        @Test
+        void syncLeaguePlayerDetailsShouldExposeRetryAfterWhenRateLimited() {
+
+                Player player = player(
+                                502L,
+                                "sivera");
+
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(List.of(player));
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(List.of());
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.add(
+                                "Retry-After",
+                                "120");
+
+                HttpClientErrorException exception = HttpClientErrorException.create(
+                                HttpStatus.TOO_MANY_REQUESTS,
+                                "Too Many Requests",
+                                headers,
+                                null,
+                                null);
+
+                when(biwengerClient.getPlayerDetail("sivera"))
+                                .thenThrow(exception);
+
+                PlayerDetailSyncResponse result = service.syncLeaguePlayerDetails(1L);
+
+                assertFalse(result.completed());
+
+                assertEquals(
+                                "RATE_LIMIT",
+                                result.stopReason());
+
+                assertEquals(
+                                502L,
+                                result.rateLimitedPlayerId());
+
+                assertEquals(
+                                120L,
+                                result.retryAfterSeconds());
+
+                assertEquals(
+                                1,
+                                result.playersAttempted());
+
+                assertEquals(
+                                0,
+                                result.playersCompleted());
         }
 
         private Player player(

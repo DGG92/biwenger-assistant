@@ -26,6 +26,8 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
+import com.artajerjes.biwengerassistant.sync.SyncStateService;
+import com.artajerjes.biwengerassistant.sync.SyncType;
 
 @Service
 public class BiwengerSyncService {
@@ -44,6 +46,7 @@ public class BiwengerSyncService {
         private final PlayerSnapshotService playerSnapshotService;
         private final MarketListingSnapshotService marketListingSnapshotService;
         private final PlayerDetailSyncService playerDetailSyncService;
+        private final SyncStateService syncStateService;
 
         public BiwengerSyncService(
                         PlayerService playerService,
@@ -55,7 +58,8 @@ public class BiwengerSyncService {
                         MatchdayRoundSyncService matchdayRoundSyncService,
                         PlayerSnapshotService playerSnapshotService,
                         MarketListingSnapshotService marketListingSnapshotService,
-                        PlayerDetailSyncService playerDetailSyncService) {
+                        PlayerDetailSyncService playerDetailSyncService,
+                        SyncStateService syncStateService) {
 
                 this.playerService = playerService;
                 this.marketService = marketService;
@@ -67,6 +71,7 @@ public class BiwengerSyncService {
                 this.playerSnapshotService = playerSnapshotService;
                 this.marketListingSnapshotService = marketListingSnapshotService;
                 this.playerDetailSyncService = playerDetailSyncService;
+                this.syncStateService = syncStateService;
         }
 
         public BiwengerSyncResponse syncAll(Long leagueId) {
@@ -323,6 +328,17 @@ public class BiwengerSyncService {
         private void syncPlayerDetailsBatch(
                         Long leagueId) {
 
+                if (syncStateService.isInCooldown(
+                                leagueId,
+                                SyncType.PLAYER_DETAILS)) {
+
+                        log.warn(
+                                        "Skipping player details sync for league {} because rate-limit cooldown is still active",
+                                        leagueId);
+
+                        return;
+                }
+
                 PlayerDetailSyncResponse result = playerDetailSyncService
                                 .syncLeaguePlayerDetails(
                                                 leagueId);
@@ -344,14 +360,21 @@ public class BiwengerSyncService {
                 if ("RATE_LIMIT".equals(
                                 result.stopReason())) {
 
+                        syncStateService.registerRateLimit(
+                                        leagueId,
+                                        SyncType.PLAYER_DETAILS,
+                                        result.rateLimitedPlayerId(),
+                                        result.retryAfterSeconds());
+
                         log.warn(
-                                        "Player details batch stopped by Biwenger rate limit for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, rateLimitedPlayerId={}",
+                                        "Player details batch stopped by Biwenger rate limit for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, rateLimitedPlayerId={}, retryAfterSeconds={}",
                                         leagueId,
                                         result.playersAttempted(),
                                         result.playersCompleted(),
                                         result.pricesProcessed(),
                                         result.reportsProcessed(),
-                                        result.rateLimitedPlayerId());
+                                        result.rateLimitedPlayerId(),
+                                        result.retryAfterSeconds());
 
                         return;
                 }

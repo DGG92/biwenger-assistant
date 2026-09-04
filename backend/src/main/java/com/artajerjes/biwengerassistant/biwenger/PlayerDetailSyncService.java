@@ -93,6 +93,7 @@ public class PlayerDetailSyncService {
 
                 Long lastCompletedPlayerId = null;
                 Long rateLimitedPlayerId = null;
+                Long retryAfterSeconds = null;
 
                 boolean completed = true;
                 String stopReason = null;
@@ -113,7 +114,9 @@ public class PlayerDetailSyncService {
                                                 false,
                                                 "RATE_LIMIT",
                                                 null,
-                                                null);
+                                                null,
+                                                BiwengerRateLimitUtils.extractRetryAfterSeconds(
+                                                                exception));
                         }
                 }
 
@@ -174,6 +177,9 @@ public class PlayerDetailSyncService {
                                 stopReason = "RATE_LIMIT";
                                 rateLimitedPlayerId = player.getId();
 
+                                retryAfterSeconds = BiwengerRateLimitUtils.extractRetryAfterSeconds(
+                                                exception);
+
                                 /*
                                  * Muy importante:
                                  *
@@ -200,6 +206,7 @@ public class PlayerDetailSyncService {
                                 completed,
                                 stopReason,
                                 lastCompletedPlayerId,
-                                rateLimitedPlayerId);
+                                rateLimitedPlayerId,
+                                retryAfterSeconds);
         }
 }

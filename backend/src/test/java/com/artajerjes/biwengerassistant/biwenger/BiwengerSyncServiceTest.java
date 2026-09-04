@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
 import com.artajerjes.biwengerassistant.history.MarketListingSnapshotService;
 import com.artajerjes.biwengerassistant.history.PlayerSnapshotService;
 import com.artajerjes.biwengerassistant.manager.ManagerService;
@@ -33,8 +34,8 @@ import com.artajerjes.biwengerassistant.player.PlayerService;
 import com.artajerjes.biwengerassistant.player.dto.PlayerLineupSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
-import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
-import com.artajerjes.biwengerassistant.biwenger.dto.sync.PlayerDetailSyncResponse;
+import com.artajerjes.biwengerassistant.sync.SyncStateService;
+import com.artajerjes.biwengerassistant.sync.SyncType;
 
 @ExtendWith(MockitoExtension.class)
 class BiwengerSyncServiceTest {
@@ -70,6 +71,9 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private PlayerDetailSyncService playerDetailSyncService;
+
+        @Mock
+        private SyncStateService syncStateService;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
@@ -847,6 +851,7 @@ class BiwengerSyncServiceTest {
                                 true,
                                 null,
                                 79L,
+                                null,
                                 null);
 
                 when(playerDetailSyncService.syncLeaguePlayerDetails(LEAGUE_ID))
@@ -858,6 +863,11 @@ class BiwengerSyncServiceTest {
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
+
+                verify(syncStateService)
+                                .isInCooldown(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS);
         }
 
         @Test
@@ -873,7 +883,8 @@ class BiwengerSyncServiceTest {
                                 false,
                                 "RATE_LIMIT",
                                 28L,
-                                29L);
+                                29L,
+                                120L);
 
                 when(playerDetailSyncService.syncLeaguePlayerDetails(LEAGUE_ID))
                                 .thenReturn(details);
@@ -884,6 +895,45 @@ class BiwengerSyncServiceTest {
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
+                verify(syncStateService)
+                                .registerRateLimit(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS,
+                                                29L,
+                                                120L);
+        }
+
+        @Test
+        void syncScheduledShouldSkipPlayerDetailsWhileCooldownIsActive() {
+
+                when(syncStateService.isInCooldown(
+                                LEAGUE_ID,
+                                SyncType.PLAYER_DETAILS))
+                                .thenReturn(true);
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(syncStateService)
+                                .isInCooldown(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS);
+
+                verify(
+                                playerDetailSyncService,
+                                never())
+                                .syncLeaguePlayerDetails(
+                                                LEAGUE_ID);
+
+                verify(managerService)
+                                .sync(LEAGUE_ID);
+
+                verify(marketService)
+                                .sync(LEAGUE_ID);
+
+                verify(offerService)
+                                .sync(LEAGUE_ID);
         }
 
 }
