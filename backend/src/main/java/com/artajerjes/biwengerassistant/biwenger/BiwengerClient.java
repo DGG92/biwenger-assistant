@@ -240,7 +240,7 @@ public class BiwengerClient {
                                                                 .path("/api/v2/user/{managerId}")
                                                                 .queryParam(
                                                                                 "fields",
-                                                                                "*,account(id),players(id,owner),lineups(round,points,count,position),league(id,name,competition,type,mode,marketMode,scoreID),market,seasons,offers,lastPositions,marketTransactions")
+                                                                                "*,account(id),players(id,owner),lineup(type,playersID,reservesID,captain,striker,coach,date),lineups(round,points,count,position),league(id,name,competition,type,mode,marketMode,scoreID),market,seasons,offers,lastPositions,marketTransactions")
                                                                 .build(managerId))
                                                 .headers(headers -> {
                                                         headers.setBearerAuth(token);

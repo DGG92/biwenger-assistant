@@ -176,15 +176,4 @@ class AssistantUserServiceTest {
                 assertThat(result.get(0).leagueId())
                                 .isEqualTo(1L);
         }
-
-        @Test
-        void shouldMatchDiegoPassword() {
-                PasswordEncoder encoder = new BCryptPasswordEncoder();
-
-                String rawPassword = "dyp060610Aa.";
-                String storedHash = "$2a$10$trp8lg6KPE/QYNN9edpnWO860LfR20SkIz9lBhlkiKbJbkUVvdlE2";
-
-                assertThat(encoder.matches(rawPassword, storedHash))
-                                .isTrue();
-        }
 }
