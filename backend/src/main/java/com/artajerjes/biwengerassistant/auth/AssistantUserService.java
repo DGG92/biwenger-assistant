@@ -1,9 +1,14 @@
 package com.artajerjes.biwengerassistant.auth;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.auth.dto.AvailableManagerResponse;
 import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 
@@ -50,5 +55,25 @@ public class AssistantUserService {
                 manager);
 
         return assistantUserRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailableManagerResponse> findAvailableManagers() {
+
+        Set<Long> assignedManagerIds = assistantUserRepository
+                .findAllByManagerIsNotNull()
+                .stream()
+                .map(user -> user.getManager().getId())
+                .collect(Collectors.toSet());
+
+        return managerRepository.findAll()
+                .stream()
+                .filter(manager -> !assignedManagerIds.contains(manager.getId()))
+                .map(manager -> new AvailableManagerResponse(
+                        manager.getId(),
+                        manager.getName(),
+                        manager.getIcon(),
+                        manager.getLeague().getId()))
+                .toList();
     }
 }

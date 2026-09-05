@@ -28,6 +28,7 @@ import com.artajerjes.biwengerassistant.offer.dto.OfferResponse;
 import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 
 @Service
 public class OfferService {
@@ -37,6 +38,7 @@ public class OfferService {
         private final PlayerRepository playerRepository;
         private final ManagerRepository managerRepository;
         private final BiwengerClient biwengerClient;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
         @Value("${biwenger.user-id}")
         private Long biwengerUserId;
@@ -46,12 +48,15 @@ public class OfferService {
                         LeagueRepository leagueRepository,
                         PlayerRepository playerRepository,
                         ManagerRepository managerRepository,
-                        BiwengerClient biwengerClient) {
+                        BiwengerClient biwengerClient,
+                        CurrentAssistantUserService currentAssistantUserService) {
+
                 this.offerRepository = offerRepository;
                 this.leagueRepository = leagueRepository;
                 this.playerRepository = playerRepository;
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
         @Transactional
@@ -207,13 +212,12 @@ public class OfferService {
                         throw new LeagueNotFoundException(leagueId);
                 }
 
-                Manager manager = managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                biwengerUserId,
-                                                leagueId)
-                                .orElseThrow(() -> new IllegalStateException(
-                                                "Authenticated Biwenger manager not found for league "
-                                                                + leagueId));
+                Manager manager = currentAssistantUserService.getCurrentManager();
+
+                if (!manager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
+                }
 
                 return new EconomicStatusResponse(
                                 manager.getCash(),

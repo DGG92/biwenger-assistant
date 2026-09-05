@@ -40,23 +40,38 @@ import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
+import com.artajerjes.biwengerassistant.manager.Manager;
 
 class MatchdayServiceTest {
 
         private BiwengerClient biwengerClient;
         private PlayerMatchReportRepository playerMatchReportRepository;
         private MatchdayService matchdayService;
+        private CurrentAssistantUserService currentAssistantUserService;
 
         @BeforeEach
         void setUp() {
 
                 biwengerClient = mock(BiwengerClient.class);
+
                 playerMatchReportRepository = mock(
                                 PlayerMatchReportRepository.class);
 
+                currentAssistantUserService = mock(CurrentAssistantUserService.class);
+
+                Manager currentManager = mock(Manager.class);
+
+                when(currentManager.getBiwengerManagerId())
+                                .thenReturn(13L);
+
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(currentManager);
+
                 matchdayService = new MatchdayService(
                                 biwengerClient,
-                                playerMatchReportRepository);
+                                playerMatchReportRepository,
+                                currentAssistantUserService);
         }
 
         @Test
@@ -286,19 +301,6 @@ class MatchdayServiceTest {
                                 200,
                                 competitionData);
 
-                /*
-                 * Usuario autenticado.
-                 */
-                BiwengerUserData userData = new BiwengerUserData(
-                                currentManagerId,
-                                "Manager actual",
-                                null,
-                                List.of());
-
-                BiwengerUserResponse userResponse = new BiwengerUserResponse(
-                                200,
-                                userData);
-
                 when(biwengerClient.getRoundLeague())
                                 .thenReturn(roundLeagueResponse);
 
@@ -307,9 +309,6 @@ class MatchdayServiceTest {
 
                 when(biwengerClient.getCompetition())
                                 .thenReturn(competitionResponse);
-
-                when(biwengerClient.getCurrentUser())
-                                .thenReturn(userResponse);
 
                 Player reportPlayer = mock(Player.class);
 
@@ -652,14 +651,6 @@ class MatchdayServiceTest {
                                                                                 "equipo",
                                                                                 null))));
 
-                BiwengerUserResponse userResponse = new BiwengerUserResponse(
-                                200,
-                                new BiwengerUserData(
-                                                managerId,
-                                                "Manager actual",
-                                                null,
-                                                List.of()));
-
                 when(biwengerClient.getRoundLeague())
                                 .thenReturn(roundLeagueResponse);
 
@@ -668,9 +659,6 @@ class MatchdayServiceTest {
 
                 when(biwengerClient.getCompetition())
                                 .thenReturn(competitionResponse);
-
-                when(biwengerClient.getCurrentUser())
-                                .thenReturn(userResponse);
 
                 var response = matchdayService.getCurrentMatchday();
 
@@ -787,14 +775,6 @@ class MatchdayServiceTest {
                                                                                 "equipo-sin-partido",
                                                                                 null))));
 
-                BiwengerUserResponse userResponse = new BiwengerUserResponse(
-                                200,
-                                new BiwengerUserData(
-                                                managerId,
-                                                "Manager actual",
-                                                null,
-                                                List.of()));
-
                 when(biwengerClient.getRoundLeague())
                                 .thenReturn(roundLeagueResponse);
 
@@ -803,9 +783,6 @@ class MatchdayServiceTest {
 
                 when(biwengerClient.getCompetition())
                                 .thenReturn(competitionResponse);
-
-                when(biwengerClient.getCurrentUser())
-                                .thenReturn(userResponse);
 
                 var response = matchdayService.getCurrentMatchday();
 

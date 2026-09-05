@@ -49,22 +49,41 @@
             </a>
 
             @if (authService.isAdmin()) {
+            <a routerLink="/admin/users" routerLinkActive="active">
+                Gestión de usuarios
+            </a>
+
             <a routerLink="/sync" routerLinkActive="active">
                 Sincronización
             </a>
             }
         </nav>
 
+        @if (authService.currentUser(); as user) {
         <div class="manager">
+
             <div class="manager-avatar">
-                CO
+                {{ user.username.charAt(0).toUpperCase() }}
             </div>
 
             <div class="manager-info">
-                <strong>Califato Omeya</strong>
-                <span>Manager</span>
+                <strong>{{ user.username }}</strong>
+
+                <span>
+                    @if (user.role === 'ADMIN') {
+                    Administrador
+                    } @else {
+                    Usuario
+                    }
+                </span>
             </div>
+
+            <button type="button" class="logout-button" (click)="logout()" title="Cerrar sesión">
+                Salir
+            </button>
+
         </div>
+        }
     </aside>
 
     <main class="content">

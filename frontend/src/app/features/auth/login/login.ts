@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { TimeoutError } from 'rxjs';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -21,36 +22,52 @@ export class Login {
   username = '';
   password = '';
 
-  loading = false;
-  errorMessage = '';
+  readonly loading = signal(false);
+  readonly errorMessage = signal('');
 
   submit(): void {
 
     if (!this.username.trim() || !this.password) {
-      this.errorMessage = 'Introduce usuario y contraseña.';
+      this.errorMessage.set(
+        'Introduce usuario y contraseña.'
+      );
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     this.authService.login({
       username: this.username.trim(),
       password: this.password,
     }).subscribe({
       next: () => {
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigateByUrl('/dashboard');
       },
-      error: (error: HttpErrorResponse) => {
-        this.loading = false;
+      error: (error: unknown) => {
+        this.loading.set(false);
 
-        if (error.status === 401) {
-          this.errorMessage = 'Usuario o contraseña incorrectos.';
+        if (
+          error instanceof HttpErrorResponse
+          && error.status === 401
+        ) {
+          this.errorMessage.set(
+            'Usuario o contraseña incorrectos.'
+          );
           return;
         }
 
-        this.errorMessage = 'No se ha podido iniciar sesión.';
+        if (error instanceof TimeoutError) {
+          this.errorMessage.set(
+            'El servidor está tardando demasiado en responder.'
+          );
+          return;
+        }
+
+        this.errorMessage.set(
+          'No se ha podido iniciar sesión.'
+        );
       },
     });
   }

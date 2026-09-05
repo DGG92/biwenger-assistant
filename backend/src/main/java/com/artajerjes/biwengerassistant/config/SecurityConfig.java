@@ -15,101 +15,106 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration) throws Exception {
-        return configuration.getAuthenticationManager();
-    }
+        @Bean
+        AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration configuration) throws Exception {
+                return configuration.getAuthenticationManager();
+        }
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+        @Bean
+        SecurityFilterChain securityFilterChain(HttpSecurity http)
+                        throws Exception {
 
-        http
-                .cors(cors -> {
-                })
-                .csrf(csrf -> csrf.disable())
+                http
+                                .cors(cors -> {
+                                })
+                                .csrf(csrf -> csrf.disable())
 
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                        .accessDeniedHandler(
-                                (request, response, exception) -> response.sendError(HttpStatus.FORBIDDEN.value())))
+                                .exceptionHandling(exceptions -> exceptions
+                                                .authenticationEntryPoint(
+                                                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                                                .accessDeniedHandler(
+                                                                (request, response, exception) -> response.sendError(
+                                                                                HttpStatus.FORBIDDEN.value())))
 
-                .authorizeHttpRequests(auth -> auth
+                                .authorizeHttpRequests(auth -> auth
 
-                        // Auth pública
-                        .requestMatchers("/api/auth/**").permitAll()
+                                                // Auth pública
+                                                .requestMatchers("/api/auth/**").permitAll()
 
-                        // Sincronización general
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/biwenger/sync/*")
-                        .hasRole("ADMIN")
+                                                // Administración de Biwenger Assistant
+                                                .requestMatchers("/api/admin/**")
+                                                .hasRole("ADMIN")
 
-                        // Managers
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/managers/sync")
-                        .hasRole("ADMIN")
+                                                // Sincronización general
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/biwenger/sync/*")
+                                                .hasRole("ADMIN")
 
-                        // Market
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/market/sync")
-                        .hasRole("ADMIN")
+                                                // Managers
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/managers/sync")
+                                                .hasRole("ADMIN")
 
-                        // Movements
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/movements/sync")
-                        .hasRole("ADMIN")
+                                                // Market
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/market/sync")
+                                                .hasRole("ADMIN")
 
-                        // Offers
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/offers/sync")
-                        .hasRole("ADMIN")
+                                                // Movements
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/movements/sync")
+                                                .hasRole("ADMIN")
 
-                        // Players: sincronizaciones generales
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/players/sync",
-                                "/api/leagues/*/players/sync-ownership",
-                                "/api/leagues/*/players/sync-lineup",
-                                "/api/leagues/*/players/reports/sync",
-                                "/api/leagues/*/players/prices/sync",
-                                "/api/leagues/*/players/details/sync")
-                        .hasRole("ADMIN")
+                                                // Offers
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/offers/sync")
+                                                .hasRole("ADMIN")
 
-                        // Players: sincronizaciones individuales
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/players/*/reports/sync",
-                                "/api/leagues/*/players/*/prices/sync")
-                        .hasRole("ADMIN")
+                                                // Players: sincronizaciones generales
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/players/sync",
+                                                                "/api/leagues/*/players/sync-ownership",
+                                                                "/api/leagues/*/players/sync-lineup",
+                                                                "/api/leagues/*/players/reports/sync",
+                                                                "/api/leagues/*/players/prices/sync",
+                                                                "/api/leagues/*/players/details/sync")
+                                                .hasRole("ADMIN")
 
-                        // Sync Center
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/leagues/*/sync/status")
-                        .hasRole("ADMIN")
+                                                // Players: sincronizaciones individuales
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/players/*/reports/sync",
+                                                                "/api/leagues/*/players/*/prices/sync")
+                                                .hasRole("ADMIN")
 
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/leagues/*/sync/now")
-                        .hasRole("ADMIN")
+                                                // Sync Center
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/leagues/*/sync/status")
+                                                .hasRole("ADMIN")
 
-                        // De momento, resto de la API abierto
-                        .requestMatchers("/api/**").permitAll()
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/sync/now")
+                                                .hasRole("ADMIN")
 
-                        .anyRequest().permitAll());
+                                                // De momento, resto de la API abierto
+                                                .requestMatchers("/api/**").permitAll()
 
-        return http.build();
-    }
+                                                .anyRequest().permitAll());
+
+                return http.build();
+        }
 }

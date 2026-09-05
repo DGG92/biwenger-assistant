@@ -124,6 +124,23 @@
     padding: 32px;
 }
 
+.logout-button {
+    margin-left: auto;
+    padding: 6px 10px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #344054;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    &:hover {
+        background: #f2f4f7;
+    }
+}
+
 @media (max-width: 800px) {
     .app-shell {
         grid-template-columns: 1fr;

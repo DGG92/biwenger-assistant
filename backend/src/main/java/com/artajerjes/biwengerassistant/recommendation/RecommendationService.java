@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +40,7 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 
 @Service
 public class RecommendationService {
@@ -87,14 +87,12 @@ public class RecommendationService {
         private final MatchdayDifficultyService matchdayDifficultyService;
         private final MatchdayChangeEligibilityService matchdayChangeEligibilityService;
         private final PlayerPriceHistoryRepository playerPriceHistoryRepository;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
         private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
         private static final double MIN_FORMATION_CHANGE_IMPROVEMENT = 1.0;
         private static final int ECONOMIC_CHANGE_DAYS = 7;
-
-        @Value("${biwenger.user-id}")
-        private Long biwengerUserId;
 
         public RecommendationService(
                         LeagueRepository leagueRepository,
@@ -104,7 +102,8 @@ public class RecommendationService {
                         PlayerPerformanceSignalService playerPerformanceSignalService,
                         MatchdayDifficultyService matchdayDifficultyService,
                         MatchdayChangeEligibilityService matchdayChangeEligibilityService,
-                        PlayerPriceHistoryRepository playerPriceHistoryRepository) {
+                        PlayerPriceHistoryRepository playerPriceHistoryRepository,
+                        CurrentAssistantUserService currentAssistantUserService) {
 
                 this.leagueRepository = leagueRepository;
                 this.marketListingRepository = marketListingRepository;
@@ -114,6 +113,7 @@ public class RecommendationService {
                 this.matchdayDifficultyService = matchdayDifficultyService;
                 this.matchdayChangeEligibilityService = matchdayChangeEligibilityService;
                 this.playerPriceHistoryRepository = playerPriceHistoryRepository;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
         private double clampDouble(
@@ -131,6 +131,13 @@ public class RecommendationService {
 
                 if (!leagueRepository.existsById(leagueId)) {
                         throw new LeagueNotFoundException(leagueId);
+                }
+
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                if (!currentManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
                 }
 
                 EconomicStatusResponse economicStatus = offerService.getEconomicStatus(leagueId);
@@ -155,9 +162,8 @@ public class RecommendationService {
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
                                 .filter(listing -> listing.getSeller() == null
-                                                || !biwengerUserId.equals(
-                                                                listing.getSeller()
-                                                                                .getBiwengerManagerId()))
+                                                || !currentManager.getId().equals(
+                                                                listing.getSeller().getId()))
                                 .map(listing -> toRecommendation(
                                                 listing,
                                                 economicStatus.maximumBid(),
@@ -758,16 +764,24 @@ public class RecommendationService {
 
         @Transactional(readOnly = true)
         public SquadNeedsResponse getSquadNeeds(Long leagueId) {
+
                 if (!leagueRepository.existsById(leagueId)) {
                         throw new LeagueNotFoundException(leagueId);
+                }
+
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                if (!currentManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
                 }
 
                 List<Player> squad = playerRepository
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
                                 .filter(player -> player.getOwner() != null)
-                                .filter(player -> biwengerUserId.equals(
-                                                player.getOwner().getBiwengerManagerId()))
+                                .filter(player -> currentManager.getId().equals(
+                                                player.getOwner().getId()))
                                 .toList();
 
                 List<Player> squadPlayers = squad.stream()
@@ -791,19 +805,12 @@ public class RecommendationService {
                                 squadPlayers);
 
                 Map<String, Integer> needScoreByPosition = calculateNeedScores(
-                                effectiveAvailabilityByPosition, squadPlayers);
-
-                Manager manager = squad.isEmpty()
-                                ? null
-                                : squad.get(0).getOwner();
+                                effectiveAvailabilityByPosition,
+                                squadPlayers);
 
                 return new SquadNeedsResponse(
-                                manager == null
-                                                ? null
-                                                : manager.getId(),
-                                manager == null
-                                                ? null
-                                                : manager.getName(),
+                                currentManager.getId(),
+                                currentManager.getName(),
                                 squadPlayers.size(),
                                 playersByPosition,
                                 startersByPosition,
@@ -819,13 +826,19 @@ public class RecommendationService {
                         throw new LeagueNotFoundException(leagueId);
                 }
 
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                if (!currentManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
+                }
+
                 List<Player> squadPlayers = playerRepository
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
                                 .filter(player -> player.getOwner() != null)
-                                .filter(player -> biwengerUserId.equals(
-                                                player.getOwner()
-                                                                .getBiwengerManagerId()))
+                                .filter(player -> currentManager.getId().equals(
+                                                player.getOwner().getId()))
                                 .filter(player -> !player.getPositions()
                                                 .contains(PlayerPosition.E))
                                 .toList();
@@ -957,13 +970,19 @@ public class RecommendationService {
                         throw new LeagueNotFoundException(leagueId);
                 }
 
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                if (!currentManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
+                }
+
                 List<Player> squadPlayers = playerRepository
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
                                 .filter(player -> player.getOwner() != null)
-                                .filter(player -> biwengerUserId.equals(
-                                                player.getOwner()
-                                                                .getBiwengerManagerId()))
+                                .filter(player -> currentManager.getId().equals(
+                                                player.getOwner().getId()))
                                 .filter(player -> !player.getPositions()
                                                 .contains(PlayerPosition.E))
                                 .toList();

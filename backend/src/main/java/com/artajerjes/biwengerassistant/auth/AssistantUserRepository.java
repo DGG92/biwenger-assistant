@@ -1,18 +1,21 @@
 package com.artajerjes.biwengerassistant.auth;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AssistantUserRepository
-        extends JpaRepository<AssistantUser, Long> {
+                extends JpaRepository<AssistantUser, Long> {
 
-    @EntityGraph(attributePaths = {
-            "manager",
-            "manager.league"
-    })
-    Optional<AssistantUser> findByUsernameIgnoreCase(String username);
+        @EntityGraph(attributePaths = {
+                        "manager",
+                        "manager.league"
+        })
+        Optional<AssistantUser> findByUsernameIgnoreCase(String username);
 
-    boolean existsByUsernameIgnoreCase(String username);
+        boolean existsByUsernameIgnoreCase(String username);
+
+        List<AssistantUser> findAllByManagerIsNotNull();
 }

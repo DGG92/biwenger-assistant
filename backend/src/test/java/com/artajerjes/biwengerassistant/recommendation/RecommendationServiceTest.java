@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistory;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
 import com.artajerjes.biwengerassistant.history.PlayerPriceSource;
@@ -79,6 +80,9 @@ class RecommendationServiceTest {
         @Mock
         private PlayerPriceHistoryRepository playerPriceHistoryRepository;
 
+        @Mock
+        private CurrentAssistantUserService currentAssistantUserService;
+
         private RecommendationService recommendationService;
 
         @BeforeEach
@@ -93,6 +97,12 @@ class RecommendationServiceTest {
                 PlayerPerformanceSignalService playerPerformanceSignalService = new PlayerPerformanceSignalService(
                                 playerMatchReportRepository);
 
+                Manager currentManager = createManager();
+
+                lenient()
+                                .when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(currentManager);
+
                 recommendationService = new RecommendationService(
                                 leagueRepository,
                                 marketListingRepository,
@@ -101,7 +111,8 @@ class RecommendationServiceTest {
                                 playerPerformanceSignalService,
                                 matchdayDifficultyService,
                                 matchdayChangeEligibilityService,
-                                playerPriceHistoryRepository);
+                                playerPriceHistoryRepository,
+                                currentAssistantUserService);
 
                 lenient()
                                 .when(
@@ -121,11 +132,6 @@ class RecommendationServiceTest {
                                                 .resolveModifiableByTeam(
                                                                 org.mockito.ArgumentMatchers.anyLong()))
                                 .thenReturn(Map.of());
-
-                ReflectionTestUtils.setField(
-                                recommendationService,
-                                "biwengerUserId",
-                                BIWENGER_USER_ID);
         }
 
         @Test

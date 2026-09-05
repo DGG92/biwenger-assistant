@@ -1,0 +1,99 @@
+<section class="admin-users">
+
+    <header class="page-header">
+        <div>
+            <h2>Gestión de usuarios</h2>
+            <p>
+                Crea cuentas de Biwenger Assistant y asígnalas
+                a los managers de la liga.
+            </p>
+        </div>
+    </header>
+
+    <div class="form-card">
+
+        <h3>Crear usuario</h3>
+
+        @if (successMessage()) {
+        <div class="message success">
+            {{ successMessage() }}
+        </div>
+        }
+
+        @if (errorMessage()) {
+        <div class="message error">
+            {{ errorMessage() }}
+        </div>
+        }
+
+        @if (loading()) {
+
+        <p>Cargando managers disponibles...</p>
+
+        } @else if (managers().length === 0) {
+
+        <div class="empty-state">
+            Todos los managers de la liga tienen ya una cuenta.
+        </div>
+
+        } @else {
+
+        <form (ngSubmit)="createUser()">
+
+            <label>
+                Usuario
+
+                <input type="text" name="username" [(ngModel)]="username" maxlength="50" autocomplete="off" required />
+            </label>
+
+            <label>
+                Contraseña inicial
+
+                <input [type]="showPassword ? 'text' : 'password'" name="password" [(ngModel)]="password" minlength="8"
+                    maxlength="100" autocomplete="new-password" required />
+            </label>
+
+            <label>
+                Repetir contraseña
+
+                <input [type]="showPassword ? 'text' : 'password'" name="repeatPassword" [(ngModel)]="repeatPassword"
+                    minlength="8" maxlength="100" autocomplete="new-password" required />
+            </label>
+
+            <label class="show-password">
+                <input type="checkbox" name="showPassword" [(ngModel)]="showPassword" />
+
+                <span>Mostrar contraseña</span>
+            </label>
+
+            <label>
+                Manager de Biwenger
+
+                <select name="managerId" [(ngModel)]="managerId" required>
+                    <option [ngValue]="null">
+                        Selecciona un manager
+                    </option>
+
+                    @for (manager of managers(); track manager.id) {
+                    <option [ngValue]="manager.id">
+                        {{ manager.name }}
+                    </option>
+                    }
+                </select>
+            </label>
+
+            <button type="submit" [disabled]="creating()">
+                @if (creating()) {
+                Creando...
+                } @else {
+                Crear usuario
+                }
+            </button>
+
+        </form>
+
+        }
+
+    </div>
+
+</section>

@@ -106,6 +106,16 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'admin/users',
+                canActivate: [adminGuard],
+                loadComponent: () =>
+                    import(
+                        './features/admin-users/admin-users'
+                    ).then(
+                        (m) => m.AdminUsers
+                    ),
+            },
+            {
                 path: 'sync',
                 canActivate: [adminGuard],
                 loadComponent: () =>

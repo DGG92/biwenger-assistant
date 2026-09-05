@@ -1,7 +1,6 @@
 package com.artajerjes.biwengerassistant.manager;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -12,7 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
+import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
@@ -24,22 +26,22 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 class SquadProfitabilityServiceTest {
 
         @Mock
-        private ManagerRepository managerRepository;
-
-        @Mock
         private PlayerRepository playerRepository;
 
         @Mock
         private PlayerMatchReportRepository playerMatchReportRepository;
+
+        @Mock
+        private CurrentAssistantUserService currentAssistantUserService;
 
         private SquadProfitabilityService squadProfitabilityService;
 
         @BeforeEach
         void setUp() {
                 squadProfitabilityService = new SquadProfitabilityService(
-                                managerRepository,
                                 playerRepository,
-                                playerMatchReportRepository);
+                                playerMatchReportRepository,
+                                currentAssistantUserService);
         }
 
         @Test
@@ -152,10 +154,8 @@ class SquadProfitabilityServiceTest {
                                                 4L))
                                 .thenReturn(List.of(unknownPurchasePriceReport));
 
-                when(managerRepository.findByIdAndLeague_Id(
-                                managerId,
-                                leagueId))
-                                .thenReturn(Optional.of(manager));
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(manager);
 
                 when(playerRepository.findAllByOwner_IdAndLeague_Id(
                                 managerId,
@@ -275,10 +275,8 @@ class SquadProfitabilityServiceTest {
                 when(excludedPlayer.getPositions())
                                 .thenReturn(List.of(PlayerPosition.E));
 
-                when(managerRepository.findByIdAndLeague_Id(
-                                managerId,
-                                leagueId))
-                                .thenReturn(Optional.of(manager));
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(manager);
 
                 when(playerRepository.findAllByOwner_IdAndLeague_Id(
                                 managerId,
@@ -330,10 +328,8 @@ class SquadProfitabilityServiceTest {
                                 managerId,
                                 "Califato Omeya");
 
-                when(managerRepository.findByIdAndLeague_Id(
-                                managerId,
-                                leagueId))
-                                .thenReturn(Optional.of(manager));
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(manager);
 
                 when(playerRepository.findAllByOwner_IdAndLeague_Id(
                                 managerId,
@@ -395,21 +391,63 @@ class SquadProfitabilityServiceTest {
         }
 
         @Test
-        void getSquadProfitabilityShouldRejectManagerOutsideLeague() {
+        void getSquadProfitabilityShouldRejectDifferentManager() {
                 Long leagueId = 1L;
-                Long managerId = 10L;
+                Long authenticatedManagerId = 10L;
+                Long requestedManagerId = 99L;
 
-                when(managerRepository.findByIdAndLeague_Id(
-                                managerId,
-                                leagueId))
-                                .thenReturn(Optional.empty());
+                Manager authenticatedManager = org.mockito.Mockito.mock(
+                                Manager.class);
+
+                League league = org.mockito.Mockito.mock(
+                                League.class);
+
+                when(authenticatedManager.getId())
+                                .thenReturn(authenticatedManagerId);
+
+                when(authenticatedManager.getLeague())
+                                .thenReturn(league);
+
+                when(league.getId())
+                                .thenReturn(leagueId);
+
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
 
                 assertThrows(
-                                IllegalArgumentException.class,
+                                AccessDeniedException.class,
                                 () -> squadProfitabilityService
                                                 .getSquadProfitability(
                                                                 leagueId,
-                                                                managerId));
+                                                                requestedManagerId));
+        }
+
+        @Test
+        void getSquadProfitabilityShouldRejectDifferentLeague() {
+                Long requestedLeagueId = 1L;
+                Long authenticatedManagerId = 10L;
+
+                Manager authenticatedManager = org.mockito.Mockito.mock(
+                                Manager.class);
+
+                League authenticatedLeague = org.mockito.Mockito.mock(
+                                League.class);
+
+                when(authenticatedManager.getLeague())
+                                .thenReturn(authenticatedLeague);
+
+                when(authenticatedLeague.getId())
+                                .thenReturn(2L);
+
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                assertThrows(
+                                AccessDeniedException.class,
+                                () -> squadProfitabilityService
+                                                .getSquadProfitability(
+                                                                requestedLeagueId,
+                                                                authenticatedManagerId));
         }
 
         private Manager manager(
@@ -424,6 +462,15 @@ class SquadProfitabilityServiceTest {
 
                 when(manager.getName())
                                 .thenReturn(name);
+
+                League league = org.mockito.Mockito.mock(
+                                League.class);
+
+                when(league.getId())
+                                .thenReturn(1L);
+
+                when(manager.getLeague())
+                                .thenReturn(league);
 
                 return manager;
         }

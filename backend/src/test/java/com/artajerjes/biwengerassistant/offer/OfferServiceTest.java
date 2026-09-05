@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.market.BiwengerMarketData;
 import com.artajerjes.biwengerassistant.biwenger.dto.market.BiwengerMarketOffer;
@@ -58,6 +59,9 @@ class OfferServiceTest {
 
         @Mock
         private BiwengerClient biwengerClient;
+
+        @Mock
+        private CurrentAssistantUserService currentAssistantUserService;
 
         @InjectMocks
         private OfferService offerService;
@@ -680,11 +684,8 @@ class OfferServiceTest {
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(Optional.of(manager));
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(manager);
 
                 EconomicStatusResponse result = offerService.getEconomicStatus(LEAGUE_ID);
 
@@ -702,15 +703,14 @@ class OfferServiceTest {
         }
 
         @Test
-        void getEconomicStatusShouldThrowWhenManagerDoesNotExist() {
+        void getEconomicStatusShouldThrowWhenAuthenticatedUserHasNoManager() {
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(Optional.empty());
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenThrow(
+                                                new IllegalStateException(
+                                                                "Authenticated Assistant user has no manager assigned"));
 
                 assertThrows(
                                 IllegalStateException.class,

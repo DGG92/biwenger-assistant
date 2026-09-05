@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +25,8 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
+import com.artajerjes.biwengerassistant.manager.Manager;
 
 @Service
 public class ActionRecommendationService {
@@ -35,22 +36,22 @@ public class ActionRecommendationService {
         private final RecommendationService recommendationService;
         private final PlayerPerformanceSignalService playerPerformanceSignalService;
         private final PlayerProtectionService playerProtectionService;
-
-        @Value("${biwenger.user-id}")
-        private Long biwengerUserId;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
         public ActionRecommendationService(
                         LeagueRepository leagueRepository,
                         PlayerRepository playerRepository,
                         RecommendationService recommendationService,
                         PlayerPerformanceSignalService playerPerformanceSignalService,
-                        PlayerProtectionService playerProtectionService) {
+                        PlayerProtectionService playerProtectionService,
+                        CurrentAssistantUserService currentAssistantUserService) {
 
                 this.leagueRepository = leagueRepository;
                 this.playerRepository = playerRepository;
                 this.recommendationService = recommendationService;
                 this.playerPerformanceSignalService = playerPerformanceSignalService;
                 this.playerProtectionService = playerProtectionService;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
         @Transactional(readOnly = true)
@@ -61,13 +62,19 @@ public class ActionRecommendationService {
                         throw new LeagueNotFoundException(leagueId);
                 }
 
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                if (!currentManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
+                }
+
                 List<Player> squadPlayers = playerRepository
                                 .findAllByLeague_Id(leagueId)
                                 .stream()
                                 .filter(player -> player.getOwner() != null)
-                                .filter(player -> biwengerUserId.equals(
-                                                player.getOwner()
-                                                                .getBiwengerManagerId()))
+                                .filter(player -> currentManager.getId().equals(
+                                                player.getOwner().getId()))
                                 .toList();
 
                 List<ActionCandidate> actions = new ArrayList<>();

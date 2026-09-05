@@ -36,12 +36,12 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 
 @ExtendWith(MockitoExtension.class)
 class ActionRecommendationServiceTest {
 
         private static final Long LEAGUE_ID = 1L;
-        private static final Long BIWENGER_USER_ID = 11_467_137L;
 
         @Mock
         private LeagueRepository leagueRepository;
@@ -61,30 +61,122 @@ class ActionRecommendationServiceTest {
         @Mock
         private PlayerProtectionService playerProtectionService;
 
+        @Mock
+        private CurrentAssistantUserService currentAssistantUserService;
+
         private ActionRecommendationService actionRecommendationService;
 
         @BeforeEach
         void setUp() {
 
+                League currentLeague = createLeague();
+
                 lenient()
-                                .when(manager.getBiwengerManagerId())
-                                .thenReturn(BIWENGER_USER_ID);
+                                .when(manager.getId())
+                                .thenReturn(13L);
+
+                lenient()
+                                .when(manager.getLeague())
+                                .thenReturn(currentLeague);
+
+                lenient()
+                                .when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(manager);
 
                 actionRecommendationService = new ActionRecommendationService(
                                 leagueRepository,
                                 playerRepository,
                                 recommendationService,
                                 playerPerformanceSignalService,
-                                playerProtectionService);
-
-                ReflectionTestUtils.setField(
-                                actionRecommendationService,
-                                "biwengerUserId",
-                                BIWENGER_USER_ID);
+                                playerProtectionService,
+                                currentAssistantUserService);
 
                 lenient()
                                 .when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
+        }
+
+        @Test
+        void shouldOnlyGenerateSquadActionsForAuthenticatedManager() {
+
+                Player ownPlayer = createOwnedPlayer(
+                                480L,
+                                "2184",
+                                "Jugador propio",
+                                PlayerPosition.MC,
+                                2_000_000L,
+                                1_500_000L,
+                                20_000L,
+                                PlayerStatus.OK,
+                                false);
+
+                Manager otherManager = org.mockito.Mockito.mock(
+                                Manager.class);
+
+                when(otherManager.getId())
+                                .thenReturn(99L);
+
+                Player otherPlayer = createOwnedPlayer(
+                                481L,
+                                "2185",
+                                "Jugador de otro manager",
+                                PlayerPosition.MC,
+                                3_000_000L,
+                                2_000_000L,
+                                30_000L,
+                                PlayerStatus.OK,
+                                false);
+
+                ReflectionTestUtils.setField(
+                                otherPlayer,
+                                "owner",
+                                otherManager);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(
+                                                List.of(
+                                                                ownPlayer,
+                                                                otherPlayer));
+
+                when(recommendationService.getSquadNeeds(LEAGUE_ID))
+                                .thenReturn(
+                                                createSquadNeeds(
+                                                                Map.of(
+                                                                                "PT", 0,
+                                                                                "DF", 0,
+                                                                                "MC", 25,
+                                                                                "DL", 0)));
+
+                when(playerPerformanceSignalService.analyze(ownPlayer))
+                                .thenReturn(
+                                                new PlayerPerformanceSignals(
+                                                                5.5,
+                                                                3,
+                                                                false,
+                                                                5.0,
+                                                                10));
+
+                when(playerProtectionService.calculate(ownPlayer))
+                                .thenReturn(
+                                                new PlayerProtectionAlert(
+                                                                PlayerProtectionAlertLevel.NONE,
+                                                                0,
+                                                                List.of()));
+
+                List<ActionCandidate> result = actionRecommendationService
+                                .getSquadActions(LEAGUE_ID);
+
+                assertFalse(result.isEmpty());
+
+                assertTrue(
+                                result.stream()
+                                                .allMatch(action -> action.playerId()
+                                                                .equals(ownPlayer.getId())));
+
+                assertFalse(
+                                result.stream()
+                                                .anyMatch(action -> action.playerId()
+                                                                .equals(otherPlayer.getId())));
         }
 
         @Test

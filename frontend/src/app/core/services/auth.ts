@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, timeout } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
 
@@ -36,6 +36,7 @@ export class AuthService {
             request,
             { withCredentials: true }
         ).pipe(
+            timeout(10000),
             tap((user) => this.currentUserSignal.set(user))
         );
     }

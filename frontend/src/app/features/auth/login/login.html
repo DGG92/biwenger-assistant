@@ -25,23 +25,23 @@
             </label>
 
             <input id="username" name="username" type="text" [(ngModel)]="username" autocomplete="username"
-                [disabled]="loading" required>
+                [disabled]="loading()" required>
 
             <label for="password">
                 Contraseña
             </label>
 
             <input id="password" name="password" type="password" [(ngModel)]="password" autocomplete="current-password"
-                [disabled]="loading" required>
+                [disabled]="loading()" required>
 
-            @if (errorMessage) {
+            @if (errorMessage()) {
             <div class="error-message">
-                {{ errorMessage }}
+                {{ errorMessage() }}
             </div>
             }
 
-            <button type="submit" [disabled]="loading">
-                @if (loading) {
+            <button type="submit" [disabled]="loading()">
+                @if (loading()) {
                 Entrando...
                 } @else {
                 Entrar

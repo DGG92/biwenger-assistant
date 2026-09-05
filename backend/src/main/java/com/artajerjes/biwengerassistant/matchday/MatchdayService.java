@@ -27,19 +27,24 @@ import com.artajerjes.biwengerassistant.player.LineupPositionResolver;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
+import com.artajerjes.biwengerassistant.manager.Manager;
 
 @Service
 public class MatchdayService {
 
         private final BiwengerClient biwengerClient;
         private final PlayerMatchReportRepository playerMatchReportRepository;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
         public MatchdayService(
                         BiwengerClient biwengerClient,
-                        PlayerMatchReportRepository playerMatchReportRepository) {
+                        PlayerMatchReportRepository playerMatchReportRepository,
+                        CurrentAssistantUserService currentAssistantUserService) {
 
                 this.biwengerClient = biwengerClient;
                 this.playerMatchReportRepository = playerMatchReportRepository;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
         public MatchdayResponse getCurrentMatchday() {
@@ -50,13 +55,10 @@ public class MatchdayService {
 
                 BiwengerCompetitionResponse competitionResponse = biwengerClient.getCompetition();
 
-                BiwengerUserResponse currentUserResponse = biwengerClient.getCurrentUser();
-
                 validateResponses(
                                 roundLeagueResponse,
                                 roundsResponse,
-                                competitionResponse,
-                                currentUserResponse);
+                                competitionResponse);
 
                 var league = roundLeagueResponse.data().league();
 
@@ -64,7 +66,9 @@ public class MatchdayService {
 
                 var competition = competitionResponse.data();
 
-                Long currentManagerId = currentUserResponse.data().id();
+                Manager currentManager = currentAssistantUserService.getCurrentManager();
+
+                Long currentManagerId = currentManager.getBiwengerManagerId();
 
                 BiwengerRoundLeagueStanding standing = findCurrentUserStanding(
                                 league.standings(),
@@ -542,8 +546,7 @@ public class MatchdayService {
         private void validateResponses(
                         BiwengerRoundLeagueResponse roundLeagueResponse,
                         BiwengerRoundsResponse roundsResponse,
-                        BiwengerCompetitionResponse competitionResponse,
-                        BiwengerUserResponse currentUserResponse) {
+                        BiwengerCompetitionResponse competitionResponse) {
 
                 if (roundLeagueResponse == null
                                 || roundLeagueResponse.data() == null
@@ -565,13 +568,6 @@ public class MatchdayService {
 
                         throw new IllegalStateException(
                                         "Invalid Biwenger competition response");
-                }
-
-                if (currentUserResponse == null
-                                || currentUserResponse.data() == null) {
-
-                        throw new IllegalStateException(
-                                        "Invalid Biwenger current user response");
                 }
         }
 }

@@ -5,9 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityPlayerResponse;
 import com.artajerjes.biwengerassistant.manager.dto.SquadProfitabilityResponse;
 import com.artajerjes.biwengerassistant.player.Player;
@@ -19,18 +21,18 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 @Service
 public class SquadProfitabilityService {
 
-        private final ManagerRepository managerRepository;
         private final PlayerRepository playerRepository;
         private final PlayerMatchReportRepository playerMatchReportRepository;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
         public SquadProfitabilityService(
-                        ManagerRepository managerRepository,
                         PlayerRepository playerRepository,
-                        PlayerMatchReportRepository playerMatchReportRepository) {
+                        PlayerMatchReportRepository playerMatchReportRepository,
+                        CurrentAssistantUserService currentAssistantUserService) {
 
-                this.managerRepository = managerRepository;
                 this.playerRepository = playerRepository;
                 this.playerMatchReportRepository = playerMatchReportRepository;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
         @Transactional(readOnly = true)
@@ -38,16 +40,26 @@ public class SquadProfitabilityService {
                         Long leagueId,
                         Long managerId) {
 
-                Manager manager = managerRepository
-                                .findByIdAndLeague_Id(
-                                                managerId,
-                                                leagueId)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Manager not found in league"));
+                Manager manager = currentAssistantUserService.getCurrentManager();
+
+                if (manager.getLeague() == null
+                                || !leagueId.equals(
+                                                manager.getLeague().getId())) {
+                        throw new AccessDeniedException(
+                                        "Authenticated manager does not belong to league "
+                                                        + leagueId);
+                }
+
+                if (!manager.getId().equals(managerId)) {
+                        throw new AccessDeniedException(
+                                        "Cannot access profitability for another manager");
+                }
+
+                Long authenticatedManagerId = manager.getId();
 
                 List<Player> players = playerRepository
                                 .findAllByOwner_IdAndLeague_Id(
-                                                managerId,
+                                                authenticatedManagerId,
                                                 leagueId)
                                 .stream()
                                 .filter(player -> !player.getPositions().contains(
