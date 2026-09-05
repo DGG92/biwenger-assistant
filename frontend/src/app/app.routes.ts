@@ -1,4 +1,7 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
+
 
 export const routes: Routes = [
     {
@@ -10,6 +13,7 @@ export const routes: Routes = [
     },
     {
         path: '',
+        canActivate: [authGuard],
         loadComponent: () =>
             import('./layout/main-layout/main-layout').then(
                 (m) => m.MainLayout
@@ -99,6 +103,16 @@ export const routes: Routes = [
                         './features/movements/movements'
                     ).then(
                         (m) => m.Movements
+                    ),
+            },
+            {
+                path: 'sync',
+                canActivate: [adminGuard],
+                loadComponent: () =>
+                    import(
+                        './features/sync/sync'
+                    ).then(
+                        (m) => m.Sync
                     ),
             },
         ],

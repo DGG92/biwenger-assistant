@@ -1,0 +1,85 @@
+.sync-page {
+    padding: 32px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.page-header h1 {
+    margin: 0 0 6px;
+}
+
+.page-header p {
+    margin: 0;
+    color: #64748b;
+}
+
+.page-header button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.page-header button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,
+            minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.status-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.status-card span {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.status-card strong {
+    color: #0f172a;
+    font-size: 24px;
+}
+
+.error-message {
+    color: #b91c1c;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.primary-button {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.primary-button:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.success-message {
+    margin-bottom: 20px;
+    color: #15803d;
+    font-weight: 600;
+}

@@ -47,6 +47,12 @@
             <a routerLink="/movements" routerLinkActive="active">
                 Movimientos
             </a>
+
+            @if (authService.isAdmin()) {
+            <a routerLink="/sync" routerLinkActive="active">
+                Sincronización
+            </a>
+            }
         </nav>
 
         <div class="manager">

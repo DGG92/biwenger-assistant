@@ -1,0 +1,84 @@
+<section class="sync-page">
+
+    <div class="page-header">
+        <div>
+            <h1>Sincronización</h1>
+            <p>Estado de los datos almacenados desde Biwenger.</p>
+        </div>
+
+        <div class="header-actions">
+
+            <button type="button" (click)="loadStatus()" [disabled]="loading() || syncing()">
+                @if (loading()) {
+                Actualizando...
+                } @else {
+                Actualizar estado
+                }
+            </button>
+
+            <button type="button" class="primary-button" (click)="syncNow()" [disabled]="syncing()">
+                @if (syncing()) {
+                Sincronizando...
+                } @else {
+                Sincronizar ahora
+                }
+            </button>
+
+        </div>
+    </div>
+
+    @if (successMessage()) {
+    <p class="success-message">
+        {{ successMessage() }}
+    </p>
+    }
+
+    @if (loading() && !status()) {
+    <p>Cargando estado...</p>
+    }
+
+    @if (errorMessage()) {
+    <p class="error-message">
+        {{ errorMessage() }}
+    </p>
+    }
+
+    @if (status(); as syncStatus) {
+
+    <div class="status-grid">
+
+        <article class="status-card">
+            <span>Última ejecución</span>
+            <strong>
+                {{ syncStatus.execution.status }}
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Jugadores</span>
+            <strong>
+                {{ syncStatus.players.eligible }}
+                /
+                {{ syncStatus.players.total }}
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Informes</span>
+            <strong>
+                {{ syncStatus.players.reports.coveragePercent }}%
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Histórico de precios</span>
+            <strong>
+                {{ syncStatus.players.priceHistory.coveragePercent }}%
+            </strong>
+        </article>
+
+    </div>
+
+    }
+
+</section>
