@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 
 public interface PlayerMatchReportRepository
         extends JpaRepository<PlayerMatchReport, Long> {
@@ -59,4 +60,33 @@ public interface PlayerMatchReportRepository
             """)
     List<PlayerMatchReport> findAllScoredReportsByLeague(
             @Param("leagueId") Long leagueId);
+
+    @Query("""
+        SELECT r.season
+        FROM PlayerMatchReport r
+        JOIN r.player p
+        WHERE p.league.id = :leagueId
+          AND r.participated = true
+          AND r.points IS NOT NULL
+          AND r.season IS NOT NULL
+          AND TRIM(r.season) <> ''
+        ORDER BY r.matchDate DESC
+        """)
+        List<String> findLatestScoredSeasonByLeague(
+                @Param("leagueId") Long leagueId,
+                Pageable pageable);
+
+        @Query("""
+                SELECT r
+                FROM PlayerMatchReport r
+                JOIN FETCH r.player p
+                WHERE p.league.id = :leagueId
+                AND r.participated = true
+                AND r.points IS NOT NULL
+                AND r.season = :season
+                ORDER BY r.matchDate DESC
+                """)
+        List<PlayerMatchReport> findAllScoredReportsByLeagueAndSeason(
+                @Param("leagueId") Long leagueId,
+                @Param("season") String season);        
 }

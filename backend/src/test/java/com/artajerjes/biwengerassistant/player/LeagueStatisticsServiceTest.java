@@ -88,13 +88,7 @@ class LeagueStatisticsServiceTest {
                                 "2026-2027",
                                 7);
 
-                PlayerMatchReport playerThreeReport = mock(
-                                PlayerMatchReport.class);
-
-                when(playerThreeReport.getSeason())
-                                .thenReturn("2025-2026");
-
-                when(playerRepository.findAllByLeague_Id(leagueId))
+                when(playerRepository.findAllWithPositionsByLeagueId(leagueId))
                                 .thenReturn(List.of(
                                                 playerOne,
                                                 playerTwo,
@@ -102,16 +96,30 @@ class LeagueStatisticsServiceTest {
                                                 playerWithoutData));
 
                 when(playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId))
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
+                                .thenReturn(List.of("2026-2027"));
+
+                when(playerMatchReportRepository
+                                .findAllScoredReportsByLeagueAndSeason(
+                                                leagueId,
+                                                "2026-2027"))
                                 .thenReturn(List.of(
                                                 playerOneReportOne,
                                                 playerOneReportTwo,
                                                 playerTwoReportOne,
-                                                playerTwoReportTwo,
-                                                playerThreeReport));
+                                                playerTwoReportTwo));
 
                 when(playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId))
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
                                 .thenReturn(List.of());
 
                 LeagueStatisticsResponse result = leagueStatisticsService
@@ -195,17 +203,26 @@ class LeagueStatisticsServiceTest {
                 when(playerTwo.getId())
                                 .thenReturn(2L);
 
-                when(playerRepository.findAllByLeague_Id(leagueId))
+                when(playerRepository.findAllWithPositionsByLeagueId(leagueId))
                                 .thenReturn(List.of(
                                                 playerOne,
                                                 playerTwo));
 
                 when(playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId))
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
                                 .thenReturn(List.of());
 
                 when(playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId))
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
                                 .thenReturn(List.of());
 
                 LeagueStatisticsResponse result = leagueStatisticsService
@@ -264,19 +281,34 @@ class LeagueStatisticsServiceTest {
                                 "2026-2027",
                                 50);
 
-                when(playerRepository.findAllByLeague_Id(leagueId))
+                when(playerRepository.findAllWithPositionsByLeagueId(leagueId))
                                 .thenReturn(List.of(
                                                 playerWithValue,
                                                 playerWithoutValue));
 
                 when(playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId))
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
+                                .thenReturn(List.of("2026-2027"));
+
+                when(playerMatchReportRepository
+                                .findAllScoredReportsByLeagueAndSeason(
+                                                leagueId,
+                                                "2026-2027"))
                                 .thenReturn(List.of(
                                                 reportWithValue,
                                                 reportWithoutValue));
 
                 when(playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId))
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
                                 .thenReturn(List.of());
 
                 LeagueStatisticsResponse result = leagueStatisticsService
@@ -351,22 +383,34 @@ class LeagueStatisticsServiceTest {
                                 LocalDate.now().minusDays(7),
                                 30_000_000L);
 
-                when(playerRepository.findAllByLeague_Id(leagueId))
+                when(playerRepository.findAllWithPositionsByLeagueId(leagueId))
                                 .thenReturn(List.of(
                                                 riser,
                                                 faller,
                                                 valuable));
 
                 when(playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId))
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
                                 .thenReturn(List.of());
 
                 when(playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId))
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
                                 .thenReturn(List.of(
                                                 riserHistory,
                                                 fallerHistory,
                                                 valuableHistory));
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
+                                .thenReturn(List.of(
+                                                1L,
+                                                2L,
+                                                3L));
 
                 LeagueStatisticsResponse result = leagueStatisticsService.getLeagueStatistics(leagueId);
 
@@ -445,17 +489,26 @@ class LeagueStatisticsServiceTest {
                 when(zeroPurchasePrice.getPurchasePrice())
                                 .thenReturn(0L);
 
-                when(playerRepository.findAllByLeague_Id(leagueId))
+                when(playerRepository.findAllWithPositionsByLeagueId(leagueId))
                                 .thenReturn(List.of(
                                                 validInvestment,
                                                 zeroPurchasePrice));
 
                 when(playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId))
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
                                 .thenReturn(List.of());
 
                 when(playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId))
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
                                 .thenReturn(List.of());
 
                 LeagueStatisticsResponse result = leagueStatisticsService.getLeagueStatistics(leagueId);
@@ -478,6 +531,80 @@ class LeagueStatisticsServiceTest {
 
                 assertTrue(
                                 result.worstInvestments().stream()
+                                                .noneMatch(statistic -> statistic.playerId().equals(2L)));
+        }
+
+        @Test
+        void getLeagueStatisticsShouldUseOnlyLatestSeasonReports() {
+
+                Long leagueId = 1L;
+
+                Player currentSeasonPlayer = player(
+                                1L,
+                                "Jugador actual",
+                                10_000_000L,
+                                PlayerPosition.DL);
+
+                Player previousSeasonPlayer = player(
+                                2L,
+                                "Jugador anterior",
+                                10_000_000L,
+                                PlayerPosition.MC);
+
+                PlayerMatchReport currentSeasonReport = report(
+                                currentSeasonPlayer,
+                                "2026-2027",
+                                10);
+
+                when(playerRepository
+                                .findAllWithPositionsByLeagueId(leagueId))
+                                .thenReturn(List.of(
+                                                currentSeasonPlayer,
+                                                previousSeasonPlayer));
+
+                when(playerMatchReportRepository
+                                .findLatestScoredSeasonByLeague(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(
+                                                                org.springframework.data.domain.Pageable.class)))
+                                .thenReturn(List.of("2026-2027"));
+
+                when(playerMatchReportRepository
+                                .findAllScoredReportsByLeagueAndSeason(
+                                                leagueId,
+                                                "2026-2027"))
+                                .thenReturn(List.of(currentSeasonReport));
+
+                when(playerPriceHistoryRepository
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                org.mockito.ArgumentMatchers.eq(leagueId),
+                                                org.mockito.ArgumentMatchers.any(LocalDate.class)))
+                                .thenReturn(List.of());
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(leagueId))
+                                .thenReturn(List.of());
+
+                LeagueStatisticsResponse result = leagueStatisticsService.getLeagueStatistics(leagueId);
+
+                assertEquals(
+                                "2026-2027",
+                                result.season());
+
+                assertEquals(
+                                1,
+                                result.playersWithData());
+
+                assertEquals(
+                                1,
+                                result.topPoints().size());
+
+                assertEquals(
+                                "Jugador actual",
+                                result.topPoints().get(0).name());
+
+                assertTrue(
+                                result.topPoints().stream()
                                                 .noneMatch(statistic -> statistic.playerId().equals(2L)));
         }
 
@@ -532,9 +659,6 @@ class LeagueStatisticsServiceTest {
 
                 when(history.getPlayerId())
                                 .thenReturn(playerId);
-
-                when(history.getPriceDate())
-                                .thenReturn(priceDate);
 
                 when(history.getMarketValue())
                                 .thenReturn(marketValue);

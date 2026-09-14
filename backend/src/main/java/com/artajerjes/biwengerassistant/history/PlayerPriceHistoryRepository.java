@@ -51,6 +51,17 @@ public interface PlayerPriceHistoryRepository
         List<Long> findPlayerIdsWithHistoryByLeagueId(
                         @Param("leagueId") Long leagueId);
 
+        @Query(value = """
+                        SELECT DISTINCT ON (p.player_id) p.*
+                        FROM player_price_history p
+                        WHERE p.league_id = :leagueId
+                          AND p.price_date <= :targetDate
+                        ORDER BY p.player_id, p.price_date DESC
+                        """, nativeQuery = true)
+        List<PlayerPriceHistory> findLatestPricesAtOrBeforeDateByLeagueId(
+                        @Param("leagueId") Long leagueId,
+                        @Param("targetDate") LocalDate targetDate);
+
         @Query("""
                         SELECT p
                         FROM PlayerPriceHistory p

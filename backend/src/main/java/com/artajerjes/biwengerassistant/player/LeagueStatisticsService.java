@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,20 +43,31 @@ public class LeagueStatisticsService {
         @Transactional(readOnly = true)
         public LeagueStatisticsResponse getLeagueStatistics(Long leagueId) {
 
-                List<Player> players = playerRepository.findAllByLeague_Id(leagueId);
+                List<Player> players = playerRepository.findAllWithPositionsByLeagueId(leagueId);
 
-                List<PlayerMatchReport> reports = playerMatchReportRepository
-                                .findAllScoredReportsByLeague(leagueId);
+                List<String> latestSeasons = playerMatchReportRepository
+                                .findLatestScoredSeasonByLeague(
+                                                leagueId,
+                                                PageRequest.of(0, 1));
 
-                List<PlayerPriceHistory> priceHistory = playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId);
-
-                String season = reports.stream()
-                                .map(PlayerMatchReport::getSeason)
-                                .filter(reportSeason -> reportSeason != null
-                                                && !reportSeason.isBlank())
+                String season = latestSeasons.stream()
                                 .findFirst()
                                 .orElse(null);
+
+                List<PlayerMatchReport> reports = season == null
+                                ? List.of()
+                                : playerMatchReportRepository
+                                                .findAllScoredReportsByLeagueAndSeason(
+                                                                leagueId,
+                                                                season);
+
+                LocalDate targetDate = LocalDate.now()
+                                .minusDays(ECONOMIC_CHANGE_DAYS);
+
+                List<PlayerPriceHistory> priceHistory = playerPriceHistoryRepository
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                leagueId,
+                                                targetDate);
 
                 Map<Long, Player> playersById = players.stream()
                                 .collect(Collectors.toMap(
@@ -87,10 +99,11 @@ public class LeagueStatisticsService {
                                                                 List.of())))
                                 .toList();
 
-                int playersWithPriceHistory = (int) players.stream()
-                                .filter(player -> priceHistoryByPlayer.containsKey(
-                                                player.getId()))
-                                .count();
+                List<Long> playerIdsWithPriceHistory = playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(
+                                                leagueId);
+
+                int playersWithPriceHistory = playerIdsWithPriceHistory.size();
 
                 double priceHistoryCoveragePercent = calculateCoverage(
                                 playersWithPriceHistory,
@@ -266,15 +279,8 @@ public class LeagueStatisticsService {
 
                 Long currentValue = player.getMarketValue();
 
-                LocalDate targetDate = LocalDate.now()
-                                .minusDays(ECONOMIC_CHANGE_DAYS);
-
                 Long value7DaysAgo = history.stream()
-                                .filter(price -> price.getPriceDate() != null
-                                                && !price.getPriceDate()
-                                                                .isAfter(targetDate))
-                                .max(Comparator.comparing(
-                                                PlayerPriceHistory::getPriceDate))
+                                .findFirst()
                                 .map(PlayerPriceHistory::getMarketValue)
                                 .orElse(null);
 
