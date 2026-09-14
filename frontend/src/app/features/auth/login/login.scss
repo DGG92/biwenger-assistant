@@ -132,3 +132,29 @@
     color: #b91c1c;
     font-size: 14px;
 }
+
+.show-password {
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 8px;
+    margin-top: -8px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.show-password input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.show-password input:disabled,
+.show-password:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.65;
+}

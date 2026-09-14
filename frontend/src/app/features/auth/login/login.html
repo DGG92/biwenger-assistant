@@ -31,8 +31,13 @@
                 Contraseña
             </label>
 
-            <input id="password" name="password" type="password" [(ngModel)]="password" autocomplete="current-password"
-                [disabled]="loading()" required>
+            <input id="password" name="password" [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password"
+                autocomplete="current-password" [disabled]="loading()" required>
+
+            <label class="show-password">
+                <input type="checkbox" name="showPassword" [(ngModel)]="showPassword" [disabled]="loading()">
+                <span>Mostrar contraseña</span>
+            </label>
 
             @if (errorMessage()) {
             <div class="error-message">

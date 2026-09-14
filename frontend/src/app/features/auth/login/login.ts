@@ -21,6 +21,7 @@ export class Login {
 
   username = '';
   password = '';
+  showPassword = false;
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');
