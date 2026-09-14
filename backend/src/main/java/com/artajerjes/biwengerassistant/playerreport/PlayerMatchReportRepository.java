@@ -34,6 +34,25 @@ public interface PlayerMatchReportRepository
     List<PlayerMatchReport> findTop5ByPlayer_IdOrderByMatchDateDesc(
             Long playerId);
 
+    @Query(value = """
+            WITH ranked AS (
+                SELECT r.id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY r.player_id
+                           ORDER BY r.match_date DESC
+                       ) AS rn
+                FROM player_match_reports r
+                WHERE r.player_id IN (:playerIds)
+            )
+            SELECT r.*
+            FROM player_match_reports r
+            JOIN ranked x ON x.id = r.id
+            WHERE x.rn <= 5
+            ORDER BY r.player_id, r.match_date DESC
+            """, nativeQuery = true)
+    List<PlayerMatchReport> findTop5ReportsByPlayerIds(
+            @Param("playerIds") List<Long> playerIds);
+
     List<PlayerMatchReport> findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
             Long playerId);
 
@@ -62,31 +81,31 @@ public interface PlayerMatchReportRepository
             @Param("leagueId") Long leagueId);
 
     @Query("""
-        SELECT r.season
-        FROM PlayerMatchReport r
-        JOIN r.player p
-        WHERE p.league.id = :leagueId
-          AND r.participated = true
-          AND r.points IS NOT NULL
-          AND r.season IS NOT NULL
-          AND TRIM(r.season) <> ''
-        ORDER BY r.matchDate DESC
-        """)
-        List<String> findLatestScoredSeasonByLeague(
-                @Param("leagueId") Long leagueId,
-                Pageable pageable);
+            SELECT r.season
+            FROM PlayerMatchReport r
+            JOIN r.player p
+            WHERE p.league.id = :leagueId
+              AND r.participated = true
+              AND r.points IS NOT NULL
+              AND r.season IS NOT NULL
+              AND TRIM(r.season) <> ''
+            ORDER BY r.matchDate DESC
+            """)
+    List<String> findLatestScoredSeasonByLeague(
+            @Param("leagueId") Long leagueId,
+            Pageable pageable);
 
-        @Query("""
-                SELECT r
-                FROM PlayerMatchReport r
-                JOIN FETCH r.player p
-                WHERE p.league.id = :leagueId
-                AND r.participated = true
-                AND r.points IS NOT NULL
-                AND r.season = :season
-                ORDER BY r.matchDate DESC
-                """)
-        List<PlayerMatchReport> findAllScoredReportsByLeagueAndSeason(
-                @Param("leagueId") Long leagueId,
-                @Param("season") String season);        
+    @Query("""
+            SELECT r
+            FROM PlayerMatchReport r
+            JOIN FETCH r.player p
+            WHERE p.league.id = :leagueId
+            AND r.participated = true
+            AND r.points IS NOT NULL
+            AND r.season = :season
+            ORDER BY r.matchDate DESC
+            """)
+    List<PlayerMatchReport> findAllScoredReportsByLeagueAndSeason(
+            @Param("leagueId") Long leagueId,
+            @Param("season") String season);
 }

@@ -36,7 +36,7 @@ class PlayerProtectionServiceTest {
                                 120_000L,
                                 false);
 
-                when(playerPerformanceSignalService.analyze(player))
+                when(playerPerformanceSignalService.analyzeRecent(player))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
                                                                 10.33,
@@ -68,7 +68,7 @@ class PlayerProtectionServiceTest {
                                 60_000L,
                                 false);
 
-                when(playerPerformanceSignalService.analyze(player))
+                when(playerPerformanceSignalService.analyzeRecent(player))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
                                                                 0,
@@ -98,7 +98,7 @@ class PlayerProtectionServiceTest {
                                 0L,
                                 false);
 
-                when(playerPerformanceSignalService.analyze(player))
+                when(playerPerformanceSignalService.analyzeRecent(player))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
                                                                 0,
@@ -124,7 +124,7 @@ class PlayerProtectionServiceTest {
                                 120_000L,
                                 true);
 
-                when(playerPerformanceSignalService.analyze(player))
+                when(playerPerformanceSignalService.analyzeRecent(player))
                                 .thenReturn(
                                                 new PlayerPerformanceSignals(
                                                                 0,

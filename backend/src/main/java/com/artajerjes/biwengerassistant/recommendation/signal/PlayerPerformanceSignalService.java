@@ -14,130 +14,169 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 @Service
 public class PlayerPerformanceSignalService {
 
-    private final PlayerMatchReportRepository playerMatchReportRepository;
+        private final PlayerMatchReportRepository playerMatchReportRepository;
 
-    public PlayerPerformanceSignalService(
-            PlayerMatchReportRepository playerMatchReportRepository) {
+        public PlayerPerformanceSignalService(
+                        PlayerMatchReportRepository playerMatchReportRepository) {
 
-        this.playerMatchReportRepository = playerMatchReportRepository;
-    }
-
-    public PlayerPerformanceSignals analyze(
-            Player player) {
-
-        List<PlayerMatchReport> recentReports = playerMatchReportRepository
-                .findTop5ByPlayer_IdOrderByMatchDateDesc(
-                        player.getId());
-
-        List<PlayerMatchReport> streak = buildCurrentConsecutiveStreak(
-                recentReports);
-
-        double recentWeightedAverage = 0;
-        int recentSampleSize = 0;
-        boolean allRecentMatchesExcellent = false;
-
-        if (streak.size() >= 2) {
-            recentSampleSize = streak.size();
-
-            double weightedPoints = 0;
-            int totalWeight = 0;
-
-            for (int i = 0; i < streak.size(); i++) {
-                PlayerMatchReport report = streak.get(i);
-
-                int weight = streak.size() - i;
-
-                weightedPoints += report.getPoints() * weight;
-
-                totalWeight += weight;
-            }
-
-            recentWeightedAverage = totalWeight == 0
-                    ? 0
-                    : weightedPoints / totalWeight;
-
-            allRecentMatchesExcellent = streak.stream()
-                    .allMatch(
-                            report -> report.getPoints() >= 8);
+                this.playerMatchReportRepository = playerMatchReportRepository;
         }
 
-        double historicalAveragePoints = 0;
-        int historicalSampleSize = 0;
+        public PlayerPerformanceSignals analyze(
+                        Player player) {
 
-        /*
-         * Los entrenadores utilizan otra escala de puntuación
-         * (0 / 1 / 3), por lo que no son comparables con
-         * PT / DF / MC / DL.
-         */
-        if (player.getPositions() == null
-                || !player.getPositions()
-                        .contains(PlayerPosition.E)) {
+                List<PlayerMatchReport> recentReports = playerMatchReportRepository
+                                .findTop5ByPlayer_IdOrderByMatchDateDesc(
+                                                player.getId());
 
-            List<PlayerMatchReport> historicalReports = playerMatchReportRepository
-                    .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                            player.getId());
+                List<PlayerMatchReport> historicalReports = List.of();
 
-            if (historicalReports != null
-                    && !historicalReports.isEmpty()) {
+                /*
+                 * Los entrenadores utilizan otra escala de puntuación
+                 * (0 / 1 / 3), por lo que no son comparables con
+                 * PT / DF / MC / DL.
+                 */
+                if (player.getPositions() == null
+                                || !player.getPositions()
+                                                .contains(PlayerPosition.E)) {
 
-                historicalAveragePoints = historicalReports.stream()
-                        .map(PlayerMatchReport::getPoints)
-                        .mapToInt(Integer::intValue)
-                        .average()
-                        .orElse(0);
+                        historicalReports = playerMatchReportRepository
+                                        .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                        player.getId());
+                }
 
-                historicalSampleSize = historicalReports.size();
-            }
+                return buildSignals(
+                                player,
+                                recentReports,
+                                historicalReports);
         }
 
-        return new PlayerPerformanceSignals(
-                recentWeightedAverage,
-                recentSampleSize,
-                allRecentMatchesExcellent,
-                historicalAveragePoints,
-                historicalSampleSize);
-    }
+        public PlayerPerformanceSignals analyzeRecent(Player player) {
+                List<PlayerMatchReport> recentReports = playerMatchReportRepository
+                                .findTop5ByPlayer_IdOrderByMatchDateDesc(player.getId());
 
-    private List<PlayerMatchReport> buildCurrentConsecutiveStreak(
-            List<PlayerMatchReport> recentReports) {
-
-        if (recentReports == null
-                || recentReports.isEmpty()) {
-            return List.of();
+                return analyzeRecent(player, recentReports);
         }
 
-        String currentSeason = getCurrentSeason();
+        public PlayerPerformanceSignals analyzeRecent(
+                        Player player,
+                        List<PlayerMatchReport> recentReports) {
 
-        List<PlayerMatchReport> streak = new ArrayList<>();
-
-        for (PlayerMatchReport report : recentReports) {
-
-            if (report.getSeason() == null
-                    || !currentSeason.equals(
-                            report.getSeason())) {
-                break;
-            }
-
-            if (!report.isParticipated()
-                    || report.getPoints() == null) {
-                break;
-            }
-
-            streak.add(report);
+                return buildSignals(
+                                player,
+                                recentReports,
+                                List.of());
         }
 
-        return List.copyOf(streak);
-    }
+        private PlayerPerformanceSignals buildSignals(
+                        Player player,
+                        List<PlayerMatchReport> recentReports,
+                        List<PlayerMatchReport> historicalReports) {
 
-    private String getCurrentSeason() {
-        LocalDate today = LocalDate.now();
+                List<PlayerMatchReport> streak = buildCurrentConsecutiveStreak(
+                                recentReports);
 
-        int year = today.getYear();
+                double recentWeightedAverage = 0;
+                int recentSampleSize = 0;
+                boolean allRecentMatchesExcellent = false;
 
-        if (today.getMonthValue() >= 7) {
-            return year + "-" + (year + 1);
+                if (streak.size() >= 2) {
+                        recentSampleSize = streak.size();
+
+                        double weightedPoints = 0;
+                        int totalWeight = 0;
+
+                        for (int i = 0; i < streak.size(); i++) {
+                                PlayerMatchReport report = streak.get(i);
+
+                                int weight = streak.size() - i;
+
+                                weightedPoints += report.getPoints() * weight;
+                                totalWeight += weight;
+                        }
+
+                        recentWeightedAverage = totalWeight == 0
+                                        ? 0
+                                        : weightedPoints / totalWeight;
+
+                        allRecentMatchesExcellent = streak.stream()
+                                        .allMatch(
+                                                        report -> report.getPoints() >= 8);
+                }
+
+                double historicalAveragePoints = 0;
+                int historicalSampleSize = 0;
+
+                /*
+                 * Los entrenadores utilizan otra escala de puntuación
+                 * (0 / 1 / 3), por lo que no son comparables con
+                 * PT / DF / MC / DL.
+                 */
+                if (player.getPositions() == null
+                                || !player.getPositions()
+                                                .contains(PlayerPosition.E)) {
+
+                        if (historicalReports != null
+                                        && !historicalReports.isEmpty()) {
+
+                                historicalAveragePoints = historicalReports.stream()
+                                                .map(PlayerMatchReport::getPoints)
+                                                .mapToInt(Integer::intValue)
+                                                .average()
+                                                .orElse(0);
+
+                                historicalSampleSize = historicalReports.size();
+                        }
+                }
+
+                return new PlayerPerformanceSignals(
+                                recentWeightedAverage,
+                                recentSampleSize,
+                                allRecentMatchesExcellent,
+                                historicalAveragePoints,
+                                historicalSampleSize);
         }
 
-        return (year - 1) + "-" + year;
-    }
+        private List<PlayerMatchReport> buildCurrentConsecutiveStreak(
+                        List<PlayerMatchReport> recentReports) {
+
+                if (recentReports == null
+                                || recentReports.isEmpty()) {
+                        return List.of();
+                }
+
+                String currentSeason = getCurrentSeason();
+
+                List<PlayerMatchReport> streak = new ArrayList<>();
+
+                for (PlayerMatchReport report : recentReports) {
+
+                        if (report.getSeason() == null
+                                        || !currentSeason.equals(
+                                                        report.getSeason())) {
+                                break;
+                        }
+
+                        if (!report.isParticipated()
+                                        || report.getPoints() == null) {
+                                break;
+                        }
+
+                        streak.add(report);
+                }
+
+                return List.copyOf(streak);
+        }
+
+        private String getCurrentSeason() {
+                LocalDate today = LocalDate.now();
+
+                int year = today.getYear();
+
+                if (today.getMonthValue() >= 7) {
+                        return year + "-" + (year + 1);
+                }
+
+                return (year - 1) + "-" + year;
+        }
 }

@@ -234,7 +234,7 @@ class PlayerServiceTest {
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
-                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(playerRepository.findAllWithPositionsByLeagueId(LEAGUE_ID))
                                 .thenReturn(
                                                 List.of(
                                                                 firstPlayer,
@@ -269,7 +269,7 @@ class PlayerServiceTest {
                                 () -> playerService.findAll(LEAGUE_ID));
 
                 verify(playerRepository, never())
-                                .findAllByLeague_Id(LEAGUE_ID);
+                                .findAllWithPositionsByLeagueId(LEAGUE_ID);
         }
 
         @Test

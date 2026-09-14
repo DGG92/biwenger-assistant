@@ -10,6 +10,7 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionAlertLevel;
 import com.artajerjes.biwengerassistant.player.dto.PlayerProtectionReason;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 
 @Service
 public class PlayerProtectionService {
@@ -30,6 +31,37 @@ public class PlayerProtectionService {
         if (player.getOwner() == null) {
             return emptyAlert();
         }
+
+        PlayerPerformanceSignals performance = playerPerformanceSignalService.analyzeRecent(player);
+
+        return calculate(player, performance);
+    }
+
+    public PlayerProtectionAlert calculate(
+            Player player,
+            List<PlayerMatchReport> recentReports) {
+
+        /*
+         * Mismo cálculo de protección, pero utilizando reports
+         * recientes ya cargados previamente.
+         *
+         * Esto permite evitar una consulta individual por jugador
+         * cuando /players carga los reports en batch.
+         */
+        if (player.getOwner() == null) {
+            return emptyAlert();
+        }
+
+        PlayerPerformanceSignals performance = playerPerformanceSignalService.analyzeRecent(
+                player,
+                recentReports);
+
+        return calculate(player, performance);
+    }
+
+    private PlayerProtectionAlert calculate(
+            Player player,
+            PlayerPerformanceSignals performance) {
 
         int score = 0;
 
@@ -66,8 +98,6 @@ public class PlayerProtectionService {
          * - participación real
          * - mínimo 2 partidos
          */
-        PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
-
         if (performance.recentSampleSize() >= 2) {
 
             if (performance.allRecentMatchesExcellent()) {

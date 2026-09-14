@@ -36,6 +36,8 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.UpdatePlayerRequest;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
+import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
 
 @Service
@@ -45,6 +47,7 @@ public class PlayerService {
         private final LeagueRepository leagueRepository;
         private final ManagerRepository managerRepository;
         private final PlayerMatchReportService playerMatchReportService;
+        private final PlayerMatchReportRepository playerMatchReportRepository;
         private final PlayerProtectionService playerProtectionService;
         private final PlayerPriceHistoryService playerPriceHistoryService;
         private final BiwengerClient biwengerClient;
@@ -55,13 +58,16 @@ public class PlayerService {
                         ManagerRepository managerRepository,
                         BiwengerClient biwengerClient,
                         PlayerMatchReportService playerMatchReportService,
+                        PlayerMatchReportRepository playerMatchReportRepository,
                         PlayerProtectionService playerProtectionService,
                         PlayerPriceHistoryService playerPriceHistoryService) {
+
                 this.playerRepository = playerRepository;
                 this.leagueRepository = leagueRepository;
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
                 this.playerMatchReportService = playerMatchReportService;
+                this.playerMatchReportRepository = playerMatchReportRepository;
                 this.playerProtectionService = playerProtectionService;
                 this.playerPriceHistoryService = playerPriceHistoryService;
         }
@@ -99,9 +105,28 @@ public class PlayerService {
         public List<PlayerResponse> findAll(Long leagueId) {
                 ensureLeagueExists(leagueId);
 
-                return playerRepository.findAllByLeague_Id(leagueId)
-                                .stream()
-                                .map(this::toResponse)
+                List<Player> players = playerRepository.findAllWithPositionsByLeagueId(leagueId);
+
+                List<Long> ownedPlayerIds = players.stream()
+                                .filter(player -> player.getOwner() != null)
+                                .map(Player::getId)
+                                .toList();
+
+                List<PlayerMatchReport> recentReports = ownedPlayerIds.isEmpty()
+                                ? List.of()
+                                : playerMatchReportRepository
+                                                .findTop5ReportsByPlayerIds(ownedPlayerIds);
+
+                Map<Long, List<PlayerMatchReport>> recentReportsByPlayer = recentReports.stream()
+                                .collect(Collectors.groupingBy(
+                                                report -> report.getPlayer().getId()));
+
+                return players.stream()
+                                .map(player -> toResponse(
+                                                player,
+                                                recentReportsByPlayer.getOrDefault(
+                                                                player.getId(),
+                                                                List.of())))
                                 .toList();
         }
 
@@ -266,6 +291,45 @@ public class PlayerService {
                                 player.getLeague().getId(),
                                 player.getCreatedAt(),
                                 playerProtectionService.calculate(player));
+        }
+
+        private PlayerResponse toResponse(
+                        Player player,
+                        List<PlayerMatchReport> recentReports) {
+
+                Manager owner = player.getOwner();
+
+                return new PlayerResponse(
+                                player.getId(),
+                                player.getBiwengerPlayerId(),
+                                player.getName(),
+                                player.getPositions(),
+                                player.getPoints(),
+                                player.getTeamName(),
+                                player.getMarketValue(),
+                                player.getPurchasePrice(),
+                                player.getProfitability(),
+                                player.getStatus(),
+                                player.isCaptain(),
+                                player.isRam(),
+                                player.isCoach(),
+                                player.isStarter(),
+                                player.isReserve(),
+                                player.getLineupPosition(),
+                                player.getBenchPosition(),
+                                player.getValueFluctuation(),
+                                player.isBlockedClause(),
+                                player.getClauseLockedUntil(),
+                                player.getClauseValue(),
+                                owner == null ? null : owner.getId(),
+                                owner == null ? null : owner.getName(),
+                                player.isFreePlayer(),
+                                player.getSignedAt(),
+                                player.getLeague().getId(),
+                                player.getCreatedAt(),
+                                playerProtectionService.calculate(
+                                                player,
+                                                recentReports));
         }
 
         private PlayerPosition mapPosition(Integer position) {
