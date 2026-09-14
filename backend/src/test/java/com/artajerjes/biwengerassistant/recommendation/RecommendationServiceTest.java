@@ -13,7 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -117,8 +119,9 @@ class RecommendationServiceTest {
                 lenient()
                                 .when(
                                                 playerPriceHistoryRepository
-                                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
-                                                                                anyLong()))
+                                                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                                                anyLong(),
+                                                                                any(LocalDate.class)))
                                 .thenReturn(List.of());
 
                 lenient().when(
@@ -218,8 +221,9 @@ class RecommendationServiceTest {
 
                 when(
                                 playerPriceHistoryRepository
-                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
-                                                                LEAGUE_ID))
+                                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                                eq(LEAGUE_ID),
+                                                                any(LocalDate.class)))
                                 .thenReturn(List.of(historicalPrice));
 
                 mockCommon(
@@ -279,8 +283,9 @@ class RecommendationServiceTest {
 
                 when(
                                 playerPriceHistoryRepository
-                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
-                                                                LEAGUE_ID))
+                                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                                eq(LEAGUE_ID),
+                                                                any(LocalDate.class)))
                                 .thenReturn(List.of(historicalPrice));
 
                 mockCommon(
@@ -335,8 +340,9 @@ class RecommendationServiceTest {
 
                 when(
                                 playerPriceHistoryRepository
-                                                .findAllByLeagueIdOrderByPlayerAndPriceDate(
-                                                                LEAGUE_ID))
+                                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                                eq(LEAGUE_ID),
+                                                                any(LocalDate.class)))
                                 .thenReturn(List.of(historicalPrice));
 
                 mockCommon(

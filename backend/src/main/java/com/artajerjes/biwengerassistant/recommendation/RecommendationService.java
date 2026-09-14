@@ -148,18 +148,19 @@ public class RecommendationService {
                                 .minusDays(ECONOMIC_CHANGE_DAYS);
 
                 Map<Long, Long> value7DaysAgoByPlayer = playerPriceHistoryRepository
-                                .findAllByLeagueIdOrderByPlayerAndPriceDate(leagueId)
+                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                leagueId,
+                                                referenceDate)
                                 .stream()
-                                .filter(history -> !history.getPriceDate()
-                                                .isAfter(referenceDate))
                                 .collect(
                                                 Collectors.toMap(
                                                                 PlayerPriceHistory::getPlayerId,
-                                                                PlayerPriceHistory::getMarketValue,
-                                                                (previousValue, currentValue) -> currentValue));
+                                                                PlayerPriceHistory::getMarketValue));
 
-                return marketListingRepository
-                                .findAllByLeague_Id(leagueId)
+                List<MarketListing> listings = marketListingRepository
+                                .findAllByLeague_Id(leagueId);
+
+                List<MarketRecommendationResponse> recommendations = listings
                                 .stream()
                                 .filter(listing -> listing.getSeller() == null
                                                 || !currentManager.getId().equals(
@@ -174,6 +175,8 @@ public class RecommendationService {
                                                                 MarketRecommendationResponse::score)
                                                                 .reversed())
                                 .toList();
+
+                return recommendations;
         }
 
         private MarketRecommendationResponse toRecommendation(
