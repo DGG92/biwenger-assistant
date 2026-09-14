@@ -109,8 +109,15 @@ public class ActionRecommendationService {
         public List<ActionCandidate> getMarketActions(
                         Long leagueId) {
 
-                return recommendationService
-                                .getMarketRecommendations(leagueId)
+                return getMarketActions(
+                                recommendationService
+                                                .getMarketRecommendations(leagueId));
+        }
+
+        public List<ActionCandidate> getMarketActions(
+                        List<MarketRecommendationResponse> marketRecommendations) {
+
+                return marketRecommendations
                                 .stream()
                                 .map(this::evaluateMarketAction)
                                 .filter(java.util.Objects::nonNull)
@@ -124,13 +131,25 @@ public class ActionRecommendationService {
         public List<ActionCandidate> getAllActions(
                         Long leagueId) {
 
+                return getAllActions(
+                                leagueId,
+                                recommendationService
+                                                .getMarketRecommendations(leagueId));
+        }
+
+        @Transactional(readOnly = true)
+        public List<ActionCandidate> getAllActions(
+                        Long leagueId,
+                        List<MarketRecommendationResponse> marketRecommendations) {
+
                 List<ActionCandidate> actions = new ArrayList<>();
 
                 actions.addAll(
                                 getSquadActions(leagueId));
 
                 actions.addAll(
-                                getMarketActions(leagueId));
+                                getMarketActions(
+                                                marketRecommendations));
 
                 return actions.stream()
                                 .sorted(

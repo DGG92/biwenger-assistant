@@ -9,6 +9,7 @@ import { MarketRecommendation } from '../models/market-recommendation.model';
 import { ActionRecommendation } from '../models/action-recommendation.model';
 import { RecommendedLineup } from '../models/recommended-lineup.model';
 import { SquadProfitability } from '../models/squad-profitability.model';
+import { RecommendationOverview } from '../models/recommendation-overview.model';
 
 @Injectable({
     providedIn: 'root',
@@ -37,6 +38,12 @@ export class RecommendationService {
     getActions(): Observable<ActionRecommendation[]> {
         return this.http.get<ActionRecommendation[]>(
             `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/recommendations/actions`
+        );
+    }
+
+    getOverview(): Observable<RecommendationOverview> {
+        return this.http.get<RecommendationOverview>(
+            `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/recommendations/overview`
         );
     }
 

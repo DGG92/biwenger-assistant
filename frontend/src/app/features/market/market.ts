@@ -40,17 +40,24 @@ export class Market {
   private readonly route =
     inject(ActivatedRoute);
 
-  private readonly recommendations =
+  private readonly overview =
     toSignal(
-      this.recommendationService.getMarketRecommendations(),
-      { initialValue: [] }
+      this.recommendationService.getOverview(),
+      {
+        initialValue: {
+          market: [],
+          actions: []
+        }
+      }
     );
 
-  private readonly actions =
-    toSignal(
-      this.recommendationService.getActions(),
-      { initialValue: [] }
-    );
+  private readonly recommendations = computed(
+    () => this.overview().market
+  );
+
+  private readonly actions = computed(
+    () => this.overview().actions
+  );
 
   readonly marketActions = computed(() =>
     this.actions().filter(

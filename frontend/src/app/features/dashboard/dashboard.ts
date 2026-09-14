@@ -30,10 +30,9 @@ export class Dashboard {
       switchMap(squad =>
         combineLatest({
           economy: this.recommendationService.getEconomicStatus(),
-          market: this.recommendationService.getMarketRecommendations(),
+          overview: this.recommendationService.getOverview(),
           players: this.playerService.getPlayers(),
           statistics: this.playerService.getStatistics(),
-          actions: this.recommendationService.getActions(),
           profitability:
             this.recommendationService.getSquadProfitability(
               squad.managerId
@@ -41,12 +40,19 @@ export class Dashboard {
         }).pipe(
           map(data => ({
             squad,
-            ...data,
-            topActions: data.actions.slice(0, 5),
-            highPriorityActionCount: data.actions.filter(
-              action => action.priority === 'HIGH'
-            ).length,
-            topRecommendations: data.market.slice(0, 5),
+            economy: data.economy,
+            players: data.players,
+            statistics: data.statistics,
+            profitability: data.profitability,
+            market: data.overview.market,
+            actions: data.overview.actions,
+            topActions: data.overview.actions.slice(0, 5),
+            highPriorityActionCount:
+              data.overview.actions.filter(
+                action => action.priority === 'HIGH'
+              ).length,
+            topRecommendations:
+              data.overview.market.slice(0, 5),
           }))
         )
       )
