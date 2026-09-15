@@ -126,8 +126,7 @@ public class RecommendationService {
         }
 
         @Transactional(readOnly = true)
-        public List<MarketRecommendationResponse> getMarketRecommendations(
-                        Long leagueId) {
+        public List<MarketRecommendationResponse> getMarketRecommendations(Long leagueId) {
 
                 if (!leagueRepository.existsById(leagueId)) {
                         throw new LeagueNotFoundException(leagueId);
@@ -160,30 +159,43 @@ public class RecommendationService {
                 List<MarketListing> listings = marketListingRepository
                                 .findAllByLeague_Id(leagueId);
 
-                List<MarketRecommendationResponse> recommendations = listings
+                List<MarketListing> recommendationListings = listings
                                 .stream()
                                 .filter(listing -> listing.getSeller() == null
                                                 || !currentManager.getId().equals(
                                                                 listing.getSeller().getId()))
+                                .toList();
+
+                List<Player> marketPlayers = recommendationListings
+                                .stream()
+                                .map(MarketListing::getPlayer)
+                                .toList();
+
+                Map<Long, PlayerPerformanceSignals> performanceByPlayerId = playerPerformanceSignalService
+                                .analyzeMarketPlayers(
+                                                marketPlayers);
+
+                return recommendationListings
+                                .stream()
                                 .map(listing -> toRecommendation(
                                                 listing,
                                                 economicStatus.maximumBid(),
                                                 squadNeeds.needScoreByPosition(),
-                                                value7DaysAgoByPlayer))
+                                                value7DaysAgoByPlayer,
+                                                performanceByPlayerId))
                                 .sorted(
                                                 Comparator.comparingInt(
                                                                 MarketRecommendationResponse::score)
                                                                 .reversed())
                                 .toList();
-
-                return recommendations;
         }
 
         private MarketRecommendationResponse toRecommendation(
                         MarketListing listing,
                         Long maximumBid,
                         Map<String, Integer> needScoreByPosition,
-                        Map<Long, Long> value7DaysAgoByPlayer) {
+                        Map<Long, Long> value7DaysAgoByPlayer,
+                        Map<Long, PlayerPerformanceSignals> performanceByPlayerId) {
                 Player player = listing.getPlayer();
 
                 Long marketValue = player.getMarketValue();
@@ -247,7 +259,8 @@ public class RecommendationService {
                                 player,
                                 needScoreByPosition);
 
-                PlayerPerformanceSignals performance = playerPerformanceSignalService.analyze(player);
+                PlayerPerformanceSignals performance = performanceByPlayerId.get(
+                                player.getId());
 
                 int recentFormScore = calculateRecentFormScore(performance);
 

@@ -3,6 +3,8 @@ package com.artajerjes.biwengerassistant.recommendation.signal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -49,6 +51,60 @@ public class PlayerPerformanceSignalService {
                                 player,
                                 recentReports,
                                 historicalReports);
+        }
+
+        public Map<Long, PlayerPerformanceSignals> analyzeMarketPlayers(
+                        List<Player> players) {
+
+                if (players == null || players.isEmpty()) {
+                        return Map.of();
+                }
+
+                List<Long> playerIds = players.stream()
+                                .map(Player::getId)
+                                .toList();
+
+                List<PlayerMatchReport> recentReports = playerMatchReportRepository
+                                .findTop5ReportsByPlayerIds(playerIds);
+
+                List<Long> historicalPlayerIds = players.stream()
+                                .filter(player -> player.getPositions() == null
+                                                || !player.getPositions().contains(PlayerPosition.E))
+                                .map(Player::getId)
+                                .toList();
+
+                List<PlayerMatchReport> historicalReports = historicalPlayerIds.isEmpty()
+                                ? List.of()
+                                : playerMatchReportRepository
+                                                .findTop10ScoredReportsByPlayerIds(
+                                                                historicalPlayerIds);
+
+                Map<Long, List<PlayerMatchReport>> recentReportsByPlayerId = recentReports
+                                .stream()
+                                .collect(
+                                                Collectors.groupingBy(
+                                                                report -> report.getPlayer().getId()));
+
+                Map<Long, List<PlayerMatchReport>> historicalReportsByPlayerId = historicalReports
+                                .stream()
+                                .collect(
+                                                Collectors.groupingBy(
+                                                                report -> report.getPlayer().getId()));
+
+                return players.stream()
+                                .collect(
+                                                Collectors.toMap(
+                                                                Player::getId,
+                                                                player -> buildSignals(
+                                                                                player,
+                                                                                recentReportsByPlayerId
+                                                                                                .getOrDefault(
+                                                                                                                player.getId(),
+                                                                                                                List.of()),
+                                                                                historicalReportsByPlayerId
+                                                                                                .getOrDefault(
+                                                                                                                player.getId(),
+                                                                                                                List.of()))));
         }
 
         public PlayerPerformanceSignals analyzeRecent(Player player) {

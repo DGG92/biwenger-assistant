@@ -93,7 +93,13 @@ class RecommendationServiceTest {
                 lenient()
                                 .when(
                                                 playerMatchReportRepository
-                                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(anyLong()))
+                                                                .findTop5ReportsByPlayerIds(any()))
+                                .thenReturn(List.of());
+
+                lenient()
+                                .when(
+                                                playerMatchReportRepository
+                                                                .findTop10ScoredReportsByPlayerIds(any()))
                                 .thenReturn(List.of());
 
                 PlayerPerformanceSignalService playerPerformanceSignalService = new PlayerPerformanceSignalService(
@@ -1085,7 +1091,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(70L))
+                                                .findTop5ReportsByPlayerIds(List.of(70L)))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -1151,7 +1157,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(71L))
+                                                .findTop5ReportsByPlayerIds(List.of(71L)))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -1217,7 +1223,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(72L))
+                                                .findTop5ReportsByPlayerIds(List.of(72L)))
                                 .thenReturn(List.of(
                                                 latestReport,
                                                 previousReport));
@@ -1282,7 +1288,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(73L))
+                                                .findTop5ReportsByPlayerIds(List.of(73L)))
                                 .thenReturn(List.of(
                                                 latestReport,
                                                 previousReport));
@@ -2229,7 +2235,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(74L))
+                                                .findTop5ReportsByPlayerIds(List.of(74L)))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -2332,8 +2338,8 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                                                                79L))
+                                                .findTop10ScoredReportsByPlayerIds(List.of(
+                                                                79L)))
                                 .thenReturn(historicalReports);
 
                 mockCommon(
@@ -2383,8 +2389,8 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                                                                80L))
+                                                .findTop10ScoredReportsByPlayerIds(List.of(
+                                                                80L)))
                                 .thenReturn(List.of());
 
                 mockCommon(
@@ -2503,8 +2509,8 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
-                                                                82L))
+                                                .findTop10ScoredReportsByPlayerIds(List.of(
+                                                                82L)))
                                 .thenReturn(historicalReports);
 
                 mockCommon(
@@ -2685,7 +2691,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(63L))
+                                                .findTop5ReportsByPlayerIds(List.of(63L)))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -2750,7 +2756,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(64L))
+                                                .findTop5ReportsByPlayerIds(List.of(64L)))
                                 .thenReturn(
                                                 List.of(
                                                                 latestReport,
@@ -2844,7 +2850,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(76L))
+                                                .findTop5ReportsByPlayerIds(List.of(76L)))
                                 .thenReturn(reports);
 
                 mockCommon(
@@ -2962,7 +2968,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(77L))
+                                                .findTop5ReportsByPlayerIds(List.of(77L)))
                                 .thenReturn(reports);
 
                 mockCommon(
@@ -3057,7 +3063,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(75L))
+                                                .findTop5ReportsByPlayerIds(List.of(75L)))
                                 .thenReturn(reports);
 
                 mockCommon(
@@ -3164,7 +3170,7 @@ class RecommendationServiceTest {
 
                 when(
                                 playerMatchReportRepository
-                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(78L))
+                                                .findTop5ReportsByPlayerIds(List.of(78L)))
                                 .thenReturn(reports);
 
                 mockCommon(
