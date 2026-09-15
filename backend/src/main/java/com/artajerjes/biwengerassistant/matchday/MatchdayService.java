@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
@@ -49,11 +50,20 @@ public class MatchdayService {
 
         public MatchdayResponse getCurrentMatchday() {
 
-                BiwengerRoundLeagueResponse roundLeagueResponse = biwengerClient.getRoundLeague();
+                CompletableFuture<BiwengerRoundLeagueResponse> roundLeagueFuture = CompletableFuture.supplyAsync(
+                                biwengerClient::getRoundLeague);
 
-                BiwengerRoundsResponse roundsResponse = biwengerClient.getRounds();
+                CompletableFuture<BiwengerRoundsResponse> roundsFuture = CompletableFuture.supplyAsync(
+                                biwengerClient::getRounds);
 
-                BiwengerCompetitionResponse competitionResponse = biwengerClient.getCompetition();
+                CompletableFuture<BiwengerCompetitionResponse> competitionFuture = CompletableFuture.supplyAsync(
+                                biwengerClient::getCompetition);
+
+                BiwengerRoundLeagueResponse roundLeagueResponse = roundLeagueFuture.join();
+
+                BiwengerRoundsResponse roundsResponse = roundsFuture.join();
+
+                BiwengerCompetitionResponse competitionResponse = competitionFuture.join();
 
                 validateResponses(
                                 roundLeagueResponse,
