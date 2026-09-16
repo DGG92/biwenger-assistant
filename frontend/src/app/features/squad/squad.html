@@ -398,9 +398,18 @@
             </div>
 
             <span class="formation">
-                {{ defenders().length }}-{{ midfielders().length }}-{{ forwards().length }}
+                {{ currentFormation() ?? '—' }}
             </span>
         </div>
+
+        @if (emptyLineupSlots() > 0) {
+        <div class="incomplete-lineup-warning">
+            ⚠️ Alineación incompleta:
+            {{ emptyLineupSlots() }}
+            {{ emptyLineupSlots() === 1 ? 'posición vacía' : 'posiciones vacías' }}
+            · penalización: {{ emptyLineupPenalty() }} puntos
+        </div>
+        }
 
         <div class="football-pitch">
             <div class="pitch-line center-line"></div>
@@ -438,6 +447,20 @@
                     </span>
                 </div>
                 }
+
+                @for (slot of emptyForwardSlots(); track slot) {
+                <div class="lineup-player empty-lineup-player">
+                    <div class="player-circle empty-player-circle">
+                        —
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>Posición vacía</strong>
+                    </div>
+
+                    <span>DL</span>
+                </div>
+                }
             </div>
 
             <div class="lineup-row midfielders-row">
@@ -467,6 +490,20 @@
                     <span>
                         {{ player.lineupPosition }}
                     </span>
+                </div>
+                }
+
+                @for (slot of emptyMidfielderSlots(); track slot) {
+                <div class="lineup-player empty-lineup-player">
+                    <div class="player-circle empty-player-circle">
+                        —
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>Posición vacía</strong>
+                    </div>
+
+                    <span>MC</span>
                 </div>
                 }
             </div>
@@ -500,6 +537,20 @@
                     </span>
                 </div>
                 }
+
+                @for (slot of emptyDefenderSlots(); track slot) {
+                <div class="lineup-player empty-lineup-player">
+                    <div class="player-circle empty-player-circle">
+                        —
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>Posición vacía</strong>
+                    </div>
+
+                    <span>DF</span>
+                </div>
+                }
             </div>
 
             <div class="lineup-row goalkeeper-row">
@@ -528,6 +579,20 @@
                     </div>
 
                     <span>{{ player.lineupPosition }}</span>
+                </div>
+                }
+
+                @for (slot of emptyGoalkeeperSlots(); track slot) {
+                <div class="lineup-player empty-lineup-player">
+                    <div class="player-circle empty-player-circle">
+                        —
+                    </div>
+
+                    <div class="lineup-name">
+                        <strong>Posición vacía</strong>
+                    </div>
+
+                    <span>PT</span>
                 </div>
                 }
             </div>
@@ -880,6 +945,7 @@
                     Fuera de alineación
                 </span>
                 }
+
                 @if (player.captain) {
                 <span class="captain">
                     Capitán

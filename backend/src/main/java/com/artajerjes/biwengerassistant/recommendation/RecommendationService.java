@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistory;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
@@ -40,7 +41,6 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
-import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 
 @Service
 public class RecommendationService {
@@ -827,6 +827,7 @@ public class RecommendationService {
                 return new SquadNeedsResponse(
                                 currentManager.getId(),
                                 currentManager.getName(),
+                                currentManager.getCurrentFormation(),
                                 squadPlayers.size(),
                                 playersByPosition,
                                 startersByPosition,

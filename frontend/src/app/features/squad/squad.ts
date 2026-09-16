@@ -449,6 +449,78 @@ export class Squad {
     )
   );
 
+  readonly currentFormation = computed(() =>
+    this.manager()?.currentFormation ?? null
+  );
+
+  readonly expectedLineupCounts = computed(() => {
+    const formation = this.currentFormation();
+
+    if (!formation) {
+      return null;
+    }
+
+    const parts = formation
+      .split('-')
+      .map(part => Number(part));
+
+    if (
+      parts.length !== 3 ||
+      parts.some(part => !Number.isInteger(part) || part < 0) ||
+      parts.reduce((total, part) => total + part, 0) !== 10
+    ) {
+      return null;
+    }
+
+    const [defenders, midfielders, forwards] = parts;
+
+    return {
+      PT: 1,
+      DF: defenders,
+      MC: midfielders,
+      DL: forwards,
+    };
+  });
+
+  readonly emptyGoalkeeperSlots = computed(() =>
+    this.emptySlotsForPosition(
+      this.expectedLineupCounts()?.PT,
+      this.goalkeeper().length
+    )
+  );
+
+  readonly emptyDefenderSlots = computed(() =>
+    this.emptySlotsForPosition(
+      this.expectedLineupCounts()?.DF,
+      this.defenders().length
+    )
+  );
+
+  readonly emptyMidfielderSlots = computed(() =>
+    this.emptySlotsForPosition(
+      this.expectedLineupCounts()?.MC,
+      this.midfielders().length
+    )
+  );
+
+  readonly emptyForwardSlots = computed(() =>
+    this.emptySlotsForPosition(
+      this.expectedLineupCounts()?.DL,
+      this.forwards().length
+    )
+  );
+
+  readonly emptyLineupSlots = computed(() =>
+    this.emptyGoalkeeperSlots().length +
+    this.emptyDefenderSlots().length +
+    this.emptyMidfielderSlots().length +
+    this.emptyForwardSlots().length
+  );
+
+  readonly emptyLineupPenalty = computed(() =>
+    this.emptyLineupSlots() * -4
+  );
+
   protectionAlertTitle(player: Player): string {
     switch (player.playerProtectionAlert.level) {
       case 'PROTECT':
@@ -500,6 +572,20 @@ export class Squad {
       'DISCARDED',
       'ALERT'
     ].includes(value);
+  }
+
+  private emptySlotsForPosition(
+    expected: number | undefined,
+    actual: number
+  ): number[] {
+    if (expected === undefined) {
+      return [];
+    }
+
+    return Array.from(
+      { length: Math.max(expected - actual, 0) },
+      (_, index) => index
+    );
   }
 
   constructor() {

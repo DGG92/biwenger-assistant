@@ -61,6 +61,77 @@ export class Matchday {
         )
     );
 
+    readonly formationSlots = computed(() => {
+        const formation = this.matchday()?.formation;
+
+        if (!formation) {
+            return null;
+        }
+
+        const parts = formation
+            .split('-')
+            .map(Number);
+
+        if (
+            parts.length !== 3
+            || parts.some(part => !Number.isInteger(part) || part < 0)
+        ) {
+            return null;
+        }
+
+        const [defenders, midfielders, forwards] = parts;
+
+        return {
+            goalkeeper: 1,
+            defenders,
+            midfielders,
+            forwards,
+        };
+    });
+
+    readonly emptyGoalkeeperSlots = computed(() =>
+        Math.max(
+            (this.formationSlots()?.goalkeeper ?? 0)
+            - this.goalkeeper().length,
+            0
+        )
+    );
+
+    readonly emptyDefenderSlots = computed(() =>
+        Math.max(
+            (this.formationSlots()?.defenders ?? 0)
+            - this.defenders().length,
+            0
+        )
+    );
+
+    readonly emptyMidfielderSlots = computed(() =>
+        Math.max(
+            (this.formationSlots()?.midfielders ?? 0)
+            - this.midfielders().length,
+            0
+        )
+    );
+
+    readonly emptyForwardSlots = computed(() =>
+        Math.max(
+            (this.formationSlots()?.forwards ?? 0)
+            - this.forwards().length,
+            0
+        )
+    );
+
+    readonly emptyLineupSlots = computed(() =>
+        this.emptyGoalkeeperSlots()
+        + this.emptyDefenderSlots()
+        + this.emptyMidfielderSlots()
+        + this.emptyForwardSlots()
+    );
+
+    readonly incompleteLineupPenalty = computed(
+        () => this.emptyLineupSlots() * -4
+    );
+
     readonly reserves = computed(() =>
         this.players().filter(player => player.reserve)
     );

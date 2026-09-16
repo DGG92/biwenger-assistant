@@ -769,3 +769,23 @@
         width: 100%;
     }
 }
+
+.incomplete-lineup-warning {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid #facc15;
+    border-radius: 12px;
+    background: #fefce8;
+    color: #422006;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.empty-lineup-player {
+    opacity: 0.65;
+}
+
+.empty-player-circle {
+    border: 2px dashed currentColor;
+    background: transparent;
+}

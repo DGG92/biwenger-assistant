@@ -1409,3 +1409,23 @@
         grid-template-columns: 1fr;
     }
 }
+
+.incomplete-lineup-warning {
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 193, 7, 0.45);
+    border-radius: 0.75rem;
+    background: rgba(255, 193, 7, 0.1);
+    font-weight: 600;
+}
+
+.empty-lineup-player {
+    opacity: 0.65;
+    display: flex !important;
+    visibility: visible !important;
+}
+
+.empty-player-circle {
+    border: 2px dashed currentColor;
+    background: transparent;
+}

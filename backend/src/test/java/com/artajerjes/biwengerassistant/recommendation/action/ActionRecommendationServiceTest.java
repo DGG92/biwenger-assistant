@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.league.League;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
 import com.artajerjes.biwengerassistant.manager.Manager;
@@ -36,7 +37,6 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
-import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 
 @ExtendWith(MockitoExtension.class)
 class ActionRecommendationServiceTest {
@@ -1405,6 +1405,7 @@ class ActionRecommendationServiceTest {
                 return new SquadNeedsResponse(
                                 13L,
                                 "Califato Omeya",
+                                "4-4-2",
                                 1,
                                 Map.of(
                                                 "PT", 0,
