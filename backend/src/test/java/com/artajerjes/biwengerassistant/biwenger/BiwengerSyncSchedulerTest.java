@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,7 +27,7 @@ class BiwengerSyncSchedulerTest {
         @Test
         void syncShouldExecuteSyncForDefaultLeague() {
 
-                when(syncExecutionService.syncNow(1L))
+                when(syncExecutionService.syncScheduled(1L))
                                 .thenReturn(
                                                 new SyncNowResponse(
                                                                 1L,
@@ -36,13 +37,16 @@ class BiwengerSyncSchedulerTest {
                 biwengerSyncScheduler.sync();
 
                 verify(syncExecutionService)
+                                .syncScheduled(1L);
+
+                verify(syncExecutionService, never())
                                 .syncNow(1L);
         }
 
         @Test
         void syncShouldSkipWhenAnotherSyncIsAlreadyRunning() {
 
-                when(syncExecutionService.syncNow(1L))
+                when(syncExecutionService.syncScheduled(1L))
                                 .thenReturn(
                                                 new SyncNowResponse(
                                                                 1L,
@@ -53,6 +57,9 @@ class BiwengerSyncSchedulerTest {
                                 () -> biwengerSyncScheduler.sync());
 
                 verify(syncExecutionService)
+                                .syncScheduled(1L);
+
+                verify(syncExecutionService, never())
                                 .syncNow(1L);
         }
 
@@ -63,12 +70,15 @@ class BiwengerSyncSchedulerTest {
                                 new IllegalStateException(
                                                 "Unexpected scheduled sync failure"))
                                 .when(syncExecutionService)
-                                .syncNow(1L);
+                                .syncScheduled(1L);
 
                 assertDoesNotThrow(
                                 () -> biwengerSyncScheduler.sync());
 
                 verify(syncExecutionService)
+                                .syncScheduled(1L);
+
+                verify(syncExecutionService, never())
                                 .syncNow(1L);
         }
 }

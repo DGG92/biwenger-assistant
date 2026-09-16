@@ -140,6 +140,10 @@ public class BiwengerSyncService {
                         OfferSyncResponse offers = offerService.sync(leagueId);
                         log.info("Offers synced for league {}", leagueId);
 
+                        log.info("Syncing player details for league {}", leagueId);
+                        syncPlayerDetailsBatch(leagueId, true);
+                        log.info("Player details synced for league {}", leagueId);
+
                         long elapsed = System.currentTimeMillis() - startedAt;
 
                         log.info(
@@ -271,7 +275,7 @@ public class BiwengerSyncService {
                         runScheduledPhase(
                                         leagueId,
                                         "player details",
-                                        () -> syncPlayerDetailsBatch(leagueId));
+                                        () -> syncPlayerDetailsBatch(leagueId, false));
 
                         long elapsed = System.currentTimeMillis() - startedAt;
 
@@ -335,8 +339,7 @@ public class BiwengerSyncService {
                 }
         }
 
-        private void syncPlayerDetailsBatch(
-                        Long leagueId) {
+        private void syncPlayerDetailsBatch(Long leagueId, boolean prioritizeLineup) {
 
                 if (syncStateService.isInCooldown(
                                 leagueId,
@@ -349,9 +352,13 @@ public class BiwengerSyncService {
                         return;
                 }
 
-                PlayerDetailSyncResponse result = playerDetailSyncService
-                                .syncLeaguePlayerDetails(
-                                                leagueId);
+                PlayerDetailSyncResponse result = prioritizeLineup
+                                ? playerDetailSyncService
+                                                .syncLeaguePlayerDetailsPrioritizingLineup(
+                                                                leagueId)
+                                : playerDetailSyncService
+                                                .syncLeaguePlayerDetails(
+                                                                leagueId);
 
                 if (result.completed()) {
 

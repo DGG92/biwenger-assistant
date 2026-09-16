@@ -486,6 +486,84 @@ class PlayerDetailSyncServiceTest {
                                 result.playersCompleted());
         }
 
+        @Test
+        void syncLeaguePlayerDetailsPrioritizingLineupShouldProcessLineupPlayerFirst() {
+
+                Player regularPlayer = player(
+                                1L,
+                                "regular-player");
+
+                Player lineupPlayer = player(
+                                2L,
+                                "lineup-player");
+
+                when(regularPlayer.isStarter())
+                                .thenReturn(false);
+
+                when(regularPlayer.isReserve())
+                                .thenReturn(false);
+
+                when(lineupPlayer.isStarter())
+                                .thenReturn(true);
+
+                when(lineupPlayer.isReserve())
+                                .thenReturn(false);
+
+                when(playerRepository.findAllByLeague_Id(1L))
+                                .thenReturn(
+                                                List.of(
+                                                                regularPlayer,
+                                                                lineupPlayer));
+
+                when(playerPriceHistoryRepository
+                                .findPlayerIdsWithHistoryByLeagueId(1L))
+                                .thenReturn(
+                                                List.of(
+                                                                1L,
+                                                                2L));
+
+                ReflectionTestUtils.setField(
+                                service,
+                                "batchSize",
+                                1);
+
+                BiwengerPlayerDetailResponse response = mock(
+                                BiwengerPlayerDetailResponse.class);
+
+                PlayerReportScoreConfig scoreConfig = new PlayerReportScoreConfig(
+                                100,
+                                "custom-score");
+
+                when(playerMatchReportService.loadLeagueScoreConfig())
+                                .thenReturn(scoreConfig);
+
+                when(biwengerClient.getPlayerDetail("lineup-player"))
+                                .thenReturn(response);
+
+                PlayerDetailSyncResponse result = service
+                                .syncLeaguePlayerDetailsPrioritizingLineup(1L);
+
+                assertEquals(
+                                1,
+                                result.playersAttempted());
+
+                assertEquals(
+                                1,
+                                result.playersCompleted());
+
+                assertEquals(
+                                2L,
+                                result.lastCompletedPlayerId());
+
+                verify(biwengerClient)
+                                .getPlayerDetail(
+                                                "lineup-player");
+
+                verify(biwengerClient, never())
+                                .getPlayerDetail(
+                                                "regular-player");
+        }
+
         private Player player(
                         Long id,
                         String slug) {

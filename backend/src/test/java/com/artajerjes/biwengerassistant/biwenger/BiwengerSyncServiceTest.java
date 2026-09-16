@@ -87,6 +87,25 @@ class BiwengerSyncServiceTest {
                                                                 20));
         }
 
+        private void mockSuccessfulPlayerDetailsSync(Long leagueId) {
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                25,
+                                25,
+                                6344,
+                                67,
+                                true,
+                                null,
+                                79L,
+                                null,
+                                null);
+
+                when(playerDetailSyncService
+                                .syncLeaguePlayerDetailsPrioritizingLineup(leagueId))
+                                .thenReturn(details);
+        }
+
         @Test
         void syncAllShouldExecuteAllSyncsInCorrectOrder() {
                 PlayerSyncResponse players = new PlayerSyncResponse(
@@ -159,6 +178,8 @@ class BiwengerSyncServiceTest {
 
                 mockMatchdayRoundSync(LEAGUE_ID);
 
+                mockSuccessfulPlayerDetailsSync(LEAGUE_ID);
+
                 biwengerSyncService.syncAll(LEAGUE_ID);
 
                 InOrder inOrder = inOrder(
@@ -170,7 +191,8 @@ class BiwengerSyncServiceTest {
                                 offerService,
                                 movementService,
                                 matchdayContextService,
-                                matchdayRoundSyncService);
+                                matchdayRoundSyncService,
+                                playerDetailSyncService);
 
                 inOrder.verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -204,6 +226,9 @@ class BiwengerSyncServiceTest {
 
                 inOrder.verify(offerService)
                                 .sync(LEAGUE_ID);
+
+                inOrder.verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetailsPrioritizingLineup(LEAGUE_ID);
         }
 
         @Test
@@ -285,6 +310,8 @@ class BiwengerSyncServiceTest {
                                 .thenReturn(lineup);
 
                 mockMatchdayRoundSync(LEAGUE_ID);
+
+                mockSuccessfulPlayerDetailsSync(LEAGUE_ID);
 
                 BiwengerSyncResponse result = biwengerSyncService.syncAll(
                                 LEAGUE_ID);
@@ -417,6 +444,8 @@ class BiwengerSyncServiceTest {
                                 .thenReturn(lineup);
 
                 mockMatchdayRoundSync(customLeagueId);
+
+                mockSuccessfulPlayerDetailsSync(customLeagueId);
 
                 biwengerSyncService.syncAll(customLeagueId);
 

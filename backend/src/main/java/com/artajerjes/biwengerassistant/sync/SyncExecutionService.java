@@ -32,6 +32,39 @@ public class SyncExecutionService {
 
                 try {
 
+                        biwengerSyncService.syncAll(leagueId);
+
+                        syncExecutionStateService.markSuccess(leagueId);
+
+                        return new SyncNowResponse(
+                                        leagueId,
+                                        true,
+                                        SyncExecutionStatus.SUCCESS);
+
+                } catch (Exception exception) {
+
+                        syncExecutionStateService.markFailed(
+                                        leagueId,
+                                        exception.getMessage());
+
+                        throw exception;
+                }
+        }
+
+        public SyncNowResponse syncScheduled(
+                        Long leagueId) {
+
+                if (biwengerSyncService.isSyncRunning(leagueId)) {
+                        return new SyncNowResponse(
+                                        leagueId,
+                                        false,
+                                        SyncExecutionStatus.RUNNING);
+                }
+
+                syncExecutionStateService.markRunning(leagueId);
+
+                try {
+
                         boolean started = biwengerSyncService
                                         .syncScheduled(leagueId);
 

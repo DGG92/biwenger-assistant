@@ -48,6 +48,23 @@ public class PlayerDetailSyncService {
         public PlayerDetailSyncResponse syncLeaguePlayerDetails(
                         Long leagueId) {
 
+                return syncLeaguePlayerDetails(
+                                leagueId,
+                                false);
+        }
+
+        public PlayerDetailSyncResponse syncLeaguePlayerDetailsPrioritizingLineup(
+                        Long leagueId) {
+
+                return syncLeaguePlayerDetails(
+                                leagueId,
+                                true);
+        }
+
+        private PlayerDetailSyncResponse syncLeaguePlayerDetails(
+                        Long leagueId,
+                        boolean prioritizeLineup) {
+
                 List<Player> players = playerRepository
                                 .findAllByLeague_Id(
                                                 leagueId);
@@ -65,21 +82,27 @@ public class PlayerDetailSyncService {
                  * reportsLastSyncSuccessAt convierte este proceso
                  * en una cola circular de actualización.
                  */
+                Comparator<Player> playerComparator = Comparator
+                                .comparing(
+                                                (Player player) -> prioritizeLineup
+                                                                && (player.isStarter() || player.isReserve())
+                                                                                ? 0
+                                                                                : 1)
+                                .thenComparing(
+                                                player -> playerIdsWithPriceHistory
+                                                                .contains(player.getId()))
+                                .thenComparing(
+                                                Player::getReportsLastSyncSuccessAt,
+                                                Comparator.nullsFirst(
+                                                                Comparator.naturalOrder()))
+                                .thenComparing(
+                                                Player::getId);
+
                 List<Player> eligiblePlayers = players.stream()
                                 .filter(
                                                 player -> player.getSlug() != null
                                                                 && !player.getSlug().isBlank())
-                                .sorted(
-                                                Comparator
-                                                                .comparing(
-                                                                                (Player player) -> playerIdsWithPriceHistory
-                                                                                                .contains(player.getId()))
-                                                                .thenComparing(
-                                                                                Player::getReportsLastSyncSuccessAt,
-                                                                                Comparator.nullsFirst(
-                                                                                                Comparator.naturalOrder()))
-                                                                .thenComparing(
-                                                                                Player::getId))
+                                .sorted(playerComparator)
                                 .toList();
 
                 List<Player> playersToProcess = eligiblePlayers.stream()

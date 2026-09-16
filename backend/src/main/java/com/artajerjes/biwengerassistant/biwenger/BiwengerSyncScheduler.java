@@ -35,7 +35,7 @@ public class BiwengerSyncScheduler {
                                         "Starting automatic Biwenger sync for league {}",
                                         DEFAULT_LEAGUE_ID);
 
-                        SyncNowResponse response = syncExecutionService.syncNow(
+                        SyncNowResponse response = syncExecutionService.syncScheduled(
                                         DEFAULT_LEAGUE_ID);
 
                         if (response.status() == SyncExecutionStatus.RUNNING

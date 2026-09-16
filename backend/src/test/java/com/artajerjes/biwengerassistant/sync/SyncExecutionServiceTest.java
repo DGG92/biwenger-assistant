@@ -28,9 +28,6 @@ class SyncExecutionServiceTest {
                 when(biwengerSyncService.isSyncRunning(LEAGUE_ID))
                                 .thenReturn(false);
 
-                when(biwengerSyncService.syncScheduled(LEAGUE_ID))
-                                .thenReturn(true);
-
                 SyncExecutionService service = new SyncExecutionService(
                                 biwengerSyncService,
                                 syncExecutionStateService);
@@ -58,6 +55,9 @@ class SyncExecutionServiceTest {
                                                 org.mockito.ArgumentMatchers.any());
 
                 verify(biwengerSyncService)
+                                .syncAll(LEAGUE_ID);
+
+                verify(biwengerSyncService, never())
                                 .syncScheduled(LEAGUE_ID);
         }
 
@@ -87,6 +87,9 @@ class SyncExecutionServiceTest {
                                 .isEqualTo(SyncExecutionStatus.RUNNING);
 
                 verify(biwengerSyncService, never())
+                                .syncAll(LEAGUE_ID);
+
+                verify(biwengerSyncService, never())
                                 .syncScheduled(LEAGUE_ID);
 
                 verify(syncExecutionStateService, never())
@@ -97,7 +100,7 @@ class SyncExecutionServiceTest {
         }
 
         @Test
-        void shouldResetExecutionStateWhenSyncCannotStart() {
+        void syncScheduledShouldResetExecutionStateWhenSyncCannotStart() {
 
                 BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
 
@@ -113,7 +116,7 @@ class SyncExecutionServiceTest {
                                 biwengerSyncService,
                                 syncExecutionStateService);
 
-                SyncNowResponse response = service.syncNow(LEAGUE_ID);
+                SyncNowResponse response = service.syncScheduled(LEAGUE_ID);
 
                 assertEquals(LEAGUE_ID, response.leagueId());
                 assertFalse(response.started());
@@ -146,7 +149,7 @@ class SyncExecutionServiceTest {
                 when(biwengerSyncService.isSyncRunning(LEAGUE_ID))
                                 .thenReturn(false);
 
-                when(biwengerSyncService.syncScheduled(LEAGUE_ID))
+                when(biwengerSyncService.syncAll(LEAGUE_ID))
                                 .thenThrow(new IllegalStateException(
                                                 "Biwenger unavailable"));
 
@@ -168,5 +171,11 @@ class SyncExecutionServiceTest {
 
                 verify(syncExecutionStateService, never())
                                 .markSuccess(LEAGUE_ID);
+
+                verify(biwengerSyncService)
+                                .syncAll(LEAGUE_ID);
+
+                verify(biwengerSyncService, never())
+                                .syncScheduled(LEAGUE_ID);
         }
 }
