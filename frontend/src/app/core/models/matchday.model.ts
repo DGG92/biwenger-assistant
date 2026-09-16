@@ -55,3 +55,8 @@ export interface MatchdayResponse {
 
     players: MatchdayPlayer[];
 }
+
+export interface MatchdayRoundOption {
+    roundId: number;
+    roundShortName: string;
+}

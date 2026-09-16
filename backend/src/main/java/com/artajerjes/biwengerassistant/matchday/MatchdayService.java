@@ -3,14 +3,18 @@ package com.artajerjes.biwengerassistant.matchday;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
@@ -20,7 +24,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.roundleague.BiwengerRoundLe
 import com.artajerjes.biwengerassistant.biwenger.dto.roundleague.BiwengerRoundLeagueStanding;
 import com.artajerjes.biwengerassistant.biwenger.dto.rounds.BiwengerRoundGame;
 import com.artajerjes.biwengerassistant.biwenger.dto.rounds.BiwengerRoundsResponse;
-import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
+import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayGameStatus;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayPlayerResponse;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayResponse;
@@ -28,8 +32,7 @@ import com.artajerjes.biwengerassistant.player.LineupPositionResolver;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
-import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
-import com.artajerjes.biwengerassistant.manager.Manager;
+import com.artajerjes.biwengerassistant.matchday.dto.MatchdayRoundOptionResponse;
 
 @Service
 public class MatchdayService {
@@ -59,11 +62,33 @@ public class MatchdayService {
                 CompletableFuture<BiwengerCompetitionResponse> competitionFuture = CompletableFuture.supplyAsync(
                                 biwengerClient::getCompetition);
 
-                BiwengerRoundLeagueResponse roundLeagueResponse = roundLeagueFuture.join();
+                return buildMatchdayResponse(
+                                roundLeagueFuture.join(),
+                                roundsFuture.join(),
+                                competitionFuture.join());
+        }
 
-                BiwengerRoundsResponse roundsResponse = roundsFuture.join();
+        public MatchdayResponse getMatchday(Long roundId) {
 
-                BiwengerCompetitionResponse competitionResponse = competitionFuture.join();
+                CompletableFuture<BiwengerRoundLeagueResponse> roundLeagueFuture = CompletableFuture.supplyAsync(
+                                () -> biwengerClient.getRoundLeague(roundId));
+
+                CompletableFuture<BiwengerRoundsResponse> roundsFuture = CompletableFuture.supplyAsync(
+                                () -> biwengerClient.getRounds(roundId));
+
+                CompletableFuture<BiwengerCompetitionResponse> competitionFuture = CompletableFuture.supplyAsync(
+                                biwengerClient::getCompetition);
+
+                return buildMatchdayResponse(
+                                roundLeagueFuture.join(),
+                                roundsFuture.join(),
+                                competitionFuture.join());
+        }
+
+        private MatchdayResponse buildMatchdayResponse(
+                        BiwengerRoundLeagueResponse roundLeagueResponse,
+                        BiwengerRoundsResponse roundsResponse,
+                        BiwengerCompetitionResponse competitionResponse) {
 
                 validateResponses(
                                 roundLeagueResponse,
@@ -73,6 +98,8 @@ public class MatchdayService {
                 var league = roundLeagueResponse.data().league();
 
                 var round = roundsResponse.data();
+
+                String season = resolveSeason(round.id());
 
                 var competition = competitionResponse.data();
 
@@ -219,7 +246,9 @@ public class MatchdayService {
 
                         Integer points = resolvePoints(
                                         playerId,
-                                        round.id());
+                                        round.id(),
+                                        season,
+                                        round.shortName());
 
                         players.add(
                                         new MatchdayPlayerResponse(
@@ -535,13 +564,51 @@ public class MatchdayService {
                 return false;
         }
 
+        private String resolveSeason(Long biwengerRoundId) {
+
+                if (biwengerRoundId == null) {
+                        return null;
+                }
+
+                List<String> seasons = playerMatchReportRepository
+                                .findSeasonsByBiwengerRoundId(
+                                                biwengerRoundId);
+
+                if (seasons == null || seasons.isEmpty()) {
+                        return null;
+                }
+
+                return seasons.get(0);
+        }
+
         private Integer resolvePoints(
                         Long biwengerPlayerId,
-                        Long biwengerRoundId) {
+                        Long biwengerRoundId,
+                        String season,
+                        String roundShort) {
 
-                if (biwengerPlayerId == null
-                                || biwengerRoundId == null) {
+                if (biwengerPlayerId == null) {
+                        return null;
+                }
 
+                if (season != null
+                                && roundShort != null
+                                && !roundShort.isBlank()) {
+
+                        Integer logicalRoundPoints = playerMatchReportRepository
+                                        .findFirstByPlayer_BiwengerPlayerIdAndSeasonAndRoundShortAndPointsIsNotNullOrderByMatchDateDesc(
+                                                        biwengerPlayerId.toString(),
+                                                        season,
+                                                        roundShort)
+                                        .map(PlayerMatchReport::getPoints)
+                                        .orElse(null);
+
+                        if (logicalRoundPoints != null) {
+                                return logicalRoundPoints;
+                        }
+                }
+
+                if (biwengerRoundId == null) {
                         return null;
                 }
 
@@ -579,5 +646,94 @@ public class MatchdayService {
                         throw new IllegalStateException(
                                         "Invalid Biwenger competition response");
                 }
+        }
+
+        @Transactional(readOnly = true)
+        public List<MatchdayRoundOptionResponse> getAvailableRounds() {
+
+                Long leagueId = currentAssistantUserService
+                                .getCurrentManager()
+                                .getLeague()
+                                .getId();
+
+                List<String> seasons = playerMatchReportRepository
+                                .findLatestScoredSeasonByLeague(
+                                                leagueId,
+                                                PageRequest.of(0, 1));
+
+                if (seasons.isEmpty()) {
+                        return List.of();
+                }
+
+                String season = seasons.get(0);
+
+                List<PlayerMatchReport> reports = playerMatchReportRepository
+                                .findRoundReportsByLeagueAndSeason(
+                                                leagueId,
+                                                season);
+
+                Map<String, PlayerMatchReport> latestRoundByShortName = new HashMap<>();
+
+                for (PlayerMatchReport report : reports) {
+
+                        String roundShort = report.getRoundShort();
+                        Long roundId = report.getBiwengerRoundId();
+
+                        if (roundShort == null
+                                        || roundShort.isBlank()
+                                        || roundId == null) {
+                                continue;
+                        }
+
+                        latestRoundByShortName.merge(
+                                        roundShort,
+                                        report,
+                                        (current, candidate) -> {
+
+                                                if (current.getMatchDate() == null) {
+                                                        return candidate;
+                                                }
+
+                                                if (candidate.getMatchDate() == null) {
+                                                        return current;
+                                                }
+
+                                                if (candidate.getMatchDate()
+                                                                .isAfter(current.getMatchDate())) {
+                                                        return candidate;
+                                                }
+
+                                                if (candidate.getMatchDate()
+                                                                .equals(current.getMatchDate())
+                                                                && candidate.getBiwengerRoundId() > current
+                                                                                .getBiwengerRoundId()) {
+                                                        return candidate;
+                                                }
+
+                                                return current;
+                                        });
+                }
+
+                return latestRoundByShortName
+                                .values()
+                                .stream()
+                                .map(report -> new MatchdayRoundOptionResponse(
+                                                report.getBiwengerRoundId(),
+                                                report.getRoundShort()))
+                                .sorted(Comparator.comparingInt(
+                                                option -> extractRoundNumber(
+                                                                option.roundShortName())))
+                                .toList();
+        }
+
+        private int extractRoundNumber(String roundShortName) {
+
+                if (roundShortName == null
+                                || !roundShortName.matches("J\\d+")) {
+                        return Integer.MAX_VALUE;
+                }
+
+                return Integer.parseInt(
+                                roundShortName.substring(1));
         }
 }

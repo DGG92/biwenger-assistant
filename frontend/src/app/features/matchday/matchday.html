@@ -14,9 +14,17 @@
         </div>
 
         <div class="round-header-info">
-            <span class="round-badge">
-                {{ matchday.roundShortName }}
-            </span>
+            <select class="round-selector" [value]="selectedRoundId()"
+                (change)="selectRound(+$any($event.target).value)" aria-label="Seleccionar jornada">
+                @for (
+                round of availableRounds();
+                track round.roundId
+                ) {
+                <option [value]="round.roundId" [selected]="round.roundId === selectedRoundId()">
+                    {{ round.roundShortName }}
+                </option>
+                }
+            </select>
 
             <span class="formation-badge">
                 {{ matchday.formation ?? 'Sin formación' }}

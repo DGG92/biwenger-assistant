@@ -13,8 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionData;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
@@ -35,13 +38,12 @@ import com.artajerjes.biwengerassistant.biwenger.dto.rounds.BiwengerRoundsRespon
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerLineupPlayerRef;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserData;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
+import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.matchday.dto.MatchdayGameStatus;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
-import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
-import com.artajerjes.biwengerassistant.manager.Manager;
 
 class MatchdayServiceTest {
 
@@ -867,6 +869,123 @@ class MatchdayServiceTest {
                 assertEquals(
                                 "Invalid Biwenger round league response",
                                 exception.getMessage());
+        }
+
+        @Test
+        void getMatchdayShouldRequestSpecificHistoricalRound() {
+
+                Long roundId = 4903L;
+                Long managerId = 13L;
+
+                BiwengerRoundLeagueLineup lineup = new BiwengerRoundLeagueLineup(
+                                "4-4-2",
+                                null,
+                                null,
+                                null,
+                                1L,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                true);
+
+                BiwengerRoundLeagueStanding standing = new BiwengerRoundLeagueStanding(
+                                managerId,
+                                "Manager actual",
+                                null,
+                                0,
+                                0L,
+                                0L,
+                                1,
+                                lineup);
+
+                BiwengerRoundLeagueResponse roundLeagueResponse = new BiwengerRoundLeagueResponse(
+                                200,
+                                new BiwengerRoundLeagueData(
+                                                new BiwengerRoundLeagueRound(roundId),
+                                                new BiwengerRoundLeagueLeague(
+                                                                1L,
+                                                                "Liga test",
+                                                                "la-liga",
+                                                                "classic",
+                                                                "private",
+                                                                "normal",
+                                                                100,
+                                                                List.of(standing),
+                                                                new BiwengerRoundLeagueSettings(
+                                                                                "end",
+                                                                                null,
+                                                                                1,
+                                                                                "onlyNoPlayed",
+                                                                                false))));
+
+                BiwengerRoundsResponse roundsResponse = new BiwengerRoundsResponse(
+                                200,
+                                new BiwengerRoundsData(
+                                                roundId,
+                                                "Jornada 5",
+                                                "J5",
+                                                "finished",
+                                                100,
+                                                null,
+                                                List.of(),
+                                                null));
+
+                BiwengerCompetitionResponse competitionResponse = new BiwengerCompetitionResponse(
+                                200,
+                                new BiwengerCompetitionData(
+                                                1L,
+                                                "LaLiga",
+                                                "la-liga",
+                                                "football",
+                                                "EUR",
+                                                Map.of(),
+                                                Map.of()));
+
+                when(biwengerClient.getRoundLeague(roundId))
+                                .thenReturn(roundLeagueResponse);
+
+                when(biwengerClient.getRounds(roundId))
+                                .thenReturn(roundsResponse);
+
+                when(biwengerClient.getCompetition())
+                                .thenReturn(competitionResponse);
+
+                var response = matchdayService.getMatchday(roundId);
+
+                assertEquals(
+                                roundId,
+                                response.roundId());
+
+                assertEquals(
+                                "Jornada 5",
+                                response.roundName());
+
+                assertEquals(
+                                "J5",
+                                response.roundShortName());
+
+                assertEquals(
+                                "finished",
+                                response.roundStatus());
+
+                assertEquals(
+                                "4-4-2",
+                                response.formation());
+
+                verify(biwengerClient)
+                                .getRoundLeague(roundId);
+
+                verify(biwengerClient)
+                                .getRounds(roundId);
+
+                verify(biwengerClient)
+                                .getCompetition();
+
+                verify(biwengerClient, never())
+                                .getRoundLeague();
+
+                verify(biwengerClient, never())
+                                .getRounds();
         }
 
         private BiwengerCompetitionPlayer competitionPlayer(

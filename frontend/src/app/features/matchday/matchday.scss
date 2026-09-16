@@ -789,3 +789,40 @@
     border: 2px dashed currentColor;
     background: transparent;
 }
+
+.round-selector {
+    min-width: 110px;
+    padding: 0.55rem 2rem 0.55rem 0.85rem;
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+
+    font: inherit;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.13);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: currentColor;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+    }
+
+    option {
+        color: #111;
+        background: #fff;
+    }
+}

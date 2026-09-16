@@ -1,9 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import {
+    Component,
+    computed,
+    inject,
+    signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import {
     MatchdayGameStatus,
     MatchdayPlayer,
+    MatchdayResponse,
 } from '../../core/models/matchday.model';
 import { MatchdayService } from '../../core/services/matchday';
 
@@ -16,12 +22,25 @@ import { MatchdayService } from '../../core/services/matchday';
 export class Matchday {
     private readonly matchdayService = inject(MatchdayService);
 
-    readonly matchday = toSignal(
-        this.matchdayService.getCurrentMatchday(),
+    readonly availableRounds = toSignal(
+        this.matchdayService.getAvailableRounds(),
         {
-            initialValue: null,
+            initialValue: [],
         }
     );
+
+    readonly matchday = signal<MatchdayResponse | null>(null);
+
+    readonly selectedRoundId = signal<number | null>(null);
+
+    constructor() {
+        this.matchdayService
+            .getCurrentMatchday()
+            .subscribe(matchday => {
+                this.matchday.set(matchday);
+                this.selectedRoundId.set(matchday.roundId);
+            });
+    }
 
     readonly players = computed(
         () => this.matchday()?.players ?? []
@@ -165,6 +184,20 @@ export class Matchday {
             0
         )
     );
+
+    selectRound(roundId: number): void {
+
+        if (roundId === this.selectedRoundId()) {
+            return;
+        }
+
+        this.matchdayService
+            .getMatchday(roundId)
+            .subscribe(matchday => {
+                this.matchday.set(matchday);
+                this.selectedRoundId.set(matchday.roundId);
+            });
+    }
 
     pointsClass(points: number | null): string {
         if (points === null) {

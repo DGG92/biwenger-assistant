@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
-import { MatchdayResponse } from '../models/matchday.model';
+import { MatchdayResponse, MatchdayRoundOption } from '../models/matchday.model';
 
 @Injectable({
     providedIn: 'root',
@@ -14,6 +14,18 @@ export class MatchdayService {
     getCurrentMatchday(): Observable<MatchdayResponse> {
         return this.http.get<MatchdayResponse>(
             `${API_CONFIG.baseUrl}/matchday`
+        );
+    }
+
+    getAvailableRounds(): Observable<MatchdayRoundOption[]> {
+        return this.http.get<MatchdayRoundOption[]>(
+            `${API_CONFIG.baseUrl}/matchday/rounds`
+        );
+    }
+
+    getMatchday(roundId: number): Observable<MatchdayResponse> {
+        return this.http.get<MatchdayResponse>(
+            `${API_CONFIG.baseUrl}/matchday/${roundId}`
         );
     }
 }

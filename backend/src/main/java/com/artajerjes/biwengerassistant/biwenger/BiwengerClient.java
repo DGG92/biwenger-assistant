@@ -365,6 +365,50 @@ public class BiwengerClient {
         }
 
         @SuppressWarnings("UseSpecificCatch")
+        public BiwengerRoundLeagueResponse getRoundLeague(Long roundId) {
+
+                byte[] responseBody = executeWithRetry(
+                                () -> restClient
+                                                .get()
+                                                .uri(
+                                                                "/api/v2/rounds/league/{roundId}",
+                                                                roundId)
+                                                .headers(headers -> {
+                                                        headers.setBearerAuth(token);
+                                                        headers.set(
+                                                                        "x-league",
+                                                                        leagueId);
+                                                        headers.set(
+                                                                        "x-user",
+                                                                        userId);
+                                                        headers.set(
+                                                                        "x-version",
+                                                                        version);
+                                                        headers.set(
+                                                                        "x-lang",
+                                                                        language);
+                                                })
+                                                .retrieve()
+                                                .body(byte[].class));
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty round league response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerRoundLeagueResponse.class);
+
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger round league response",
+                                        exception);
+                }
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
         public BiwengerRoundsResponse getRounds() {
 
                 byte[] responseBody = executeWithRetry(
@@ -376,6 +420,40 @@ public class BiwengerClient {
                                                                 .queryParam("lang", language)
                                                                 .queryParam("v", version)
                                                                 .build(competition))
+                                                .retrieve()
+                                                .body(byte[].class));
+
+                if (responseBody == null) {
+                        throw new IllegalStateException(
+                                        "Biwenger returned an empty rounds response");
+                }
+
+                try {
+                        return objectMapper.readValue(
+                                        responseBody,
+                                        BiwengerRoundsResponse.class);
+
+                } catch (Exception exception) {
+                        throw new IllegalStateException(
+                                        "Could not deserialize Biwenger rounds response",
+                                        exception);
+                }
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
+        public BiwengerRoundsResponse getRounds(Long roundId) {
+
+                byte[] responseBody = executeWithRetry(
+                                () -> cdnRestClient
+                                                .get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                                .path("/api/v2/rounds/{competition}/{roundId}")
+                                                                .queryParam("score", score)
+                                                                .queryParam("lang", language)
+                                                                .queryParam("v", version)
+                                                                .build(
+                                                                                competition,
+                                                                                roundId))
                                                 .retrieve()
                                                 .body(byte[].class));
 
