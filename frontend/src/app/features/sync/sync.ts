@@ -126,6 +126,37 @@ export class Sync implements OnInit, OnDestroy {
         }, 3000);
     }
 
+    formatDateTime(value: string | null): string {
+        if (!value) {
+            return 'Nunca';
+        }
+
+        return new Intl.DateTimeFormat('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(value));
+    }
+
+    formatInterval(intervalMs: number): string {
+        const minutes = Math.round(intervalMs / 60000);
+
+        if (minutes < 60) {
+            return `${minutes} min`;
+        }
+
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+
+        if (remainingMinutes === 0) {
+            return `${hours} h`;
+        }
+
+        return `${hours} h ${remainingMinutes} min`;
+    }
+
     private stopPolling(): void {
         if (this.pollingId !== null) {
             clearInterval(this.pollingId);

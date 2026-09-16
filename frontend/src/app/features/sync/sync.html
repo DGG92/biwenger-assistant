@@ -55,7 +55,7 @@
         </article>
 
         <article class="status-card">
-            <span>Jugadores</span>
+            <span>Jugadores disponibles</span>
             <strong>
                 {{ syncStatus.players.eligible }}
                 /
@@ -64,19 +64,78 @@
         </article>
 
         <article class="status-card">
-            <span>Informes</span>
+            <span>Cobertura de informes</span>
             <strong>
+                {{ syncStatus.players.reports.completed }}
+                /
+                {{ syncStatus.players.eligible }}
+                ·
                 {{ syncStatus.players.reports.coveragePercent }}%
             </strong>
         </article>
 
         <article class="status-card">
-            <span>Histórico de precios</span>
+            <span>Cobertura de precios</span>
             <strong>
+                {{ syncStatus.players.priceHistory.completed }}
+                /
+                {{ syncStatus.players.eligible }}
+                ·
                 {{ syncStatus.players.priceHistory.coveragePercent }}%
             </strong>
         </article>
 
+        <article class="status-card">
+            <span>Último Player Details actualizado</span>
+            <strong>
+                {{ formatDateTime(syncStatus.players.reports.lastSuccessAt) }}
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Player Details más antiguo</span>
+            <strong>
+                {{ formatDateTime(syncStatus.players.reports.oldestSuccessAt) }}
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Sincronización automática</span>
+            <strong>
+                @if (syncStatus.scheduler.enabled) {
+                Cada {{ formatInterval(syncStatus.scheduler.intervalMs) }}
+                } @else {
+                Desactivada
+                }
+            </strong>
+        </article>
+
+        <article class="status-card">
+            <span>Estado Player Details</span>
+            <strong>
+                {{ syncStatus.details.state }}
+            </strong>
+        </article>
+
+    </div>
+
+    <div class="sync-info">
+        <p>
+            Los informes y el histórico de precios se actualizan conjuntamente
+            mediante Player Details en tandas de 25 jugadores.
+        </p>
+
+        @if (syncStatus.scheduler.enabled) {
+        <p>
+            La sincronización automática está activa y se ejecuta cada
+            {{ formatInterval(syncStatus.scheduler.intervalMs) }}.
+        </p>
+        } @else {
+        <p>
+            La sincronización automática está desactivada en este entorno.
+            Los datos se actualizarán mediante sincronizaciones manuales.
+        </p>
+        }
     </div>
 
     }

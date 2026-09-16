@@ -83,3 +83,22 @@
     color: #15803d;
     font-weight: 600;
 }
+
+.sync-info {
+    margin-top: 20px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.sync-info p {
+    margin: 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.sync-info p+p {
+    margin-top: 6px;
+}
