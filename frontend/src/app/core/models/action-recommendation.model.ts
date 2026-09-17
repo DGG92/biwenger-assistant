@@ -17,6 +17,7 @@ export interface ActionRecommendation {
     type: ActionType;
     priority: ActionPriority;
     playerId: number | null;
+    biwengerPlayerId: string | null;
     playerName: string | null;
     title: string;
     explanation: string;

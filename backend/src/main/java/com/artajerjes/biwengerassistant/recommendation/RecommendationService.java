@@ -1154,6 +1154,7 @@ public class RecommendationService {
                                 .stream()
                                 .map(assignment -> new RecommendedLineupPlayerResponse(
                                                 assignment.player().getId(),
+                                                assignment.player().getBiwengerPlayerId(),
                                                 assignment.player().getName(),
                                                 assignment.position().name(),
                                                 round(assignment.rating())))

@@ -10,6 +10,7 @@ export type RecommendedLineupChangeType =
 
 export interface RecommendedLineupPlayer {
     playerId: number;
+    biwengerPlayerId: string;
     playerName: string;
     position: RecommendedLineupPosition;
     rating: number;

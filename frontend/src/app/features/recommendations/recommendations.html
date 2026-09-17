@@ -124,30 +124,43 @@
             [class.medium-priority]="action.priority === 'MEDIUM'" [class.low-priority]="action.priority === 'LOW'">
             <div class="action-header">
                 <div class="action-heading">
-                    <div class="badges">
-                        <span class="priority-badge" [class.high]="action.priority === 'HIGH'"
-                            [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
-                            Prioridad
-                            {{ priorityLabel(action.priority) }}
+                    @if (action.biwengerPlayerId && action.playerName) {
+                    <div class="recommendation-player-photo">
+                        <span class="recommendation-player-initial">
+                            {{ action.playerName.charAt(0) }}
                         </span>
 
-                        <span class="action-type" [class.buy]="action.type === 'BUY'"
-                            [class.bid]="action.type === 'BID'" [class.sell]="action.type === 'SELL'"
-                            [class.hold]="action.type === 'HOLD'" [class.watch]="action.type === 'WATCH'"
-                            [class.protect]="action.type === 'PROTECT'">
-                            {{ actionLabel(action.type) }}
-                        </span>
+                        <img class="recommendation-player-image" [src]="playerImageUrl(action.biwengerPlayerId)"
+                            [alt]="action.playerName" (error)="hideBrokenPlayerImage($event)" />
                     </div>
-
-                    <h2>
-                        {{ action.title }}
-                    </h2>
-
-                    @if (action.playerName) {
-                    <p class="player-name">
-                        {{ action.playerName }}
-                    </p>
                     }
+
+                    <div class="action-heading-content">
+                        <div class="badges">
+                            <span class="priority-badge" [class.high]="action.priority === 'HIGH'"
+                                [class.medium]="action.priority === 'MEDIUM'" [class.low]="action.priority === 'LOW'">
+                                Prioridad
+                                {{ priorityLabel(action.priority) }}
+                            </span>
+
+                            <span class="action-type" [class.buy]="action.type === 'BUY'"
+                                [class.bid]="action.type === 'BID'" [class.sell]="action.type === 'SELL'"
+                                [class.hold]="action.type === 'HOLD'" [class.watch]="action.type === 'WATCH'"
+                                [class.protect]="action.type === 'PROTECT'">
+                                {{ actionLabel(action.type) }}
+                            </span>
+                        </div>
+
+                        <h2>
+                            {{ action.title }}
+                        </h2>
+
+                        @if (action.playerName) {
+                        <p class="player-name">
+                            {{ action.playerName }}
+                        </p>
+                        }
+                    </div>
                 </div>
 
                 @if (action.confidence !== null) {

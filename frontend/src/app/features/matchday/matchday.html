@@ -186,7 +186,12 @@
 
                     <div class="player-visual">
                         <div class="player-circle">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         @if (player.points !== null) {
@@ -265,7 +270,12 @@
 
                     <div class="player-visual">
                         <div class="player-circle">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         <span class="points-badge" [class]="pointsClass(player.points)">
@@ -342,7 +352,12 @@
 
                     <div class="player-visual">
                         <div class="player-circle">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         <span class="points-badge" [class]="pointsClass(player.points)">
@@ -419,7 +434,12 @@
 
                     <div class="player-visual">
                         <div class="player-circle goalkeeper-circle">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         <span class="points-badge" [class]="pointsClass(player.points)">
@@ -504,7 +524,12 @@
 
                 <div class="secondary-player-main">
                     <div class="secondary-avatar coach-avatar">
-                        E
+                        <span class="player-initial">
+                            {{ playerInitial(player) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div>
@@ -561,7 +586,12 @@
 
                     <div class="secondary-player-main">
                         <div class="secondary-avatar">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         <div>
@@ -626,7 +656,12 @@
 
                     <div class="secondary-player-main">
                         <div class="secondary-avatar discarded-avatar">
-                            {{ playerInitial(player) }}
+                            <span class="player-initial">
+                                {{ playerInitial(player) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
                         </div>
 
                         <div>

@@ -186,6 +186,7 @@ public class SquadProfitabilityService {
 
                 return new SquadProfitabilityPlayerResponse(
                                 player.getId(),
+                                player.getBiwengerPlayerId(),
                                 player.getName(),
                                 currentValue,
                                 purchasePrice,

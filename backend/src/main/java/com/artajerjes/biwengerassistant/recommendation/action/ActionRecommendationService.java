@@ -7,8 +7,10 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.league.LeagueRepository;
+import com.artajerjes.biwengerassistant.manager.Manager;
 import com.artajerjes.biwengerassistant.market.MarketListingType;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
@@ -25,8 +27,6 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResp
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
-import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
-import com.artajerjes.biwengerassistant.manager.Manager;
 
 @Service
 public class ActionRecommendationService {
@@ -198,6 +198,7 @@ public class ActionRecommendationService {
                                 actionType,
                                 priority,
                                 recommendation.playerId(),
+                                recommendation.biwengerPlayerId(),
                                 recommendation.playerName(),
                                 title,
                                 explanation,
@@ -367,6 +368,7 @@ public class ActionRecommendationService {
                                         buildRecommendedStarterReplacementAction(
                                                         outgoing,
                                                         incoming,
+                                                        outgoingPlayer,
                                                         outgoingPosition,
                                                         lineup));
                 }
@@ -395,6 +397,7 @@ public class ActionRecommendationService {
         private ActionCandidate buildRecommendedStarterReplacementAction(
                         RecommendedLineupChangeResponse outgoing,
                         RecommendedLineupChangeResponse incoming,
+                        Player outgoingPlayer,
                         String position,
                         RecommendedLineupResponse lineup) {
 
@@ -436,6 +439,7 @@ public class ActionRecommendationService {
                                 ActionType.REPLACE_STARTER,
                                 priority,
                                 outgoing.playerId(),
+                                outgoingPlayer.getBiwengerPlayerId(),
                                 outgoing.playerName(),
                                 "Sustituye a "
                                                 + outgoing.playerName()
@@ -490,6 +494,7 @@ public class ActionRecommendationService {
                 return new ActionCandidate(
                                 ActionType.CHANGE_FORMATION,
                                 priority,
+                                null,
                                 null,
                                 null,
                                 title,
@@ -747,6 +752,7 @@ public class ActionRecommendationService {
                                                                         ? ActionPriority.HIGH
                                                                         : ActionPriority.MEDIUM,
                                                         player.getId(),
+                                                        player.getBiwengerPlayerId(),
                                                         player.getName(),
                                                         "Valora vender a " + player.getName(),
                                                         buildSellExplanation(
@@ -771,6 +777,7 @@ public class ActionRecommendationService {
                                                                         ? ActionPriority.HIGH
                                                                         : ActionPriority.MEDIUM,
                                                         player.getId(),
+                                                        player.getBiwengerPlayerId(),
                                                         player.getName(),
                                                         "Mantén a " + player.getName(),
                                                         buildHoldExplanation(
@@ -800,6 +807,7 @@ public class ActionRecommendationService {
                                                                         ? ActionPriority.HIGH
                                                                         : ActionPriority.MEDIUM,
                                                         player.getId(),
+                                                        player.getBiwengerPlayerId(),
                                                         player.getName(),
                                                         "Protege a " + player.getName(),
                                                         "Su evolución económica y deportiva justifica "
@@ -819,6 +827,7 @@ public class ActionRecommendationService {
                                                         ActionType.WATCH,
                                                         ActionPriority.LOW,
                                                         player.getId(),
+                                                        player.getBiwengerPlayerId(),
                                                         player.getName(),
                                                         "Sigue de cerca a " + player.getName(),
                                                         buildWatchExplanation(

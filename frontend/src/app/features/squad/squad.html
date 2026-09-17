@@ -286,7 +286,13 @@
                 ) {
                 <div class="lineup-player recommended-player">
                     <div class="player-circle recommended-player-circle">
-                        {{ player.playerName.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.playerName.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.playerName" (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -313,7 +319,13 @@
                 ) {
                 <div class="lineup-player recommended-player">
                     <div class="player-circle recommended-player-circle">
-                        {{ player.playerName.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.playerName.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.playerName" (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -340,7 +352,13 @@
                 ) {
                 <div class="lineup-player recommended-player">
                     <div class="player-circle recommended-player-circle">
-                        {{ player.playerName.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.playerName.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.playerName" (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -367,7 +385,13 @@
                 ) {
                 <div class="lineup-player recommended-player">
                     <div class="player-circle recommended-player-circle">
-                        {{ player.playerName.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.playerName.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.playerName" (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -423,7 +447,13 @@
                 <div class="lineup-player">
                     <div class="player-circle" [class.injured]="player.status === 'INJURED'"
                         [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
-                        {{ player.name.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -468,7 +498,13 @@
                 <div class="lineup-player">
                     <div class="player-circle" [class.injured]="player.status === 'INJURED'"
                         [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
-                        {{ player.name.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -513,7 +549,13 @@
                 <div class="lineup-player">
                     <div class="player-circle" [class.injured]="player.status === 'INJURED'"
                         [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
-                        {{ player.name.charAt(0) }}
+
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -556,10 +598,15 @@
             <div class="lineup-row goalkeeper-row">
                 @for (player of goalkeeper(); track player.id) {
                 <div class="lineup-player">
-                    <div class="player-circle goalkeeper" [class.captain]="player.captain"
-                        [class.injured]="player.status === 'INJURED'" [class.doubt]="player.status === 'DOUBT'"
-                        [class.sanctioned]="player.status === 'SANCTIONED'">
-                        {{ player.name.charAt(0) }}
+                    <div class="player-circle" [class.injured]="player.status === 'INJURED'"
+                        [class.doubt]="player.status === 'DOUBT'" [class.sanctioned]="player.status === 'SANCTIONED'">
+
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
                     </div>
 
                     <div class="lineup-name">
@@ -610,8 +657,19 @@
 
                     @if (goalkeeperReserve(); as player) {
                     <div class="bench-slot-player">
-                        <strong>{{ player.name }}</strong>
-                        <span>{{ player.teamName }}</span>
+                        <div class="bench-player-photo">
+                            <span class="player-initial">
+                                {{ player.name.charAt(0) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                        </div>
+
+                        <div class="bench-player-info">
+                            <strong>{{ player.name }}</strong>
+                            <span>{{ player.teamName }}</span>
+                        </div>
                     </div>
                     } @else {
                     <span class="bench-empty">Vacío</span>
@@ -623,8 +681,19 @@
 
                     @if (defenderReserve(); as player) {
                     <div class="bench-slot-player">
-                        <strong>{{ player.name }}</strong>
-                        <span>{{ player.teamName }}</span>
+                        <div class="bench-player-photo">
+                            <span class="player-initial">
+                                {{ player.name.charAt(0) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                        </div>
+
+                        <div class="bench-player-info">
+                            <strong>{{ player.name }}</strong>
+                            <span>{{ player.teamName }}</span>
+                        </div>
                     </div>
                     } @else {
                     <span class="bench-empty">Vacío</span>
@@ -636,8 +705,19 @@
 
                     @if (midfielderReserve(); as player) {
                     <div class="bench-slot-player">
-                        <strong>{{ player.name }}</strong>
-                        <span>{{ player.teamName }}</span>
+                        <div class="bench-player-photo">
+                            <span class="player-initial">
+                                {{ player.name.charAt(0) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                        </div>
+
+                        <div class="bench-player-info">
+                            <strong>{{ player.name }}</strong>
+                            <span>{{ player.teamName }}</span>
+                        </div>
                     </div>
                     } @else {
                     <span class="bench-empty">Vacío</span>
@@ -649,8 +729,19 @@
 
                     @if (forwardReserve(); as player) {
                     <div class="bench-slot-player">
-                        <strong>{{ player.name }}</strong>
-                        <span>{{ player.teamName }}</span>
+                        <div class="bench-player-photo">
+                            <span class="player-initial">
+                                {{ player.name.charAt(0) }}
+                            </span>
+
+                            <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)"
+                                [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                        </div>
+
+                        <div class="bench-player-info">
+                            <strong>{{ player.name }}</strong>
+                            <span>{{ player.teamName }}</span>
+                        </div>
                     </div>
                     } @else {
                     <span class="bench-empty">Vacío</span>
@@ -666,9 +757,20 @@
 
             @if (coach(); as player) {
             <article class="coach-card">
-                <div>
-                    <strong>{{ player.name }}</strong>
-                    <span>{{ player.teamName }}</span>
+                <div class="coach-player-main">
+                    <div class="bench-player-photo">
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <div class="bench-player-info">
+                        <strong>{{ player.name }}</strong>
+                        <span>{{ player.teamName }}</span>
+                    </div>
                 </div>
 
                 <span class="coach-badge">ENT</span>
@@ -768,19 +870,27 @@
         ) {
         <article class="player-card" [class.injured-card]="player.status === 'INJURED'">
             <div class="player-header">
-                <div>
-                    <h2>{{ player.name }}</h2>
+                <div class="player-header-main">
+                    <div class="player-card-photo">
+                        <span class="player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
 
-                    <p>
-                        {{ player.teamName || 'Sin equipo' }}
-                    </p>
+                        <img class="player-photo" [src]="playerImageUrl(player.biwengerPlayerId)" [alt]="player.name"
+                            (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <div class="player-card-identity">
+                        <h2>{{ player.name }}</h2>
+
+                        <p>
+                            {{ player.teamName || 'Sin equipo' }}
+                        </p>
+                    </div>
                 </div>
 
                 <div class="positions">
-                    @for (
-                    position of player.positions;
-                    track position
-                    ) {
+                    @for (position of player.positions; track position) {
                     <span>{{ position }}</span>
                     }
                 </div>

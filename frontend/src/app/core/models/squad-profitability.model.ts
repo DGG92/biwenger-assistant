@@ -1,5 +1,6 @@
 export interface SquadProfitabilityPlayer {
     playerId: number;
+    biwengerPlayerId: string,
     name: string;
     currentValue: number | null;
     purchasePrice: number | null;

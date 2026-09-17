@@ -1,5 +1,6 @@
 export interface LeaguePlayerStatistics {
     playerId: number;
+    biwengerPlayerId: string;
     name: string;
     positions: string[];
     marketValue: number | null;
@@ -11,6 +12,7 @@ export interface LeaguePlayerStatistics {
 
 export interface LeaguePlayerEconomicStatistics {
     playerId: number;
+    biwengerPlayerId: string;
     name: string;
     positions: string[];
 

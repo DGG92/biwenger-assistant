@@ -122,9 +122,20 @@
                     Líder en puntos
                 </span>
 
-                <strong class="intelligence-player">
-                    {{ player.name }}
-                </strong>
+                <div class="intelligence-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="intelligence-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="intelligence-value">
                     {{ player.totalPoints }} pts
@@ -145,9 +156,20 @@
                     Mayor subida · 7 días
                 </span>
 
-                <strong class="intelligence-player">
-                    {{ player.name }}
-                </strong>
+                <div class="intelligence-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="intelligence-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="intelligence-value positive-value">
                     +{{ player.changePercent7Days?.toFixed(1) }}%
@@ -168,9 +190,20 @@
                     Mayor caída · 7 días
                 </span>
 
-                <strong class="intelligence-player">
-                    {{ player.name }}
-                </strong>
+                <div class="intelligence-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="intelligence-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="intelligence-value negative-value">
                     {{ player.changePercent7Days?.toFixed(1) }}%
@@ -191,9 +224,20 @@
                     Jugador más valioso
                 </span>
 
-                <strong class="intelligence-player">
-                    {{ player.name }}
-                </strong>
+                <div class="intelligence-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="intelligence-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="intelligence-value">
                     {{
@@ -214,9 +258,20 @@
                     Mejor inversión
                 </span>
 
-                <strong class="intelligence-player">
-                    {{ player.name }}
-                </strong>
+                <div class="intelligence-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="intelligence-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="intelligence-value positive-value">
                     +{{
@@ -330,13 +385,34 @@
                     }
                 </div>
 
-                <h3 class="action-title">
-                    {{ action.title }}
-                </h3>
+                <div class="action-content">
+                    @if (action.biwengerPlayerId && action.playerName) {
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ action.playerName.charAt(0) }}
+                        </span>
 
-                <p class="action-explanation">
-                    {{ action.explanation }}
-                </p>
+                        <img class="dashboard-player-image" [src]="playerImageUrl(action.biwengerPlayerId)"
+                            [alt]="action.playerName" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+                    }
+
+                    <div class="action-content-text">
+                        <h3 class="action-title">
+                            {{ action.title }}
+                        </h3>
+
+                        @if (action.playerName) {
+                        <p class="action-player-name">
+                            {{ action.playerName }}
+                        </p>
+                        }
+
+                        <p class="action-explanation">
+                            {{ action.explanation }}
+                        </p>
+                    </div>
+                </div>
 
                 <div class="action-footer">
                     @if (action.suggestedAmount !== null) {
@@ -392,13 +468,23 @@
         search: recommendation.playerName
     }">
                 <div class="market-card-header">
-                    <div>
-                        <div class="player-heading">
-                            <strong>
-                                {{ recommendation.playerName }}
-                            </strong>
+                    <div class="market-player-main">
+                        <div class="dashboard-player-photo">
+                            <span class="dashboard-player-initial">
+                                {{ recommendation.playerName.charAt(0) }}
+                            </span>
 
-                            <span class="recommendation-badge" [class.strong-buy]="
+                            <img class="dashboard-player-image" [src]="playerImageUrl(recommendation.biwengerPlayerId)"
+                                [alt]="recommendation.playerName" (error)="hideBrokenPlayerImage($event)" />
+                        </div>
+
+                        <div>
+                            <div class="player-heading">
+                                <strong>
+                                    {{ recommendation.playerName }}
+                                </strong>
+
+                                <span class="recommendation-badge" [class.strong-buy]="
                         recommendation.recommendation === 'STRONG_BUY'
                     " [class.buy]="
                         recommendation.recommendation === 'BUY'
@@ -407,19 +493,20 @@
                     " [class.avoid]="
                         recommendation.recommendation === 'AVOID'
                     ">
-                                {{
-                                recommendation.recommendation === 'STRONG_BUY'
-                                ? 'STRONG BUY'
-                                : recommendation.recommendation
-                                }}
-                            </span>
-                        </div>
+                                    {{
+                                    recommendation.recommendation === 'STRONG_BUY'
+                                    ? 'STRONG BUY'
+                                    : recommendation.recommendation
+                                    }}
+                                </span>
+                            </div>
 
-                        <p class="market-player-context">
-                            {{ recommendation.teamName }}
-                            ·
-                            {{ recommendation.positions.join(' / ') }}
-                        </p>
+                            <p class="market-player-context">
+                                {{ recommendation.teamName }}
+                                ·
+                                {{ recommendation.positions.join(' / ') }}
+                            </p>
+                        </div>
                     </div>
 
                     <div class="market-score">
@@ -629,9 +716,20 @@
                     Mejor inversión
                 </span>
 
-                <strong class="squad-insight-player">
-                    {{ player.name }}
-                </strong>
+                <div class="squad-insight-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="squad-insight-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="squad-insight-value" [class.positive-value]="
                     player.unrealizedProfit !== null
@@ -674,9 +772,20 @@
                     Peor inversión
                 </span>
 
-                <strong class="squad-insight-player">
-                    {{ player.name }}
-                </strong>
+                <div class="squad-insight-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="squad-insight-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="squad-insight-value" [class.negative-value]="
                     player.unrealizedProfit !== null
@@ -710,9 +819,20 @@
                     Mayor eficiencia
                 </span>
 
-                <strong class="squad-insight-player">
-                    {{ player.name }}
-                </strong>
+                <div class="squad-insight-player-main">
+                    <div class="dashboard-player-photo">
+                        <span class="dashboard-player-initial">
+                            {{ player.name.charAt(0) }}
+                        </span>
+
+                        <img class="dashboard-player-image" [src]="playerImageUrl(player.biwengerPlayerId)"
+                            [alt]="player.name" (error)="hideBrokenPlayerImage($event)" />
+                    </div>
+
+                    <strong class="squad-insight-player">
+                        {{ player.name }}
+                    </strong>
+                </div>
 
                 <span class="squad-insight-value">
                     @if (player.pointsPerMillion !== null) {

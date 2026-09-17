@@ -264,6 +264,7 @@ public class LeagueStatisticsService {
 
                 return new LeaguePlayerStatisticsResponse(
                                 player.getId(),
+                                player.getBiwengerPlayerId(),
                                 player.getName(),
                                 player.getPositions(),
                                 player.getMarketValue(),
@@ -304,6 +305,7 @@ public class LeagueStatisticsService {
 
                 return new LeaguePlayerEconomicStatisticsResponse(
                                 player.getId(),
+                                player.getBiwengerPlayerId(),
                                 player.getName(),
                                 player.getPositions(),
                                 currentValue,

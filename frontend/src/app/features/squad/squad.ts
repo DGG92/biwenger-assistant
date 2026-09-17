@@ -588,6 +588,15 @@ export class Squad {
     );
   }
 
+  playerImageUrl(biwengerPlayerId: string | number): string {
+    return `https://cdn.biwenger.com/i/p/${biwengerPlayerId}.png`;
+  }
+
+  hideBrokenPlayerImage(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    image.style.display = 'none';
+  }
+
   constructor() {
     const params =
       this.route.snapshot.queryParamMap;

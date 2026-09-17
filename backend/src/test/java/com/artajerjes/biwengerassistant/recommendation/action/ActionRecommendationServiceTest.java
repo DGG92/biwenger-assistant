@@ -835,6 +835,7 @@ class ActionRecommendationServiceTest {
                                                                 List.of(
                                                                                 new RecommendedLineupPlayerResponse(
                                                                                                 reserve.getId(),
+                                                                                                reserve.getBiwengerPlayerId(),
                                                                                                 reserve.getName(),
                                                                                                 "MC",
                                                                                                 7.0)),
