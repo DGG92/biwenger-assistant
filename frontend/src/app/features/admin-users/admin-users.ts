@@ -18,6 +18,7 @@ export class AdminUsers implements OnInit {
 
     readonly managers = signal<AvailableManager[]>([]);
     readonly loading = signal(true);
+    readonly loadError = signal(false);
     readonly creating = signal(false);
     readonly errorMessage = signal('');
     readonly successMessage = signal('');
@@ -106,9 +107,9 @@ export class AdminUsers implements OnInit {
         });
     }
 
-    private loadManagers(): void {
+    loadManagers(): void {
         this.loading.set(true);
-        this.errorMessage.set('');
+        this.loadError.set(false);
 
         this.adminUsersService.getAvailableManagers().subscribe({
             next: (managers) => {
@@ -116,9 +117,7 @@ export class AdminUsers implements OnInit {
                 this.loading.set(false);
             },
             error: () => {
-                this.errorMessage.set(
-                    'No se han podido cargar los managers disponibles.'
-                );
+                this.loadError.set(true);
                 this.loading.set(false);
             },
         });

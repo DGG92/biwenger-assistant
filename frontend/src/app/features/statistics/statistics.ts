@@ -9,8 +9,11 @@ import {
     toSignal,
 } from '@angular/core/rxjs-interop';
 import {
+    catchError,
     map,
+    of,
     startWith,
+    Subject,
     switchMap,
 } from 'rxjs';
 
@@ -34,6 +37,7 @@ interface ReportSelection {
 
 interface ReportState {
     loading: boolean;
+    error: boolean;
     response: StatisticResponse | null;
 }
 
@@ -88,29 +92,47 @@ export class Statistics {
     private readonly reportSelection$ =
         toObservable(this.reportSelection);
 
+    private readonly reload$ = new Subject<void>();
+
     private readonly reportState = toSignal(
         this.reportSelection$.pipe(
             switchMap(selection =>
-                this.statisticsService
-                    .getReport(
-                        selection.report,
-                        selection.param
+                this.reload$.pipe(
+                    startWith(undefined),
+                    switchMap(() =>
+                        this.statisticsService
+                            .getReport(
+                                selection.report,
+                                selection.param
+                            )
+                            .pipe(
+                                map(
+                                    response =>
+                                        ({
+                                            loading: false,
+                                            error: false,
+                                            response,
+                                        }) satisfies ReportState
+                                ),
+                                startWith(
+                                    {
+                                        loading: true,
+                                        error: false,
+                                        response: null,
+                                    } satisfies ReportState
+                                ),
+                                catchError(() =>
+                                    of(
+                                        {
+                                            loading: false,
+                                            error: true,
+                                            response: null,
+                                        } satisfies ReportState
+                                    )
+                                )
+                            )
                     )
-                    .pipe(
-                        map(
-                            response =>
-                                ({
-                                    loading: false,
-                                    response,
-                                }) satisfies ReportState
-                        ),
-                        startWith(
-                            {
-                                loading: true,
-                                response: null,
-                            } satisfies ReportState
-                        )
-                    )
+                )
             )
         )
     );
@@ -118,6 +140,14 @@ export class Statistics {
     readonly loading = computed(
         () => this.reportState()?.loading ?? true
     );
+
+    readonly loadError = computed(
+        () => this.reportState()?.error ?? false
+    );
+
+    reloadStatistics(): void {
+        this.reload$.next();
+    }
 
     readonly report = computed(
         () =>

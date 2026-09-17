@@ -1,7 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
-import { combineLatest, map, switchMap } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  map,
+  of,
+  startWith,
+  switchMap
+} from 'rxjs';
 
 import { RecommendationService } from '../../core/services/recommendation';
 import { PlayerService } from '../../core/services/player';
@@ -25,38 +33,61 @@ export class Dashboard {
   private readonly playerService =
     inject(PlayerService);
 
-  readonly dashboard$ =
-    this.recommendationService.getSquadNeeds().pipe(
-      switchMap(squad =>
-        combineLatest({
-          economy: this.recommendationService.getEconomicStatus(),
-          overview: this.recommendationService.getOverview(),
-          players: this.playerService.getPlayers(),
-          statistics: this.playerService.getStatistics(),
-          profitability:
-            this.recommendationService.getSquadProfitability(
-              squad.managerId
-            ),
-        }).pipe(
-          map(data => ({
-            squad,
-            economy: data.economy,
-            players: data.players,
-            statistics: data.statistics,
-            profitability: data.profitability,
-            market: data.overview.market,
-            actions: data.overview.actions,
-            topActions: data.overview.actions.slice(0, 5),
-            highPriorityActionCount:
-              data.overview.actions.filter(
-                action => action.priority === 'HIGH'
-              ).length,
-            topRecommendations:
-              data.overview.market.slice(0, 5),
-          }))
+  private readonly reload$ = new BehaviorSubject<void>(undefined);
+
+  readonly dashboardState$ = this.reload$.pipe(
+    switchMap(() =>
+      this.recommendationService.getSquadNeeds().pipe(
+        switchMap(squad =>
+          combineLatest({
+            economy: this.recommendationService.getEconomicStatus(),
+            overview: this.recommendationService.getOverview(),
+            players: this.playerService.getPlayers(),
+            statistics: this.playerService.getStatistics(),
+            profitability:
+              this.recommendationService.getSquadProfitability(
+                squad.managerId
+              ),
+          }).pipe(
+            map(data => ({
+              squad,
+              economy: data.economy,
+              players: data.players,
+              statistics: data.statistics,
+              profitability: data.profitability,
+              market: data.overview.market,
+              actions: data.overview.actions,
+              topActions: data.overview.actions.slice(0, 5),
+              highPriorityActionCount:
+                data.overview.actions.filter(
+                  action => action.priority === 'HIGH'
+                ).length,
+              topRecommendations:
+                data.overview.market.slice(0, 5),
+            }))
+          )
+        ),
+        map(data => ({
+          status: 'success' as const,
+          data
+        })),
+        startWith({
+          status: 'loading' as const,
+          data: null
+        }),
+        catchError(() =>
+          of({
+            status: 'error' as const,
+            data: null
+          })
         )
       )
-    );
+    )
+  );
+
+  reloadDashboard(): void {
+    this.reload$.next();
+  }
 
   reasonLabel(
     reason: MarketRecommendationReason

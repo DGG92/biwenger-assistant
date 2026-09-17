@@ -1,6 +1,14 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import {
+    catchError,
+    map,
+    of,
+    startWith,
+    Subject,
+    switchMap
+} from 'rxjs';
 
 import { Manager } from '../../core/models/manager.model';
 import { ManagerService } from '../../core/services/manager';
@@ -14,12 +22,53 @@ import { ManagerService } from '../../core/services/manager';
 export class Standings {
     private readonly managerService = inject(ManagerService);
 
-    private readonly managersData = toSignal(
-        this.managerService.getManagers(),
+    private readonly reload$ = new Subject<void>();
+
+    private readonly managersState = toSignal(
+        this.reload$.pipe(
+            startWith(undefined),
+            switchMap(() =>
+                this.managerService.getManagers().pipe(
+                    map(data => ({
+                        status: 'success' as const,
+                        data
+                    })),
+                    startWith({
+                        status: 'loading' as const,
+                        data: null
+                    }),
+                    catchError(() =>
+                        of({
+                            status: 'error' as const,
+                            data: null
+                        })
+                    )
+                )
+            )
+        ),
         {
-            initialValue: [] as Manager[],
+            initialValue: {
+                status: 'loading' as const,
+                data: null
+            }
         }
     );
+
+    readonly loading = computed(
+        () => this.managersState().status === 'loading'
+    );
+
+    readonly loadError = computed(
+        () => this.managersState().status === 'error'
+    );
+
+    private readonly managersData = computed(
+        () => this.managersState().data ?? []
+    );
+
+    reloadStandings(): void {
+        this.reload$.next();
+    }
 
     readonly managers = computed(() =>
         [...this.managersData()].sort(

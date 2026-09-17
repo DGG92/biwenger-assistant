@@ -1,4 +1,33 @@
 <section class="standings-page">
+    @if (loading()) {
+    <div class="standings-skeleton" aria-label="Cargando Clasificación">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton skeleton-table-header"></div>
+
+        <div class="skeleton-table-rows">
+            @for (item of [1, 2, 3, 4, 5, 6, 7, 8]; track item) {
+            <div class="skeleton skeleton-table-row"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="standings-state standings-error">
+        <span class="standings-state-icon">!</span>
+
+        <h2>No hemos podido cargar la Clasificación</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener los datos
+            de los managers de la liga.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadStandings()">
+            Reintentar
+        </button>
+    </div>
+    } @else {
     <header class="page-header">
         <div>
             <p class="eyebrow">VII Güenguer</p>
@@ -107,4 +136,5 @@
             }
         </div>
     </section>
+    }
 </section>

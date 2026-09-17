@@ -699,3 +699,55 @@
         display: none;
     }
 }
+
+/* SKELETON DE CARGA */
+
+.movements-skeleton {
+    width: 100%;
+}
+
+.skeleton {
+    border-radius: 10px;
+    background: rgba(127, 127, 127, 0.18);
+    animation: movements-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-results {
+    width: 150px;
+    height: 24px;
+    margin-bottom: 16px;
+}
+
+.skeleton-movement-list {
+    display: grid;
+    gap: 16px;
+}
+
+.skeleton-movement-card {
+    width: 100%;
+    height: 230px;
+}
+
+@keyframes movements-skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 700px) {
+    .skeleton-movement-card {
+        height: 280px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+    }
+}

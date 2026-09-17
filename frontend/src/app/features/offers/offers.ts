@@ -6,7 +6,15 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
+import {
+  catchError,
+  forkJoin,
+  map,
+  of,
+  startWith,
+  Subject,
+  switchMap
+} from 'rxjs';
 
 import {
   EconomicStatus,
@@ -36,18 +44,62 @@ export class Offers {
   readonly activeTab =
     signal<OfferTab>('received');
 
-  private readonly data = toSignal(
-    forkJoin({
-      offers:
-        this.offerService.getOffers(
-          this.leagueId
-        ),
-      economicStatus:
-        this.offerService.getEconomicStatus(
-          this.leagueId
-        ),
-    })
+  private readonly reload$ = new Subject<void>();
+
+  private readonly dataState = toSignal(
+    this.reload$.pipe(
+      startWith(undefined),
+      switchMap(() =>
+        forkJoin({
+          offers:
+            this.offerService.getOffers(
+              this.leagueId
+            ),
+          economicStatus:
+            this.offerService.getEconomicStatus(
+              this.leagueId
+            ),
+        }).pipe(
+          map(data => ({
+            status: 'success' as const,
+            data
+          })),
+          startWith({
+            status: 'loading' as const,
+            data: null
+          }),
+          catchError(() =>
+            of({
+              status: 'error' as const,
+              data: null
+            })
+          )
+        )
+      )
+    ),
+    {
+      initialValue: {
+        status: 'loading' as const,
+        data: null
+      }
+    }
   );
+
+  readonly loading = computed(
+    () => this.dataState().status === 'loading'
+  );
+
+  readonly loadError = computed(
+    () => this.dataState().status === 'error'
+  );
+
+  private readonly data = computed(
+    () => this.dataState().data
+  );
+
+  reloadOffers(): void {
+    this.reload$.next();
+  }
 
   readonly offers = computed(
     () => this.data()?.offers ?? []

@@ -2,7 +2,15 @@ import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { combineLatest, map, startWith } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  map,
+  of,
+  startWith,
+  Subject,
+  switchMap
+} from 'rxjs';
 
 import { Player, PlayerProtectionReason, PlayerStatus } from '../../core/models/player.model';
 import { SquadNeeds } from '../../core/models/squad-needs.model';
@@ -96,33 +104,71 @@ export class Squad {
     }
   }
 
-  private readonly squadData = toSignal(
-    combineLatest({
-      players: this.playerService.getPlayers(),
-      squad: this.recommendationService.getSquadNeeds(),
-      actions: this.recommendationService.getActions(),
-      recommendedLineup:
-        this.recommendationService.getRecommendedLineup(),
-    }).pipe(
-      map(({
-        players,
-        squad,
-        actions,
-        recommendedLineup
-      }): SquadData => ({
-        manager: squad,
-        players: players.filter(
-          player => player.ownerId === squad.managerId
-        ),
-        actions,
-        recommendedLineup,
-      })),
-      startWith(INITIAL_SQUAD_DATA)
+  private readonly reload$ = new Subject<void>();
+
+  private readonly squadState = toSignal(
+    this.reload$.pipe(
+      startWith(undefined),
+      switchMap(() =>
+        combineLatest({
+          players: this.playerService.getPlayers(),
+          squad: this.recommendationService.getSquadNeeds(),
+          actions: this.recommendationService.getActions(),
+          recommendedLineup:
+            this.recommendationService.getRecommendedLineup(),
+        }).pipe(
+          map(({
+            players,
+            squad,
+            actions,
+            recommendedLineup
+          }) => ({
+            status: 'success' as const,
+            data: {
+              manager: squad,
+              players: players.filter(
+                player => player.ownerId === squad.managerId
+              ),
+              actions,
+              recommendedLineup,
+            } satisfies SquadData
+          })),
+          startWith({
+            status: 'loading' as const,
+            data: null
+          }),
+          catchError(() =>
+            of({
+              status: 'error' as const,
+              data: null
+            })
+          )
+        )
+      )
     ),
     {
-      requireSync: true,
+      initialValue: {
+        status: 'loading' as const,
+        data: null
+      }
     }
   );
+
+  readonly loading = computed(
+    () => this.squadState().status === 'loading'
+  );
+
+  readonly loadError = computed(
+    () => this.squadState().status === 'error'
+  );
+
+  private readonly squadData = computed(
+    () => this.squadState().data ?? INITIAL_SQUAD_DATA
+  );
+
+  reloadSquad(): void {
+    this.reload$.next();
+  }
 
   readonly positionFilter =
     signal<PositionFilter>('ALL');

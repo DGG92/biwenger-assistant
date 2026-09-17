@@ -55,10 +55,14 @@
     </section>
 
     @if (loading()) {
-    <div class="state-card">
-        <div class="loader"></div>
-        <strong>Cargando movimientos...</strong>
-        <span>Consultando la actividad de la liga.</span>
+    <div class="movements-skeleton" aria-label="Cargando Movimientos">
+        <div class="skeleton skeleton-results"></div>
+
+        <div class="skeleton-movement-list">
+            @for (item of [1, 2, 3, 4]; track item) {
+            <div class="skeleton skeleton-movement-card"></div>
+            }
+        </div>
     </div>
     } @else if (error()) {
     <div class="state-card state-card--error">

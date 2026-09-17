@@ -1,4 +1,39 @@
 <section class="recommendations-page">
+    @if (loading()) {
+    <div class="recommendations-skeleton" aria-label="Cargando Recomendaciones">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton-summary-grid">
+            @for (item of [1, 2, 3, 4]; track item) {
+            <div class="skeleton skeleton-summary-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-filters"></div>
+
+        <div class="skeleton-action-list">
+            @for (item of [1, 2, 3]; track item) {
+            <div class="skeleton skeleton-action-card"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="recommendations-state recommendations-error">
+        <span class="recommendations-state-icon">!</span>
+
+        <h2>No hemos podido cargar las Recomendaciones</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener las acciones
+            recomendadas por el asistente.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadRecommendations()">
+            Reintentar
+        </button>
+    </div>
+    } @else {
     <header class="page-header">
         <div>
             <p class="eyebrow">Asistente</p>
@@ -239,4 +274,5 @@
         </div>
         }
     </section>
+    }
 </section>

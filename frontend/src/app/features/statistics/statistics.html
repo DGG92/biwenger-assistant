@@ -120,9 +120,29 @@
     </section>
 
     @if (loading()) {
-    <div class="loading-state">
-        <span class="loading-spinner"></span>
-        Cargando estadísticas...
+    <div class="statistics-skeleton" aria-label="Cargando Estadísticas">
+        <div class="skeleton skeleton-table-header"></div>
+
+        <div class="skeleton-table-rows">
+            @for (item of [1, 2, 3, 4, 5, 6, 7, 8]; track item) {
+            <div class="skeleton skeleton-table-row"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="statistics-state statistics-error">
+        <span class="statistics-state-icon">!</span>
+
+        <h2>No hemos podido cargar las Estadísticas</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener
+            el informe seleccionado.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadStatistics()">
+            Reintentar
+        </button>
     </div>
     } @else if (report(); as report) {
     <section class="statistics-table">

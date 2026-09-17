@@ -1,6 +1,14 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import {
+    catchError,
+    map,
+    of,
+    startWith,
+    Subject,
+    switchMap
+} from 'rxjs';
 
 import {
     ActionPriority,
@@ -29,11 +37,53 @@ export class Recommendations {
     private readonly recommendationService =
         inject(RecommendationService);
 
-    private readonly actions =
-        toSignal(
-            this.recommendationService.getActions(),
-            { initialValue: [] }
-        );
+    private readonly reload$ = new Subject<void>();
+
+    private readonly actionsState = toSignal(
+        this.reload$.pipe(
+            startWith(undefined),
+            switchMap(() =>
+                this.recommendationService.getActions().pipe(
+                    map(data => ({
+                        status: 'success' as const,
+                        data
+                    })),
+                    startWith({
+                        status: 'loading' as const,
+                        data: null
+                    }),
+                    catchError(() =>
+                        of({
+                            status: 'error' as const,
+                            data: null
+                        })
+                    )
+                )
+            )
+        ),
+        {
+            initialValue: {
+                status: 'loading' as const,
+                data: null
+            }
+        }
+    );
+
+    readonly loading = computed(
+        () => this.actionsState().status === 'loading'
+    );
+
+    readonly loadError = computed(
+        () => this.actionsState().status === 'error'
+    );
+
+    private readonly actions = computed(
+        () => this.actionsState().data ?? []
+    );
+
+    reloadRecommendations(): void {
+        this.reload$.next();
+    }
 
     readonly priorityFilter =
         signal<PriorityFilter>('ALL');

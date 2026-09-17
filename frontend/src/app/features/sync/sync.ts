@@ -23,6 +23,7 @@ export class Sync implements OnInit, OnDestroy {
 
     readonly status = signal<SyncStatusResponse | null>(null);
     readonly loading = signal(true);
+    readonly loadError = signal(false);
     readonly syncing = signal(false);
     readonly errorMessage = signal('');
     readonly successMessage = signal('');
@@ -39,6 +40,7 @@ export class Sync implements OnInit, OnDestroy {
 
     loadStatus(): void {
         this.loading.set(true);
+        this.loadError.set(false);
         this.errorMessage.set('');
 
         this.syncService.getStatus().subscribe({
@@ -55,9 +57,7 @@ export class Sync implements OnInit, OnDestroy {
                 }
             },
             error: () => {
-                this.errorMessage.set(
-                    'No se ha podido cargar el estado de sincronización.'
-                );
+                this.loadError.set(true);
                 this.loading.set(false);
             },
         });

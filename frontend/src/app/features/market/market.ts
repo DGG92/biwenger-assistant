@@ -1,5 +1,13 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import {
+  catchError,
+  map,
+  of,
+  startWith,
+  Subject,
+  switchMap
+} from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -40,24 +48,57 @@ export class Market {
   private readonly route =
     inject(ActivatedRoute);
 
-  private readonly overview =
-    toSignal(
-      this.recommendationService.getOverview(),
-      {
-        initialValue: {
-          market: [],
-          actions: []
-        }
+  private readonly reload$ = new Subject<void>();
+
+  private readonly overviewState = toSignal(
+    this.reload$.pipe(
+      startWith(undefined),
+      switchMap(() =>
+        this.recommendationService.getOverview().pipe(
+          map(data => ({
+            status: 'success' as const,
+            data
+          })),
+          startWith({
+            status: 'loading' as const,
+            data: null
+          }),
+          catchError(() =>
+            of({
+              status: 'error' as const,
+              data: null
+            })
+          )
+        )
+      )
+    ),
+    {
+      initialValue: {
+        status: 'loading' as const,
+        data: null
       }
-    );
+    }
+  );
+
+  readonly loading = computed(
+    () => this.overviewState().status === 'loading'
+  );
+
+  readonly loadError = computed(
+    () => this.overviewState().status === 'error'
+  );
 
   private readonly recommendations = computed(
-    () => this.overview().market
+    () => this.overviewState().data?.market ?? []
   );
 
   private readonly actions = computed(
-    () => this.overview().actions
+    () => this.overviewState().data?.actions ?? []
   );
+
+  reloadMarket(): void {
+    this.reload$.next();
+  }
 
   readonly marketActions = computed(() =>
     this.actions().filter(

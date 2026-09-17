@@ -102,3 +102,93 @@ button {
     border: 1px solid #e4e7ec;
     border-radius: 8px;
 }
+
+/* ESTADOS DE CARGA Y ERROR */
+
+.admin-users-skeleton {
+    display: grid;
+    gap: 18px;
+}
+
+.skeleton {
+    border-radius: 8px;
+    background: rgba(127, 127, 127, 0.18);
+    animation: admin-users-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-field {
+    width: 100%;
+    height: 62px;
+}
+
+.skeleton-checkbox {
+    width: 180px;
+    height: 24px;
+}
+
+.skeleton-button {
+    width: 160px;
+    height: 44px;
+    margin-top: 4px;
+}
+
+.load-state {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 2rem;
+
+    >span:not(.load-state-icon) {
+        max-width: 480px;
+        color: #64748b;
+    }
+}
+
+.load-state-icon {
+    width: 48px;
+    height: 48px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+
+    display: grid;
+    place-items: center;
+
+    margin-bottom: 4px;
+
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.retry-button {
+    margin-top: 12px;
+    padding: 0.7rem 1.25rem;
+
+    border: 0;
+    border-radius: 8px;
+
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+}
+
+@keyframes admin-users-skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+    }
+}

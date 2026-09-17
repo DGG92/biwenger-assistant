@@ -1,5 +1,6 @@
 <section class="dashboard">
-    @if (dashboard$ | async; as data) {
+    @if (dashboardState$ | async; as state) {
+    @if (state.status === 'success' && state.data; as data) {
     <header class="page-header">
         <div>
             <p class="eyebrow">VII Güenguer</p>
@@ -892,7 +893,48 @@
             }
         </div>
     </section>
+    } @else if (state.status === 'error') {
+    <div class="dashboard-state dashboard-error">
+        <span class="dashboard-state-icon">!</span>
+
+        <h2>No hemos podido cargar el Dashboard</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener los datos.
+            Puedes volver a intentarlo.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadDashboard()">
+            Reintentar
+        </button>
+    </div>
     } @else {
-    <p>Cargando dashboard...</p>
+    <div class="dashboard-skeleton" aria-label="Cargando Dashboard">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton-summary-grid">
+            @for (item of [1, 2, 3, 4]; track item) {
+            <div class="skeleton skeleton-summary-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-section-title"></div>
+
+        <div class="skeleton-card-grid">
+            @for (item of [1, 2, 3, 4, 5]; track item) {
+            <div class="skeleton skeleton-content-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-section-title"></div>
+
+        <div class="skeleton-card-grid">
+            @for (item of [1, 2, 3]; track item) {
+            <div class="skeleton skeleton-content-card"></div>
+            }
+        </div>
+    </div>
+    }
     }
 </section>

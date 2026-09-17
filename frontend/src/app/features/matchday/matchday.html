@@ -1,5 +1,42 @@
 <section class="matchday-page">
-    @if (matchday(); as matchday) {
+    @if (loading()) {
+    <div class="matchday-skeleton" aria-label="Cargando Jornada">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton-summary-grid">
+            @for (item of [1, 2, 3, 4, 5]; track item) {
+            <div class="skeleton skeleton-summary-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-context"></div>
+
+        <div class="skeleton skeleton-section-title"></div>
+        <div class="skeleton skeleton-pitch"></div>
+
+        <div class="skeleton-secondary-grid">
+            @for (item of [1, 2, 3]; track item) {
+            <div class="skeleton skeleton-secondary-card"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="matchday-state matchday-error">
+        <span class="matchday-state-icon">!</span>
+
+        <h2>No hemos podido cargar la Jornada</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener la alineación
+            y los datos de la jornada.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadMatchday()">
+            Reintentar
+        </button>
+    </div>
+    } @else if (matchday(); as matchday) {
 
     <header class="page-header">
         <div>
@@ -14,7 +51,7 @@
         </div>
 
         <div class="round-header-info">
-            <select class="round-selector" [value]="selectedRoundId()"
+            <select class="round-selector" [value]="selectedRoundId()" [disabled]="changingRound()"
                 (change)="selectRound(+$any($event.target).value)" aria-label="Seleccionar jornada">
                 @for (
                 round of availableRounds();
@@ -25,6 +62,12 @@
                 </option>
                 }
             </select>
+
+            @if (changingRound()) {
+            <span class="round-loading">
+                Cargando...
+            </span>
+            }
 
             <span class="formation-badge">
                 {{ matchday.formation ?? 'Sin formación' }}
@@ -707,19 +750,6 @@
             }
         </article>
 
-    </section>
-
-    } @else {
-
-    <section class="loading-state">
-        <div class="loading-ball">⚽</div>
-
-        <h2>Cargando jornada</h2>
-
-        <p>
-            Recuperando la alineación efectiva y el estado
-            de los partidos.
-        </p>
     </section>
 
     }

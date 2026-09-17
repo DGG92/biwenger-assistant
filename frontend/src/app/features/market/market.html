@@ -1,4 +1,33 @@
 <section class="market-page">
+    @if (loading()) {
+    <div class="market-skeleton" aria-label="Cargando Mercado">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton skeleton-filters"></div>
+
+        <div class="skeleton-card-list">
+            @for (item of [1, 2, 3, 4]; track item) {
+            <div class="skeleton skeleton-player-card"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="market-state market-error">
+        <span class="market-state-icon">!</span>
+
+        <h2>No hemos podido cargar el Mercado</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener los jugadores
+            disponibles y las recomendaciones.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadMarket()">
+            Reintentar
+        </button>
+    </div>
+    } @else {
     <header class="page-header">
         <div>
             <p class="eyebrow">VII Güenguer</p>
@@ -580,4 +609,5 @@
         </div>
         }
     </div>
+    }
 </section>

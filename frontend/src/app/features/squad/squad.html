@@ -1,5 +1,42 @@
 <section class="squad-page">
-    @if (manager(); as manager) {
+    @if (loading()) {
+    <div class="squad-skeleton" aria-label="Cargando Mi plantilla">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton-summary-grid">
+            @for (item of [1, 2, 3, 4]; track item) {
+            <div class="skeleton skeleton-summary-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-section-title"></div>
+        <div class="skeleton skeleton-pitch"></div>
+
+        <div class="skeleton skeleton-section-title"></div>
+
+        <div class="skeleton-player-grid">
+            @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+            <div class="skeleton skeleton-player-card"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="squad-state squad-error">
+        <span class="squad-state-icon">!</span>
+
+        <h2>No hemos podido cargar Mi plantilla</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener los datos
+            de tu plantilla.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadSquad()">
+            Reintentar
+        </button>
+    </div>
+    } @else if (manager(); as manager) {
     <header class="page-header">
         <div>
             <p class="eyebrow">VII Güenguer</p>
@@ -1090,7 +1127,5 @@
         </div>
         }
     </div>
-    } @else {
-    <p>Cargando plantilla...</p>
     }
 </section>

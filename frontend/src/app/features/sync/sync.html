@@ -34,7 +34,34 @@
     }
 
     @if (loading() && !status()) {
-    <p>Cargando estado...</p>
+
+    <div class="sync-skeleton" aria-label="Cargando estado de sincronización">
+        <div class="skeleton-status-grid">
+            @for (item of [1, 2, 3, 4, 5, 6, 7, 8]; track item) {
+            <div class="skeleton skeleton-status-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-info"></div>
+    </div>
+
+    } @else if (loadError() && !status()) {
+
+    <div class="sync-load-state">
+        <span class="sync-load-state-icon">!</span>
+
+        <h2>No hemos podido cargar la Sincronización</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener el estado
+            de sincronización de los datos.
+        </p>
+
+        <button type="button" class="retry-button" (click)="loadStatus()">
+            Reintentar
+        </button>
+    </div>
+
     }
 
     @if (errorMessage()) {

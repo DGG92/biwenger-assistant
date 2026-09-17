@@ -1,4 +1,39 @@
 <section class="offers-page">
+    @if (loading()) {
+    <div class="offers-skeleton" aria-label="Cargando Ofertas">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+
+        <div class="skeleton-economic-grid">
+            @for (item of [1, 2]; track item) {
+            <div class="skeleton skeleton-economic-card"></div>
+            }
+        </div>
+
+        <div class="skeleton skeleton-tabs"></div>
+
+        <div class="skeleton-offer-list">
+            @for (item of [1, 2, 3]; track item) {
+            <div class="skeleton skeleton-offer-card"></div>
+            }
+        </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="offers-state offers-error">
+        <span class="offers-state-icon">!</span>
+
+        <h2>No hemos podido cargar las Ofertas</h2>
+
+        <p>
+            Ha ocurrido un problema al obtener tus ofertas
+            y la información económica.
+        </p>
+
+        <button type="button" class="retry-button" (click)="reloadOffers()">
+            Reintentar
+        </button>
+    </div>
+    } @else {
 
     <header class="page-header">
         <div>
@@ -335,5 +370,5 @@
         }
 
     </section>
-
+    }
 </section>

@@ -5,7 +5,7 @@ import {
     signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-
+import { finalize } from 'rxjs';
 import {
     MatchdayGameStatus,
     MatchdayPlayer,
@@ -32,14 +32,12 @@ export class Matchday {
     readonly matchday = signal<MatchdayResponse | null>(null);
 
     readonly selectedRoundId = signal<number | null>(null);
+    readonly loading = signal(true);
+    readonly loadError = signal(false);
+    readonly changingRound = signal(false);
 
     constructor() {
-        this.matchdayService
-            .getCurrentMatchday()
-            .subscribe(matchday => {
-                this.matchday.set(matchday);
-                this.selectedRoundId.set(matchday.roundId);
-            });
+        this.loadCurrentMatchday();
     }
 
     readonly players = computed(
@@ -186,16 +184,28 @@ export class Matchday {
     );
 
     selectRound(roundId: number): void {
-
-        if (roundId === this.selectedRoundId()) {
+        if (
+            roundId === this.selectedRoundId()
+            || this.changingRound()
+        ) {
             return;
         }
 
+        this.changingRound.set(true);
+
         this.matchdayService
             .getMatchday(roundId)
-            .subscribe(matchday => {
-                this.matchday.set(matchday);
-                this.selectedRoundId.set(matchday.roundId);
+            .pipe(
+                finalize(() => this.changingRound.set(false))
+            )
+            .subscribe({
+                next: matchday => {
+                    this.matchday.set(matchday);
+                    this.selectedRoundId.set(matchday.roundId);
+                },
+                error: () => {
+                    // Conservamos la jornada que ya estaba visible.
+                }
             });
     }
 
@@ -270,5 +280,29 @@ export class Matchday {
     hideBrokenPlayerImage(event: Event): void {
         const image = event.target as HTMLImageElement;
         image.style.display = 'none';
+    }
+
+    private loadCurrentMatchday(): void {
+        this.loading.set(true);
+        this.loadError.set(false);
+
+        this.matchdayService
+            .getCurrentMatchday()
+            .pipe(
+                finalize(() => this.loading.set(false))
+            )
+            .subscribe({
+                next: matchday => {
+                    this.matchday.set(matchday);
+                    this.selectedRoundId.set(matchday.roundId);
+                },
+                error: () => {
+                    this.loadError.set(true);
+                }
+            });
+    }
+
+    reloadMatchday(): void {
+        this.loadCurrentMatchday();
     }
 }

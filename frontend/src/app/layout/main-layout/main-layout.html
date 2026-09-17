@@ -1,89 +1,100 @@
 <div class="app-shell">
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-mark">
-                BA
+    <aside class="sidebar" [class.sidebar--open]="mobileMenuOpen()">
+        <div class="brand-row">
+            <div class="brand">
+                <div class="brand-mark">
+                    BA
+                </div>
+
+                <div>
+                    <h1>Biwenger Assistant</h1>
+                    <p>VII Güenguer</p>
+                </div>
             </div>
 
-            <div>
-                <h1>Biwenger Assistant</h1>
-                <p>VII Güenguer</p>
-            </div>
-        </div>
-
-        <nav class="navigation">
-            <a routerLink="/dashboard" routerLinkActive="active">
-                Inicio
-            </a>
-
-            <a routerLink="/recommendations" routerLinkActive="active">
-                Recomendaciones
-            </a>
-
-            <a routerLink="/matchday" routerLinkActive="active">
-                Jornada
-            </a>
-
-            <a routerLink="/squad" routerLinkActive="active">
-                Mi plantilla
-            </a>
-
-            <a routerLink="/market" routerLinkActive="active">
-                Mercado
-            </a>
-
-            <a routerLink="/standings" routerLinkActive="active">
-                Clasificación
-            </a>
-
-            <a routerLink="/statistics" routerLinkActive="active">
-                Estadísticas
-            </a>
-
-            <a routerLink="/offers" routerLinkActive="active">
-                Ofertas
-            </a>
-
-            <a routerLink="/movements" routerLinkActive="active">
-                Movimientos
-            </a>
-
-            @if (authService.isAdmin()) {
-            <a routerLink="/admin/users" routerLinkActive="active">
-                Gestión de usuarios
-            </a>
-
-            <a routerLink="/sync" routerLinkActive="active">
-                Sincronización
-            </a>
-            }
-        </nav>
-
-        @if (authService.currentUser(); as user) {
-        <div class="manager">
-
-            <div class="manager-avatar">
-                {{ user.username.charAt(0).toUpperCase() }}
-            </div>
-
-            <div class="manager-info">
-                <strong>{{ user.username }}</strong>
-
-                <span>
-                    @if (user.role === 'ADMIN') {
-                    Administrador
-                    } @else {
-                    Usuario
-                    }
-                </span>
-            </div>
-
-            <button type="button" class="logout-button" (click)="logout()" title="Cerrar sesión">
-                Salir
+            <button type="button" class="menu-toggle" (click)="toggleMobileMenu()"
+                [attr.aria-expanded]="mobileMenuOpen()" aria-label="Abrir o cerrar menú">
+                @if (mobileMenuOpen()) {
+                ✕
+                } @else {
+                ☰
+                }
             </button>
-
         </div>
-        }
+
+        <div class="sidebar-content">
+            <nav class="navigation">
+                <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Inicio
+                </a>
+
+                <a routerLink="/recommendations" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Recomendaciones
+                </a>
+
+                <a routerLink="/matchday" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Jornada
+                </a>
+
+                <a routerLink="/squad" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Mi plantilla
+                </a>
+
+                <a routerLink="/market" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Mercado
+                </a>
+
+                <a routerLink="/standings" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Clasificación
+                </a>
+
+                <a routerLink="/statistics" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Estadísticas
+                </a>
+
+                <a routerLink="/offers" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Ofertas
+                </a>
+
+                <a routerLink="/movements" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Movimientos
+                </a>
+
+                @if (authService.isAdmin()) {
+                <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Gestión de usuarios
+                </a>
+
+                <a routerLink="/sync" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Sincronización
+                </a>
+                }
+            </nav>
+
+            @if (authService.currentUser(); as user) {
+            <div class="manager">
+                <div class="manager-avatar">
+                    {{ user.username.charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="manager-info">
+                    <strong>{{ user.username }}</strong>
+
+                    <span>
+                        @if (user.role === 'ADMIN') {
+                        Administrador
+                        } @else {
+                        Usuario
+                        }
+                    </span>
+                </div>
+
+                <button type="button" class="logout-button" (click)="logout()" title="Cerrar sesión">
+                    Salir
+                </button>
+            </div>
+            }
+        </div>
     </aside>
 
     <main class="content">
