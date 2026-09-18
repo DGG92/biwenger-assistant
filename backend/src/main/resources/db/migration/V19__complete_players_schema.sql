@@ -1,0 +1,7 @@
+ALTER TABLE players
+    ADD COLUMN slug VARCHAR(150),
+    ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT 'OK',
+    ADD COLUMN coach BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN lineup_position VARCHAR(255),
+    ADD COLUMN bench_position VARCHAR(255),
+    ADD COLUMN purchase_price BIGINT;
