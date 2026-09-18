@@ -132,12 +132,7 @@ export class Movements {
           this.movements.set(movements);
           this.loading.set(false);
         },
-        error: (error) => {
-          console.error(
-            'Error loading movements',
-            error,
-          );
-
+        error: () => {
           this.error.set(
             'No se han podido cargar los movimientos.',
           );
