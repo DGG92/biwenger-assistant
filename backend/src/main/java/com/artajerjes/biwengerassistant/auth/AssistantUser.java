@@ -94,4 +94,8 @@ public class AssistantUser {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

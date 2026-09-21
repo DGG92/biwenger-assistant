@@ -14,90 +14,109 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 
+import static org.mockito.Mockito.verify;
+
+import com.artajerjes.biwengerassistant.auth.dto.ChangePasswordRequest;
 import com.artajerjes.biwengerassistant.auth.dto.CurrentUserResponse;
 import com.artajerjes.biwengerassistant.auth.dto.LoginRequest;
 
 class AuthControllerTest {
 
-    private final AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
+        private final AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
 
-    private final AssistantUserRepository assistantUserRepository = mock(AssistantUserRepository.class);
+        private final AssistantUserRepository assistantUserRepository = mock(AssistantUserRepository.class);
 
-    private final AuthController controller = new AuthController(
-            authenticationManager,
-            assistantUserRepository);
+        private final AssistantUserService assistantUserService = mock(AssistantUserService.class);
 
-    @Test
-    void shouldLoginAndCreateSession() {
-        Authentication authentication = mock(Authentication.class);
+        private final AuthController controller = new AuthController(
+                        authenticationManager,
+                        assistantUserRepository,
+                        assistantUserService);
 
-        when(authentication.getName()).thenReturn("diego");
+        @Test
+        void shouldLoginAndCreateSession() {
+                Authentication authentication = mock(Authentication.class);
 
-        when(authenticationManager.authenticate(any(Authentication.class)))
-                .thenReturn(authentication);
+                when(authentication.getName()).thenReturn("diego");
 
-        AssistantUser user = new AssistantUser(
-                "diego",
-                "hashed-password",
-                AssistantRole.ADMIN,
-                null);
+                when(authenticationManager.authenticate(any(Authentication.class)))
+                                .thenReturn(authentication);
 
-        when(assistantUserRepository.findByUsernameIgnoreCase("diego"))
-                .thenReturn(Optional.of(user));
+                AssistantUser user = new AssistantUser(
+                                "diego",
+                                "hashed-password",
+                                AssistantRole.ADMIN,
+                                null);
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
+                when(assistantUserRepository.findByUsernameIgnoreCase("diego"))
+                                .thenReturn(Optional.of(user));
 
-        CurrentUserResponse response = controller.login(
-                new LoginRequest("diego", "secret"),
-                request);
+                MockHttpServletRequest request = new MockHttpServletRequest();
 
-        assertThat(request.getSession(false)).isNotNull();
+                CurrentUserResponse response = controller.login(
+                                new LoginRequest("diego", "secret"),
+                                request);
 
-        assertThat(response.username()).isEqualTo("diego");
-        assertThat(response.role()).isEqualTo(AssistantRole.ADMIN);
-        assertThat(response.managerId()).isNull();
-        assertThat(response.leagueId()).isNull();
-    }
+                assertThat(request.getSession(false)).isNotNull();
 
-    @Test
-    void shouldRejectInvalidCredentials() {
-        when(authenticationManager.authenticate(any(Authentication.class)))
-                .thenThrow(new BadCredentialsException(
-                        "Bad credentials"));
+                assertThat(response.username()).isEqualTo("diego");
+                assertThat(response.role()).isEqualTo(AssistantRole.ADMIN);
+                assertThat(response.managerId()).isNull();
+                assertThat(response.leagueId()).isNull();
+        }
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
+        @Test
+        void shouldRejectInvalidCredentials() {
+                when(authenticationManager.authenticate(any(Authentication.class)))
+                                .thenThrow(new BadCredentialsException(
+                                                "Bad credentials"));
 
-        assertThatThrownBy(() -> controller.login(
-                new LoginRequest("diego", "wrong"),
-                request))
-                .isInstanceOf(BadCredentialsException.class);
-    }
+                MockHttpServletRequest request = new MockHttpServletRequest();
 
-    @Test
-    void shouldRejectMeWithoutAuthentication() {
-        assertThatThrownBy(() -> controller.me(null))
-                .hasMessageContaining("401");
-    }
+                assertThatThrownBy(() -> controller.login(
+                                new LoginRequest("diego", "wrong"),
+                                request))
+                                .isInstanceOf(BadCredentialsException.class);
+        }
 
-    @Test
-    void shouldLogoutAndInvalidateSession() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
+        @Test
+        void shouldRejectMeWithoutAuthentication() {
+                assertThatThrownBy(() -> controller.me(null))
+                                .hasMessageContaining("401");
+        }
 
-        request.getSession(true);
+        @Test
+        void shouldLogoutAndInvalidateSession() {
+                MockHttpServletRequest request = new MockHttpServletRequest();
 
-        assertThat(request.getSession(false)).isNotNull();
+                request.getSession(true);
 
-        controller.logout(request);
+                assertThat(request.getSession(false)).isNotNull();
 
-        assertThat(request.getSession(false)).isNull();
-    }
+                controller.logout(request);
 
-    @Test
-    void shouldLogoutWithoutExistingSession() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
+                assertThat(request.getSession(false)).isNull();
+        }
 
-        controller.logout(request);
+        @Test
+        void shouldLogoutWithoutExistingSession() {
+                MockHttpServletRequest request = new MockHttpServletRequest();
 
-        assertThat(request.getSession(false)).isNull();
-    }
+                controller.logout(request);
+
+                assertThat(request.getSession(false)).isNull();
+        }
+
+        @Test
+        void shouldChangeCurrentUserPassword() {
+                controller.changePassword(
+                                new ChangePasswordRequest(
+                                                "new-password",
+                                                "new-password"));
+
+                verify(assistantUserService)
+                                .changeCurrentUserPassword(
+                                                "new-password",
+                                                "new-password");
+        }
 }

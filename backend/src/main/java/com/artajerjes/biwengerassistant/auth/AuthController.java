@@ -16,7 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.artajerjes.biwengerassistant.auth.dto.CurrentUserResponse;
 import com.artajerjes.biwengerassistant.auth.dto.LoginRequest;
+import com.artajerjes.biwengerassistant.auth.dto.ChangePasswordRequest;
 
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
@@ -24,85 +26,97 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final AssistantUserRepository assistantUserRepository;
+        private final AuthenticationManager authenticationManager;
+        private final AssistantUserRepository assistantUserRepository;
+        private final AssistantUserService assistantUserService;
 
-    public AuthController(
-            AuthenticationManager authenticationManager,
-            AssistantUserRepository assistantUserRepository) {
-        this.authenticationManager = authenticationManager;
-        this.assistantUserRepository = assistantUserRepository;
-    }
-
-    @PostMapping("/login")
-    public CurrentUserResponse login(
-            @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest) {
-
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.username(),
-                        request.password()));
-
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        HttpSession session = httpRequest.getSession(true);
-
-        session.setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                securityContext);
-
-        return getCurrentUser(authentication);
-    }
-
-    @GetMapping("/me")
-    public CurrentUserResponse me(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Not authenticated");
+        public AuthController(
+                        AuthenticationManager authenticationManager,
+                        AssistantUserRepository assistantUserRepository,
+                        AssistantUserService assistantUserService) {
+                this.authenticationManager = authenticationManager;
+                this.assistantUserRepository = assistantUserRepository;
+                this.assistantUserService = assistantUserService;
         }
 
-        return getCurrentUser(authentication);
-    }
+        @PostMapping("/login")
+        public CurrentUserResponse login(
+                        @RequestBody LoginRequest request,
+                        HttpServletRequest httpRequest) {
 
-    private CurrentUserResponse getCurrentUser(
-            Authentication authentication) {
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(
+                                                request.username(),
+                                                request.password()));
 
-        AssistantUser user = assistantUserRepository
-                .findByUsernameIgnoreCase(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Assistant user not found"));
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
-        Long managerId = user.getManager() != null
-                ? user.getManager().getId()
-                : null;
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
 
-        Long leagueId = user.getManager() != null
-                && user.getManager().getLeague() != null
-                        ? user.getManager().getLeague().getId()
-                        : null;
+                HttpSession session = httpRequest.getSession(true);
 
-        return new CurrentUserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getRole(),
-                managerId,
-                leagueId);
-    }
+                session.setAttribute(
+                                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                                securityContext);
 
-    @PostMapping("/logout")
-    public void logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session != null) {
-            session.invalidate();
+                return getCurrentUser(authentication);
         }
 
-        SecurityContextHolder.clearContext();
-    }
+        @GetMapping("/me")
+        public CurrentUserResponse me(Authentication authentication) {
+                if (authentication == null || !authentication.isAuthenticated()) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.UNAUTHORIZED,
+                                        "Not authenticated");
+                }
+
+                return getCurrentUser(authentication);
+        }
+
+        private CurrentUserResponse getCurrentUser(
+                        Authentication authentication) {
+
+                AssistantUser user = assistantUserRepository
+                                .findByUsernameIgnoreCase(authentication.getName())
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.UNAUTHORIZED,
+                                                "Assistant user not found"));
+
+                Long managerId = user.getManager() != null
+                                ? user.getManager().getId()
+                                : null;
+
+                Long leagueId = user.getManager() != null
+                                && user.getManager().getLeague() != null
+                                                ? user.getManager().getLeague().getId()
+                                                : null;
+
+                return new CurrentUserResponse(
+                                user.getId(),
+                                user.getUsername(),
+                                user.getRole(),
+                                managerId,
+                                leagueId);
+        }
+
+        @PostMapping("/change-password")
+        public void changePassword(
+                        @Valid @RequestBody ChangePasswordRequest request) {
+
+                assistantUserService.changeCurrentUserPassword(
+                                request.newPassword(),
+                                request.repeatedPassword());
+        }
+
+        @PostMapping("/logout")
+        public void logout(HttpServletRequest request) {
+                HttpSession session = request.getSession(false);
+
+                if (session != null) {
+                        session.invalidate();
+                }
+
+                SecurityContextHolder.clearContext();
+        }
 }

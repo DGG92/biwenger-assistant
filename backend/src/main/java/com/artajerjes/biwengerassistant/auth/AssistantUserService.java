@@ -15,65 +15,84 @@ import com.artajerjes.biwengerassistant.manager.ManagerRepository;
 @Service
 public class AssistantUserService {
 
-    private final AssistantUserRepository assistantUserRepository;
-    private final ManagerRepository managerRepository;
-    private final PasswordEncoder passwordEncoder;
+        private final AssistantUserRepository assistantUserRepository;
+        private final ManagerRepository managerRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final CurrentAssistantUserService currentAssistantUserService;
 
-    public AssistantUserService(
-            AssistantUserRepository assistantUserRepository,
-            ManagerRepository managerRepository,
-            PasswordEncoder passwordEncoder) {
-        this.assistantUserRepository = assistantUserRepository;
-        this.managerRepository = managerRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @Transactional
-    public AssistantUser create(
-            String username,
-            String rawPassword,
-            AssistantRole role,
-            Long managerId) {
-
-        if (assistantUserRepository.existsByUsernameIgnoreCase(username)) {
-            throw new IllegalArgumentException(
-                    "Username already exists: " + username);
+        public AssistantUserService(
+                        AssistantUserRepository assistantUserRepository,
+                        ManagerRepository managerRepository,
+                        PasswordEncoder passwordEncoder,
+                        CurrentAssistantUserService currentAssistantUserService) {
+                this.assistantUserRepository = assistantUserRepository;
+                this.managerRepository = managerRepository;
+                this.passwordEncoder = passwordEncoder;
+                this.currentAssistantUserService = currentAssistantUserService;
         }
 
-        Manager manager = null;
+        @Transactional
+        public AssistantUser create(
+                        String username,
+                        String rawPassword,
+                        AssistantRole role,
+                        Long managerId) {
 
-        if (managerId != null) {
-            manager = managerRepository.findById(managerId)
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Manager not found: " + managerId));
+                if (assistantUserRepository.existsByUsernameIgnoreCase(username)) {
+                        throw new IllegalArgumentException(
+                                        "Username already exists: " + username);
+                }
+
+                Manager manager = null;
+
+                if (managerId != null) {
+                        manager = managerRepository.findById(managerId)
+                                        .orElseThrow(() -> new IllegalArgumentException(
+                                                        "Manager not found: " + managerId));
+                }
+
+                AssistantUser user = new AssistantUser(
+                                username,
+                                passwordEncoder.encode(rawPassword),
+                                role,
+                                manager);
+
+                return assistantUserRepository.save(user);
         }
 
-        AssistantUser user = new AssistantUser(
-                username,
-                passwordEncoder.encode(rawPassword),
-                role,
-                manager);
+        @Transactional(readOnly = true)
+        public List<AvailableManagerResponse> findAvailableManagers() {
 
-        return assistantUserRepository.save(user);
-    }
+                Set<Long> assignedManagerIds = assistantUserRepository
+                                .findAllByManagerIsNotNull()
+                                .stream()
+                                .map(user -> user.getManager().getId())
+                                .collect(Collectors.toSet());
 
-    @Transactional(readOnly = true)
-    public List<AvailableManagerResponse> findAvailableManagers() {
+                return managerRepository.findAll()
+                                .stream()
+                                .filter(manager -> !assignedManagerIds.contains(manager.getId()))
+                                .map(manager -> new AvailableManagerResponse(
+                                                manager.getId(),
+                                                manager.getName(),
+                                                manager.getIcon(),
+                                                manager.getLeague().getId()))
+                                .toList();
+        }
 
-        Set<Long> assignedManagerIds = assistantUserRepository
-                .findAllByManagerIsNotNull()
-                .stream()
-                .map(user -> user.getManager().getId())
-                .collect(Collectors.toSet());
+        @Transactional
+        public void changeCurrentUserPassword(
+                        String newPassword,
+                        String repeatedPassword) {
 
-        return managerRepository.findAll()
-                .stream()
-                .filter(manager -> !assignedManagerIds.contains(manager.getId()))
-                .map(manager -> new AvailableManagerResponse(
-                        manager.getId(),
-                        manager.getName(),
-                        manager.getIcon(),
-                        manager.getLeague().getId()))
-                .toList();
-    }
+                if (!newPassword.equals(repeatedPassword)) {
+                        throw new IllegalArgumentException(
+                                        "Passwords do not match");
+                }
+
+                AssistantUser user = currentAssistantUserService.getCurrentUser();
+
+                user.changePassword(
+                                passwordEncoder.encode(newPassword));
+        }
 }

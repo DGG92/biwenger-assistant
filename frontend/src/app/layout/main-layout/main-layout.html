@@ -60,6 +60,10 @@
                     Movimientos
                 </a>
 
+                <a routerLink="/profile" routerLinkActive="active" (click)="closeMobileMenu()">
+                    Mi perfil
+                </a>
+
                 @if (authService.isAdmin()) {
                 <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMobileMenu()">
                     Gestión de usuarios

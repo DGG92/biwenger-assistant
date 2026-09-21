@@ -1,0 +1,62 @@
+<section class="profile">
+
+    <header class="page-header">
+        <div>
+            <h2>Mi perfil</h2>
+            <p>
+                Gestiona los datos de acceso a tu cuenta de Biwenger Assistant.
+            </p>
+        </div>
+    </header>
+
+    <div class="form-card">
+
+        <h3>Cambiar contraseña</h3>
+
+        @if (successMessage()) {
+        <div class="message success">
+            {{ successMessage() }}
+        </div>
+        }
+
+        @if (errorMessage()) {
+        <div class="message error">
+            {{ errorMessage() }}
+        </div>
+        }
+
+        <form (ngSubmit)="changePassword()">
+
+            <label>
+                Nueva contraseña
+
+                <input [type]="showPassword ? 'text' : 'password'" name="newPassword" [(ngModel)]="newPassword"
+                    minlength="8" maxlength="100" autocomplete="new-password" required />
+            </label>
+
+            <label>
+                Repetir contraseña
+
+                <input [type]="showPassword ? 'text' : 'password'" name="repeatedPassword"
+                    [(ngModel)]="repeatedPassword" minlength="8" maxlength="100" autocomplete="new-password" required />
+            </label>
+
+            <label class="show-password">
+                <input type="checkbox" name="showPassword" [(ngModel)]="showPassword" />
+
+                <span>Mostrar contraseña</span>
+            </label>
+
+            <button type="submit" [disabled]="saving()">
+                @if (saving()) {
+                Guardando...
+                } @else {
+                Cambiar contraseña
+                }
+            </button>
+
+        </form>
+
+    </div>
+
+</section>

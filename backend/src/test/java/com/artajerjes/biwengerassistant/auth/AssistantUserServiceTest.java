@@ -13,7 +13,6 @@ import com.artajerjes.biwengerassistant.auth.dto.AvailableManagerResponse;
 import com.artajerjes.biwengerassistant.league.League;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.artajerjes.biwengerassistant.manager.Manager;
@@ -27,10 +26,13 @@ class AssistantUserServiceTest {
 
         private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
 
+        private final CurrentAssistantUserService currentAssistantUserService = mock(CurrentAssistantUserService.class);
+
         private final AssistantUserService service = new AssistantUserService(
                         assistantUserRepository,
                         managerRepository,
-                        passwordEncoder);
+                        passwordEncoder,
+                        currentAssistantUserService);
 
         @Test
         void shouldCreateAdminWithEncodedPassword() {
@@ -175,5 +177,38 @@ class AssistantUserServiceTest {
 
                 assertThat(result.get(0).leagueId())
                                 .isEqualTo(1L);
+        }
+
+        @Test
+        void shouldChangeCurrentUserPassword() {
+                AssistantUser user = new AssistantUser(
+                                "diego",
+                                "old-hash",
+                                AssistantRole.ADMIN,
+                                null);
+
+                when(currentAssistantUserService.getCurrentUser())
+                                .thenReturn(user);
+
+                when(passwordEncoder.encode("new-password"))
+                                .thenReturn("new-hash");
+
+                service.changeCurrentUserPassword(
+                                "new-password",
+                                "new-password");
+
+                assertThat(user.getPasswordHash())
+                                .isEqualTo("new-hash");
+
+                verify(passwordEncoder).encode("new-password");
+        }
+
+        @Test
+        void shouldRejectPasswordChangeWhenPasswordsDoNotMatch() {
+                assertThatThrownBy(() -> service.changeCurrentUserPassword(
+                                "new-password",
+                                "different-password"))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessageContaining("do not match");
         }
 }

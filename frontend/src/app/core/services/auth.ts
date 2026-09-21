@@ -19,6 +19,11 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface ChangePasswordRequest {
+    newPassword: string;
+    repeatedPassword: string;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -47,6 +52,14 @@ export class AuthService {
             { withCredentials: true }
         ).pipe(
             tap((user) => this.currentUserSignal.set(user))
+        );
+    }
+
+    changePassword(request: ChangePasswordRequest): Observable<void> {
+        return this.http.post<void>(
+            `${API_CONFIG.baseUrl}/auth/change-password`,
+            request,
+            { withCredentials: true }
         );
     }
 

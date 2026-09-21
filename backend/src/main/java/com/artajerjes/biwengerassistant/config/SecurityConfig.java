@@ -45,7 +45,17 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
 
                                                 // Auth pública
-                                                .requestMatchers("/api/auth/**").permitAll()
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/auth/login")
+                                                .permitAll()
+
+                                                // Auth del usuario actual
+                                                .requestMatchers(
+                                                                "/api/auth/me",
+                                                                "/api/auth/logout",
+                                                                "/api/auth/change-password")
+                                                .authenticated()
 
                                                 // Administración de Biwenger Assistant
                                                 .requestMatchers("/api/admin/**")
