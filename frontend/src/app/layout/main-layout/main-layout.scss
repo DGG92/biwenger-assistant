@@ -23,6 +23,13 @@
     box-sizing: border-box;
 }
 
+.sidebar-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .brand-row {
     display: contents;
 }
