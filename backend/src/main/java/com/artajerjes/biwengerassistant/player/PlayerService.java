@@ -39,6 +39,8 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportService;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReport;
 import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository;
 import com.artajerjes.biwengerassistant.playerreport.dto.PlayerReportSyncResponse;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
 
 @Service
 public class PlayerService {
@@ -51,6 +53,7 @@ public class PlayerService {
         private final PlayerProtectionService playerProtectionService;
         private final PlayerPriceHistoryService playerPriceHistoryService;
         private final BiwengerClient biwengerClient;
+        private final BiwengerCredentialService biwengerCredentialService;
 
         public PlayerService(
                         PlayerRepository playerRepository,
@@ -60,7 +63,8 @@ public class PlayerService {
                         PlayerMatchReportService playerMatchReportService,
                         PlayerMatchReportRepository playerMatchReportRepository,
                         PlayerProtectionService playerProtectionService,
-                        PlayerPriceHistoryService playerPriceHistoryService) {
+                        PlayerPriceHistoryService playerPriceHistoryService,
+                        BiwengerCredentialService biwengerCredentialService) {
 
                 this.playerRepository = playerRepository;
                 this.leagueRepository = leagueRepository;
@@ -70,6 +74,7 @@ public class PlayerService {
                 this.playerMatchReportRepository = playerMatchReportRepository;
                 this.playerProtectionService = playerProtectionService;
                 this.playerPriceHistoryService = playerPriceHistoryService;
+                this.biwengerCredentialService = biwengerCredentialService;
         }
 
         @Transactional
@@ -622,11 +627,24 @@ public class PlayerService {
 
         @Transactional
         public PlayerLineupSyncResponse syncCurrentLineup(Long leagueId) {
+
+                BiwengerIdentity identity = biwengerCredentialService.getCurrentIdentity();
+
+                return syncCurrentLineup(
+                                leagueId,
+                                identity);
+        }
+
+        @Transactional
+        public PlayerLineupSyncResponse syncCurrentLineup(
+                        Long leagueId,
+                        BiwengerIdentity identity) {
+
                 League league = leagueRepository.findById(leagueId)
                                 .orElseThrow(
                                                 () -> new LeagueNotFoundException(leagueId));
 
-                BiwengerUserResponse response = biwengerClient.getCurrentUser();
+                BiwengerUserResponse response = biwengerClient.getCurrentUser(identity);
 
                 if (response == null
                                 || response.data() == null

@@ -28,6 +28,10 @@ import com.artajerjes.biwengerassistant.player.dto.PlayerOwnershipSyncResponse;
 import com.artajerjes.biwengerassistant.player.dto.PlayerSyncResponse;
 import com.artajerjes.biwengerassistant.sync.SyncStateService;
 import com.artajerjes.biwengerassistant.sync.SyncType;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.manager.ManagerRepository;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
+import com.artajerjes.biwengerassistant.manager.Manager;
 
 @Service
 public class BiwengerSyncService {
@@ -47,6 +51,8 @@ public class BiwengerSyncService {
         private final MarketListingSnapshotService marketListingSnapshotService;
         private final PlayerDetailSyncService playerDetailSyncService;
         private final SyncStateService syncStateService;
+        private final BiwengerCredentialService biwengerCredentialService;
+        private final ManagerRepository managerRepository;
 
         public BiwengerSyncService(
                         PlayerService playerService,
@@ -59,7 +65,9 @@ public class BiwengerSyncService {
                         PlayerSnapshotService playerSnapshotService,
                         MarketListingSnapshotService marketListingSnapshotService,
                         PlayerDetailSyncService playerDetailSyncService,
-                        SyncStateService syncStateService) {
+                        SyncStateService syncStateService,
+                        BiwengerCredentialService biwengerCredentialService,
+                        ManagerRepository managerRepository) {
 
                 this.playerService = playerService;
                 this.marketService = marketService;
@@ -72,6 +80,8 @@ public class BiwengerSyncService {
                 this.marketListingSnapshotService = marketListingSnapshotService;
                 this.playerDetailSyncService = playerDetailSyncService;
                 this.syncStateService = syncStateService;
+                this.biwengerCredentialService = biwengerCredentialService;
+                this.managerRepository = managerRepository;
         }
 
         public BiwengerSyncResponse syncAll(Long leagueId) {
@@ -254,11 +264,6 @@ public class BiwengerSyncService {
 
                         runScheduledPhase(
                                         leagueId,
-                                        "current lineup",
-                                        () -> playerService.syncCurrentLineup(leagueId));
-
-                        runScheduledPhase(
-                                        leagueId,
                                         "matchday context",
                                         () -> matchdayContextService.syncCurrentMatchday(leagueId));
 
@@ -269,8 +274,8 @@ public class BiwengerSyncService {
 
                         runScheduledPhase(
                                         leagueId,
-                                        "offers",
-                                        () -> offerService.sync(leagueId));
+                                        "private user data",
+                                        () -> syncPrivateUserData(leagueId));
 
                         runScheduledPhase(
                                         leagueId,
@@ -301,6 +306,47 @@ public class BiwengerSyncService {
                 }
 
                 return true;
+        }
+
+        private void syncPrivateUserData(Long leagueId) {
+
+                for (BiwengerIdentity identity : biwengerCredentialService.getAllIdentities()) {
+
+                        managerRepository
+                                        .findByBiwengerManagerIdAndLeague_Id(
+                                                        identity.userId(),
+                                                        leagueId)
+                                        .ifPresentOrElse(
+                                                        manager -> syncPrivateUserData(
+                                                                        leagueId,
+                                                                        manager,
+                                                                        identity),
+                                                        () -> log.warn(
+                                                                        "Skipping private scheduled sync for Biwenger user {} because no manager exists in league {}",
+                                                                        identity.userId(),
+                                                                        leagueId));
+                }
+        }
+
+        private void syncPrivateUserData(
+                        Long leagueId,
+                        Manager manager,
+                        BiwengerIdentity identity) {
+
+                runScheduledPhase(
+                                leagueId,
+                                "current lineup for manager " + manager.getId(),
+                                () -> playerService.syncCurrentLineup(
+                                                leagueId,
+                                                identity));
+
+                runScheduledPhase(
+                                leagueId,
+                                "offers for manager " + manager.getId(),
+                                () -> offerService.sync(
+                                                leagueId,
+                                                manager,
+                                                identity));
         }
 
         private void runScheduledPhase(

@@ -24,6 +24,16 @@ export interface ChangePasswordRequest {
     repeatedPassword: string;
 }
 
+export interface BiwengerCredentialStatus {
+    linked: boolean;
+    biwengerUserId: number | null;
+    lastValidatedAt: string | null;
+}
+
+export interface SaveBiwengerCredentialRequest {
+    token: string;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -60,6 +70,21 @@ export class AuthService {
             `${API_CONFIG.baseUrl}/auth/change-password`,
             request,
             { withCredentials: true }
+        );
+    }
+
+    getBiwengerCredentialStatus(): Observable<BiwengerCredentialStatus> {
+        return this.http.get<BiwengerCredentialStatus>(
+            `${API_CONFIG.baseUrl}/profile/biwenger`
+        );
+    }
+
+    saveBiwengerCredential(
+        request: SaveBiwengerCredentialRequest
+    ): Observable<BiwengerCredentialStatus> {
+        return this.http.put<BiwengerCredentialStatus>(
+            `${API_CONFIG.baseUrl}/profile/biwenger`,
+            request
         );
     }
 

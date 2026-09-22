@@ -15,6 +15,7 @@ import com.artajerjes.biwengerassistant.league.LeagueNotFoundException;
 import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.player.PlayerAlreadyExistsException;
 import com.artajerjes.biwengerassistant.player.PlayerNotFoundException;
+import com.artajerjes.biwengerassistant.credential.InvalidBiwengerCredentialException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -130,4 +131,21 @@ public class GlobalExceptionHandler {
                                 .body(apiError);
         }
 
+        @ExceptionHandler(InvalidBiwengerCredentialException.class)
+        public ResponseEntity<ApiError> handleInvalidBiwengerCredential(
+                        InvalidBiwengerCredentialException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                LocalDateTime.now(),
+                                HttpStatus.BAD_REQUEST.value(),
+                                "Bad Request",
+                                "Invalid Biwenger credential",
+                                request.getRequestURI(),
+                                Map.of());
+
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(apiError);
+        }
 }

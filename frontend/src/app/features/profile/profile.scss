@@ -114,3 +114,33 @@ button:disabled {
         padding: 20px;
     }
 }
+
+.credential-info {
+    margin: 0;
+    opacity: 0.75;
+}
+
+.credential-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+
+    span {
+        opacity: 0.75;
+        font-size: 0.9rem;
+    }
+}
+
+.credential-status.linked {
+    border: 1px solid rgba(46, 204, 113, 0.35);
+}
+
+.credential-help {
+    margin: -0.25rem 0 0;
+    font-size: 0.85rem;
+    opacity: 0.7;
+}

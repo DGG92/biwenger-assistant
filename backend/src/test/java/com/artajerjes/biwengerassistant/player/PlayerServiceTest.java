@@ -27,6 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerClient;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionData;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionPlayer;
 import com.artajerjes.biwengerassistant.biwenger.dto.competition.BiwengerCompetitionResponse;
@@ -59,6 +61,8 @@ class PlayerServiceTest {
         private static final Long LEAGUE_ID = 1L;
         private static final Long PLAYER_ID = 10L;
         private static final Long MANAGER_ID = 2L;
+        private static final Long BIWENGER_USER_ID = 123456L;
+        private static final String BIWENGER_TOKEN = "test-token";
 
         private static final LocalDateTime FUTURE_LOCK_DATE = LocalDateTime.of(2099, 1, 1, 0, 0);
 
@@ -75,6 +79,9 @@ class PlayerServiceTest {
         private BiwengerClient biwengerClient;
 
         @Mock
+        private BiwengerCredentialService biwengerCredentialService;
+
+        @Mock
         private PlayerProtectionService playerProtectionService;
 
         @InjectMocks
@@ -89,6 +96,13 @@ class PlayerServiceTest {
                                                                 PlayerProtectionAlertLevel.NONE,
                                                                 0,
                                                                 List.of()));
+
+                lenient()
+                                .when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(
+                                                new BiwengerIdentity(
+                                                                BIWENGER_USER_ID,
+                                                                BIWENGER_TOKEN));
         }
 
         @Test
@@ -1460,7 +1474,7 @@ class PlayerServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
 
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
@@ -1501,6 +1515,61 @@ class PlayerServiceTest {
                 assertEquals(
                                 PlayerPosition.DL,
                                 ram.getLineupPosition());
+
+                verify(biwengerCredentialService)
+                                .getCurrentIdentity();
+
+                verify(biwengerClient)
+                                .getCurrentUser(any(BiwengerIdentity.class));
+
+                verify(biwengerClient, never())
+                                .getCurrentUser();
+        }
+
+        @Test
+        void syncCurrentLineupWithExplicitIdentityShouldNotUseCurrentAuthenticatedIdentity() {
+
+                League league = createLeague();
+                Manager manager = createManager();
+
+                BiwengerIdentity identity = new BiwengerIdentity(
+                                BIWENGER_USER_ID,
+                                BIWENGER_TOKEN);
+
+                BiwengerUserResponse response = new BiwengerUserResponse(
+                                200,
+                                new BiwengerUserData(
+                                                manager.getBiwengerManagerId(),
+                                                manager.getName(),
+                                                null,
+                                                List.of()));
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getCurrentUser(identity))
+                                .thenReturn(response);
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                manager.getBiwengerManagerId(),
+                                LEAGUE_ID))
+                                .thenReturn(Optional.of(manager));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                PlayerLineupSyncResponse result = playerService.syncCurrentLineup(
+                                LEAGUE_ID,
+                                identity);
+
+                assertEquals(MANAGER_ID, result.managerId());
+                assertNull(result.formation());
+
+                verify(biwengerClient)
+                                .getCurrentUser(identity);
+
+                verify(biwengerCredentialService, never())
+                                .getCurrentIdentity();
         }
 
         @Test
@@ -1557,7 +1626,7 @@ class PlayerServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
 
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
@@ -1617,7 +1686,7 @@ class PlayerServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
 
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
@@ -1681,7 +1750,7 @@ class PlayerServiceTest {
 
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
                                 manager.getBiwengerManagerId(), LEAGUE_ID))
@@ -1782,7 +1851,7 @@ class PlayerServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
 
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
@@ -1831,7 +1900,7 @@ class PlayerServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getCurrentUser())
+                when(biwengerClient.getCurrentUser(any(BiwengerIdentity.class)))
                                 .thenReturn(response);
 
                 when(managerRepository.findByBiwengerManagerIdAndLeague_Id(

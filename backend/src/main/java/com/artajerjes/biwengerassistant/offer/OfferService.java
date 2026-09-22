@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +28,8 @@ import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
 import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
 
 @Service
 public class OfferService {
@@ -39,9 +40,7 @@ public class OfferService {
         private final ManagerRepository managerRepository;
         private final BiwengerClient biwengerClient;
         private final CurrentAssistantUserService currentAssistantUserService;
-
-        @Value("${biwenger.user-id}")
-        private Long biwengerUserId;
+        private final BiwengerCredentialService biwengerCredentialService;
 
         public OfferService(
                         OfferRepository offerRepository,
@@ -49,7 +48,8 @@ public class OfferService {
                         PlayerRepository playerRepository,
                         ManagerRepository managerRepository,
                         BiwengerClient biwengerClient,
-                        CurrentAssistantUserService currentAssistantUserService) {
+                        CurrentAssistantUserService currentAssistantUserService,
+                        BiwengerCredentialService biwengerCredentialService) {
 
                 this.offerRepository = offerRepository;
                 this.leagueRepository = leagueRepository;
@@ -57,14 +57,37 @@ public class OfferService {
                 this.managerRepository = managerRepository;
                 this.biwengerClient = biwengerClient;
                 this.currentAssistantUserService = currentAssistantUserService;
+                this.biwengerCredentialService = biwengerCredentialService;
         }
 
         @Transactional
         public OfferSyncResponse sync(Long leagueId) {
+
+                Manager ownerManager = currentAssistantUserService.getCurrentManager();
+                BiwengerIdentity identity = biwengerCredentialService.getCurrentIdentity();
+
+                return sync(
+                                leagueId,
+                                ownerManager,
+                                identity);
+        }
+
+        @Transactional
+        public OfferSyncResponse sync(
+                        Long leagueId,
+                        Manager ownerManager,
+                        BiwengerIdentity identity) {
+
                 League league = leagueRepository.findById(leagueId)
                                 .orElseThrow(() -> new LeagueNotFoundException(leagueId));
 
-                BiwengerMarketResponse response = biwengerClient.getMarket();
+                if (!ownerManager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Manager does not belong to league "
+                                                        + leagueId);
+                }
+
+                BiwengerMarketResponse response = biwengerClient.getMarket(identity);
 
                 if (response == null || response.data() == null) {
                         throw new IllegalStateException(
@@ -72,7 +95,7 @@ public class OfferService {
                 }
 
                 syncEconomicStatus(
-                                leagueId,
+                                ownerManager,
                                 response);
 
                 Map<String, Player> playersByBiwengerId = playerRepository.findAllByLeague_Id(leagueId)
@@ -142,7 +165,9 @@ public class OfferService {
                         }
 
                         Offer existing = offerRepository
-                                        .findByBiwengerOfferId(externalOffer.id())
+                                        .findByBiwengerOfferIdAndOwnerManager_Id(
+                                                        externalOffer.id(),
+                                                        ownerManager.getId())
                                         .orElse(null);
 
                         if (existing == null) {
@@ -153,6 +178,7 @@ public class OfferService {
                                                 externalOffer.type(),
                                                 fromManager,
                                                 toManager,
+                                                ownerManager,
                                                 toLocalDateTime(externalOffer.created()),
                                                 toLocalDateTime(externalOffer.until()),
                                                 requestedPlayers,
@@ -175,7 +201,9 @@ public class OfferService {
                         }
                 }
 
-                List<Offer> existingOffers = offerRepository.findAllByLeague_Id(leagueId);
+                List<Offer> existingOffers = offerRepository.findAllByLeague_IdAndOwnerManager_Id(
+                                leagueId,
+                                ownerManager.getId());
 
                 for (Offer existingOffer : existingOffers) {
                         if (!currentExternalIds.contains(
@@ -198,8 +226,17 @@ public class OfferService {
                         throw new LeagueNotFoundException(leagueId);
                 }
 
+                Manager manager = currentAssistantUserService.getCurrentManager();
+
+                if (!manager.getLeague().getId().equals(leagueId)) {
+                        throw new IllegalArgumentException(
+                                        "Authenticated manager does not belong to league " + leagueId);
+                }
+
                 return offerRepository
-                                .findAllByLeague_Id(leagueId)
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                leagueId,
+                                                manager.getId())
                                 .stream()
                                 .map(this::toResponse)
                                 .toList();
@@ -284,20 +321,13 @@ public class OfferService {
         }
 
         private void syncEconomicStatus(
-                        Long leagueId,
+                        Manager manager,
                         BiwengerMarketResponse response) {
+
                 if (response.data().status() == null) {
                         throw new IllegalStateException(
                                         "Biwenger returned an invalid market status response");
                 }
-
-                Manager manager = managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                biwengerUserId,
-                                                leagueId)
-                                .orElseThrow(() -> new IllegalStateException(
-                                                "Authenticated Biwenger manager not found for league "
-                                                                + leagueId));
 
                 manager.updateEconomicStatus(
                                 response.data().status().balance(),

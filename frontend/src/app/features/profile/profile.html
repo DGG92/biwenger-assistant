@@ -59,4 +59,87 @@
 
     </div>
 
+    <div class="form-card">
+
+        <h3>Cuenta de Biwenger</h3>
+
+        @if (credentialLoading()) {
+
+        <p class="credential-info">
+            Comprobando vinculación...
+        </p>
+
+        } @else {
+
+        @if (credentialStatus()?.linked) {
+
+        <div class="credential-status linked">
+            <strong>Cuenta vinculada</strong>
+
+            <span>
+                Tu cuenta de Biwenger está vinculada correctamente.
+            </span>
+        </div>
+
+        } @else {
+
+        <div class="credential-status">
+            <strong>Cuenta no vinculada</strong>
+
+            <span>
+                Introduce tu token de Biwenger para activar la
+                sincronización de tus datos privados.
+            </span>
+        </div>
+
+        }
+
+        @if (credentialSuccessMessage()) {
+        <div class="message success">
+            {{ credentialSuccessMessage() }}
+        </div>
+        }
+
+        @if (credentialErrorMessage()) {
+        <div class="message error">
+            {{ credentialErrorMessage() }}
+        </div>
+        }
+
+        <form (ngSubmit)="saveBiwengerCredential()">
+
+            <label>
+                Token de Biwenger
+
+                <input [type]="showBiwengerToken ? 'text' : 'password'" name="biwengerToken" [(ngModel)]="biwengerToken"
+                    autocomplete="off" required />
+            </label>
+
+            <label class="show-password">
+                <input type="checkbox" name="showBiwengerToken" [(ngModel)]="showBiwengerToken" />
+
+                <span>Mostrar token</span>
+            </label>
+
+            <p class="credential-help">
+                El token se valida con tu usuario de Biwenger antes
+                de guardarse y se almacena cifrado.
+            </p>
+
+            <button type="submit" [disabled]="credentialSaving()">
+                @if (credentialSaving()) {
+                Validando...
+                } @else if (credentialStatus()?.linked) {
+                Actualizar vinculación
+                } @else {
+                Vincular cuenta
+                }
+            </button>
+
+        </form>
+
+        }
+
+    </div>
+
 </section>

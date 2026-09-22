@@ -7,9 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OfferRepository extends JpaRepository<Offer, Long> {
 
-    Optional<Offer> findByBiwengerOfferId(Long biwengerOfferId);
+    Optional<Offer> findByBiwengerOfferIdAndOwnerManager_Id(
+            Long biwengerOfferId,
+            Long ownerManagerId);
 
-    List<Offer> findAllByLeague_Id(Long leagueId);
-
-    void deleteAllByLeague_Id(Long leagueId);
+    List<Offer> findAllByLeague_IdAndOwnerManager_Id(
+            Long leagueId,
+            Long ownerManagerId);
 }

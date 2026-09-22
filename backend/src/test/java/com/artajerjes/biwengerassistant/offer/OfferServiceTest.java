@@ -7,7 +7,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,12 +37,19 @@ import com.artajerjes.biwengerassistant.offer.dto.OfferSyncResponse;
 import com.artajerjes.biwengerassistant.player.Player;
 import com.artajerjes.biwengerassistant.player.PlayerPosition;
 import com.artajerjes.biwengerassistant.player.PlayerRepository;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
 
 @ExtendWith(MockitoExtension.class)
 class OfferServiceTest {
 
         private static final Long LEAGUE_ID = 1L;
         private static final Long BIWENGER_USER_ID = 11_467_137L;
+        private static final String BIWENGER_TOKEN = "test-token";
+
+        private static final BiwengerIdentity BIWENGER_IDENTITY = new BiwengerIdentity(
+                        BIWENGER_USER_ID,
+                        BIWENGER_TOKEN);
 
         @Mock
         private OfferRepository offerRepository;
@@ -63,16 +69,11 @@ class OfferServiceTest {
         @Mock
         private CurrentAssistantUserService currentAssistantUserService;
 
+        @Mock
+        private BiwengerCredentialService biwengerCredentialService;
+
         @InjectMocks
         private OfferService offerService;
-
-        @BeforeEach
-        void setUp() {
-                ReflectionTestUtils.setField(
-                                offerService,
-                                "biwengerUserId",
-                                BIWENGER_USER_ID);
-        }
 
         @Test
         void syncShouldCreateNewOffer() {
@@ -85,6 +86,12 @@ class OfferServiceTest {
                                 20L,
                                 BIWENGER_USER_ID,
                                 "Califato Omeya");
+
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(fromManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
 
                 BiwengerMarketOffer externalOffer = new BiwengerMarketOffer(
                                 263_849_180L,
@@ -103,28 +110,27 @@ class OfferServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(Optional.of(fromManager));
-
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of(player));
 
                 when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of(fromManager));
 
-                when(biwengerClient.getMarket())
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(
                                                 createMarketResponse(
                                                                 List.of(externalOffer)));
 
                 when(offerRepository
-                                .findByBiwengerOfferId(263_849_180L))
+                                .findByBiwengerOfferIdAndOwnerManager_Id(
+                                                263_849_180L,
+                                                fromManager.getId()))
                                 .thenReturn(Optional.empty());
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                fromManager.getId()))
                                 .thenReturn(List.of());
 
                 OfferSyncResponse result = offerService.sync(LEAGUE_ID);
@@ -175,6 +181,62 @@ class OfferServiceTest {
         }
 
         @Test
+        void syncWithExplicitManagerAndIdentityShouldNotUseAuthenticatedUser() {
+
+                League league = createLeague();
+
+                Manager ownerManager = createManager(
+                                20L,
+                                BIWENGER_USER_ID,
+                                "Califato Omeya");
+
+                when(leagueRepository.findById(LEAGUE_ID))
+                                .thenReturn(Optional.of(league));
+
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
+                                .thenReturn(
+                                                createMarketResponse(List.of()));
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of());
+
+                when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(List.of(ownerManager));
+
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                ownerManager.getId()))
+                                .thenReturn(List.of());
+
+                OfferSyncResponse result = offerService.sync(
+                                LEAGUE_ID,
+                                ownerManager,
+                                BIWENGER_IDENTITY);
+
+                assertEquals(0, result.total());
+                assertEquals(0, result.created());
+                assertEquals(0, result.updated());
+
+                assertEquals(
+                                -5_518_500L,
+                                ownerManager.getCash());
+
+                assertEquals(
+                                2_541_500L,
+                                ownerManager.getMaximumBid());
+
+                verify(biwengerClient)
+                                .getMarket(BIWENGER_IDENTITY);
+
+                verify(currentAssistantUserService, never())
+                                .getCurrentManager();
+
+                verify(biwengerCredentialService, never())
+                                .getCurrentIdentity();
+        }
+
+        @Test
         void syncShouldUpdateExistingOffer() {
                 League league = createLeague();
 
@@ -188,6 +250,12 @@ class OfferServiceTest {
                                 BIWENGER_USER_ID,
                                 "Califato Omeya");
 
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(fromManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
+
                 Offer existingOffer = new Offer(
                                 263_849_180L,
                                 3_500_000L,
@@ -195,6 +263,7 @@ class OfferServiceTest {
                                 "purchase",
                                 fromManager,
                                 null,
+                                fromManager,
                                 LocalDateTime.of(
                                                 2026,
                                                 8,
@@ -227,28 +296,27 @@ class OfferServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(Optional.of(fromManager));
-
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of(player));
 
                 when(managerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of(fromManager));
 
-                when(biwengerClient.getMarket())
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(
                                                 createMarketResponse(
                                                                 List.of(externalOffer)));
 
                 when(offerRepository
-                                .findByBiwengerOfferId(263_849_180L))
+                                .findByBiwengerOfferIdAndOwnerManager_Id(
+                                                263_849_180L,
+                                                fromManager.getId()))
                                 .thenReturn(Optional.of(existingOffer));
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                fromManager.getId()))
                                 .thenReturn(List.of(existingOffer));
 
                 OfferSyncResponse result = offerService.sync(LEAGUE_ID);
@@ -299,6 +367,12 @@ class OfferServiceTest {
                                 BIWENGER_USER_ID,
                                 "Califato Omeya");
 
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
+
                 Offer obsoleteOffer = new Offer(
                                 999L,
                                 1_000_000L,
@@ -306,6 +380,7 @@ class OfferServiceTest {
                                 "purchase",
                                 null,
                                 null,
+                                authenticatedManager,
                                 LocalDateTime.of(
                                                 2026,
                                                 8,
@@ -324,13 +399,6 @@ class OfferServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(
-                                                Optional.of(authenticatedManager));
-
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of());
 
@@ -338,11 +406,14 @@ class OfferServiceTest {
                                 .thenReturn(
                                                 List.of(authenticatedManager));
 
-                when(biwengerClient.getMarket())
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(
                                                 createMarketResponse(List.of()));
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                authenticatedManager.getId()))
                                 .thenReturn(List.of(obsoleteOffer));
 
                 OfferSyncResponse result = offerService.sync(LEAGUE_ID);
@@ -372,6 +443,12 @@ class OfferServiceTest {
                                 BIWENGER_USER_ID,
                                 "Califato Omeya");
 
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
+
                 BiwengerMarketOffer externalOffer = new BiwengerMarketOffer(
                                 1L,
                                 500_000L,
@@ -386,13 +463,6 @@ class OfferServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(
-                                                Optional.of(authenticatedManager));
-
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of());
 
@@ -400,16 +470,21 @@ class OfferServiceTest {
                                 .thenReturn(
                                                 List.of(authenticatedManager));
 
-                when(biwengerClient.getMarket())
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(
                                                 createMarketResponse(
                                                                 List.of(externalOffer)));
 
                 when(offerRepository
-                                .findByBiwengerOfferId(1L))
+                                .findByBiwengerOfferIdAndOwnerManager_Id(
+                                                1L,
+                                                authenticatedManager.getId()))
                                 .thenReturn(Optional.empty());
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                authenticatedManager.getId()))
                                 .thenReturn(List.of());
 
                 OfferSyncResponse result = offerService.sync(LEAGUE_ID);
@@ -441,6 +516,12 @@ class OfferServiceTest {
                                 BIWENGER_USER_ID,
                                 "Califato Omeya");
 
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
+
                 BiwengerMarketOffer externalOffer = new BiwengerMarketOffer(
                                 2L,
                                 1_000_000L,
@@ -458,13 +539,6 @@ class OfferServiceTest {
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(managerRepository
-                                .findByBiwengerManagerIdAndLeague_Id(
-                                                BIWENGER_USER_ID,
-                                                LEAGUE_ID))
-                                .thenReturn(
-                                                Optional.of(authenticatedManager));
-
                 when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
                                 .thenReturn(List.of());
 
@@ -472,16 +546,21 @@ class OfferServiceTest {
                                 .thenReturn(
                                                 List.of(authenticatedManager));
 
-                when(biwengerClient.getMarket())
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(
                                                 createMarketResponse(
                                                                 List.of(externalOffer)));
 
                 when(offerRepository
-                                .findByBiwengerOfferId(2L))
+                                .findByBiwengerOfferIdAndOwnerManager_Id(
+                                                2L,
+                                                authenticatedManager.getId()))
                                 .thenReturn(Optional.empty());
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                authenticatedManager.getId()))
                                 .thenReturn(List.of());
 
                 OfferSyncResponse result = offerService.sync(LEAGUE_ID);
@@ -519,10 +598,21 @@ class OfferServiceTest {
         void syncShouldThrowWhenMarketResponseIsInvalid() {
                 League league = createLeague();
 
+                Manager authenticatedManager = createManager(
+                                20L,
+                                BIWENGER_USER_ID,
+                                "Califato Omeya");
+
                 when(leagueRepository.findById(LEAGUE_ID))
                                 .thenReturn(Optional.of(league));
 
-                when(biwengerClient.getMarket())
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                when(biwengerCredentialService.getCurrentIdentity())
+                                .thenReturn(BIWENGER_IDENTITY);
+
+                when(biwengerClient.getMarket(BIWENGER_IDENTITY))
                                 .thenReturn(null);
 
                 assertThrows(
@@ -531,7 +621,9 @@ class OfferServiceTest {
 
                 verify(
                                 offerRepository,
-                                never()).findAllByLeague_Id(LEAGUE_ID);
+                                never()).findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                authenticatedManager.getId());
         }
 
         @Test
@@ -566,6 +658,7 @@ class OfferServiceTest {
                                 "purchase",
                                 fromManager,
                                 null,
+                                fromManager,
                                 LocalDateTime.of(
                                                 2026,
                                                 8,
@@ -589,8 +682,14 @@ class OfferServiceTest {
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                fromManager.getId()))
                                 .thenReturn(List.of(offer));
+
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(fromManager);
 
                 List<OfferResponse> result = offerService.findAll(LEAGUE_ID);
 
@@ -645,10 +744,21 @@ class OfferServiceTest {
 
         @Test
         void findAllShouldReturnEmptyListWhenThereAreNoOffers() {
+                Manager authenticatedManager = createManager(
+                                20L,
+                                BIWENGER_USER_ID,
+                                "Califato Omeya");
+
                 when(leagueRepository.existsById(LEAGUE_ID))
                                 .thenReturn(true);
 
-                when(offerRepository.findAllByLeague_Id(LEAGUE_ID))
+                when(currentAssistantUserService.getCurrentManager())
+                                .thenReturn(authenticatedManager);
+
+                when(offerRepository
+                                .findAllByLeague_IdAndOwnerManager_Id(
+                                                LEAGUE_ID,
+                                                authenticatedManager.getId()))
                                 .thenReturn(List.of());
 
                 List<OfferResponse> result = offerService.findAll(LEAGUE_ID);
@@ -666,8 +776,8 @@ class OfferServiceTest {
                                 () -> offerService.findAll(LEAGUE_ID));
 
                 verify(
-                                offerRepository,
-                                never()).findAllByLeague_Id(LEAGUE_ID);
+                                currentAssistantUserService,
+                                never()).getCurrentManager();
         }
 
         @Test

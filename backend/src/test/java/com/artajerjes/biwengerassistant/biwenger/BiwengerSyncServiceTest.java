@@ -1,5 +1,12 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
+import java.util.List;
+
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
+import com.artajerjes.biwengerassistant.manager.Manager;
+import com.artajerjes.biwengerassistant.manager.ManagerRepository;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -74,6 +81,12 @@ class BiwengerSyncServiceTest {
 
         @Mock
         private SyncStateService syncStateService;
+
+        @Mock
+        private BiwengerCredentialService biwengerCredentialService;
+
+        @Mock
+        private ManagerRepository managerRepository;
 
         @InjectMocks
         private BiwengerSyncService biwengerSyncService;
@@ -695,8 +708,9 @@ class BiwengerSyncServiceTest {
                                 never())
                                 .captureSnapshots(LEAGUE_ID);
 
-                verify(playerService)
-                                .syncCurrentLineup(LEAGUE_ID);
+                verify(
+                                playerService,
+                                never()).syncCurrentLineup(LEAGUE_ID);
 
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
@@ -704,8 +718,9 @@ class BiwengerSyncServiceTest {
                 verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
-                verify(offerService)
-                                .sync(LEAGUE_ID);
+                verify(
+                                offerService,
+                                never()).sync(LEAGUE_ID);
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
@@ -738,17 +753,21 @@ class BiwengerSyncServiceTest {
                 verify(movementService)
                                 .sync(LEAGUE_ID);
 
-                verify(playerService)
+                verify(
+                                playerService,
+                                never())
                                 .syncCurrentLineup(LEAGUE_ID);
+
+                verify(
+                                offerService,
+                                never())
+                                .sync(LEAGUE_ID);
 
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(matchdayRoundSyncService)
                                 .syncCurrentMatchday(LEAGUE_ID);
-
-                verify(offerService)
-                                .sync(LEAGUE_ID);
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
@@ -832,7 +851,27 @@ class BiwengerSyncServiceTest {
         @Test
         void syncScheduledShouldAbsorbOfferFailure() {
 
-                when(offerService.sync(LEAGUE_ID))
+                BiwengerIdentity identity = new BiwengerIdentity(
+                                11_467_137L,
+                                "test-token");
+
+                Manager manager = org.mockito.Mockito.mock(Manager.class);
+
+                when(manager.getId())
+                                .thenReturn(13L);
+
+                when(biwengerCredentialService.getAllIdentities())
+                                .thenReturn(List.of(identity));
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                identity.userId(),
+                                LEAGUE_ID))
+                                .thenReturn(java.util.Optional.of(manager));
+
+                when(offerService.sync(
+                                LEAGUE_ID,
+                                manager,
+                                identity))
                                 .thenThrow(
                                                 new IllegalStateException(
                                                                 "Offers temporarily unavailable"));
@@ -857,7 +896,9 @@ class BiwengerSyncServiceTest {
                                 .sync(LEAGUE_ID);
 
                 verify(playerService)
-                                .syncCurrentLineup(LEAGUE_ID);
+                                .syncCurrentLineup(
+                                                LEAGUE_ID,
+                                                identity);
 
                 verify(matchdayContextService)
                                 .syncCurrentMatchday(LEAGUE_ID);
@@ -866,7 +907,10 @@ class BiwengerSyncServiceTest {
                                 .syncCurrentMatchday(LEAGUE_ID);
 
                 verify(offerService)
-                                .sync(LEAGUE_ID);
+                                .sync(
+                                                LEAGUE_ID,
+                                                manager,
+                                                identity);
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
@@ -966,8 +1010,98 @@ class BiwengerSyncServiceTest {
                 verify(marketService)
                                 .sync(LEAGUE_ID);
 
-                verify(offerService)
+                verify(
+                                offerService,
+                                never())
                                 .sync(LEAGUE_ID);
         }
 
+        @Test
+        void syncScheduledShouldSyncPrivateDataForEveryLinkedIdentity() {
+
+                BiwengerIdentity firstIdentity = new BiwengerIdentity(
+                                11_467_137L,
+                                "token-diego");
+
+                BiwengerIdentity secondIdentity = new BiwengerIdentity(
+                                6_743_399L,
+                                "token-friend");
+
+                Manager firstManager = org.mockito.Mockito.mock(Manager.class);
+                Manager secondManager = org.mockito.Mockito.mock(Manager.class);
+
+                when(firstManager.getId())
+                                .thenReturn(13L);
+
+                when(secondManager.getId())
+                                .thenReturn(14L);
+
+                when(biwengerCredentialService.getAllIdentities())
+                                .thenReturn(List.of(
+                                                firstIdentity,
+                                                secondIdentity));
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                firstIdentity.userId(),
+                                LEAGUE_ID))
+                                .thenReturn(java.util.Optional.of(firstManager));
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                secondIdentity.userId(),
+                                LEAGUE_ID))
+                                .thenReturn(java.util.Optional.of(secondManager));
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(playerService)
+                                .syncCurrentLineup(
+                                                LEAGUE_ID,
+                                                firstIdentity);
+
+                verify(offerService)
+                                .sync(
+                                                LEAGUE_ID,
+                                                firstManager,
+                                                firstIdentity);
+
+                verify(playerService)
+                                .syncCurrentLineup(
+                                                LEAGUE_ID,
+                                                secondIdentity);
+
+                verify(offerService)
+                                .sync(
+                                                LEAGUE_ID,
+                                                secondManager,
+                                                secondIdentity);
+        }
+
+        @Test
+        void syncScheduledShouldSkipIdentityWithoutManagerInLeague() {
+
+                BiwengerIdentity identity = new BiwengerIdentity(
+                                6_743_399L,
+                                "token-other-league");
+
+                when(biwengerCredentialService.getAllIdentities())
+                                .thenReturn(List.of(identity));
+
+                when(managerRepository.findByBiwengerManagerIdAndLeague_Id(
+                                identity.userId(),
+                                LEAGUE_ID))
+                                .thenReturn(java.util.Optional.empty());
+
+                assertDoesNotThrow(
+                                () -> biwengerSyncService.syncScheduled(
+                                                LEAGUE_ID));
+
+                verify(
+                                playerService,
+                                never())
+                                .syncCurrentLineup(
+                                                LEAGUE_ID,
+                                                identity);
+        }
 }

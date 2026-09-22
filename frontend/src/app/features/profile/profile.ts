@@ -1,7 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AuthService } from '../../core/services/auth';
+import {
+    AuthService,
+    BiwengerCredentialStatus,
+} from '../../core/services/auth';
 
 @Component({
     selector: 'app-profile',
@@ -9,7 +12,7 @@ import { AuthService } from '../../core/services/auth';
     templateUrl: './profile.html',
     styleUrl: './profile.scss',
 })
-export class Profile {
+export class Profile implements OnInit {
 
     private readonly authService = inject(AuthService);
 
@@ -17,9 +20,22 @@ export class Profile {
     readonly errorMessage = signal('');
     readonly successMessage = signal('');
 
+    readonly credentialLoading = signal(true);
+    readonly credentialSaving = signal(false);
+    readonly credentialStatus = signal<BiwengerCredentialStatus | null>(null);
+    readonly credentialErrorMessage = signal('');
+    readonly credentialSuccessMessage = signal('');
+
     newPassword = '';
     repeatedPassword = '';
     showPassword = false;
+
+    biwengerToken = '';
+    showBiwengerToken = false;
+
+    ngOnInit(): void {
+        this.loadBiwengerCredentialStatus();
+    }
 
     changePassword(): void {
         if (!this.newPassword || !this.repeatedPassword) {
@@ -82,5 +98,71 @@ export class Profile {
                 );
             },
         });
+    }
+
+    saveBiwengerCredential(): void {
+        const token = this.biwengerToken.trim();
+
+        if (!token) {
+            this.credentialErrorMessage.set(
+                'Introduce tu token de Biwenger.'
+            );
+            this.credentialSuccessMessage.set('');
+            return;
+        }
+
+        this.credentialSaving.set(true);
+        this.credentialErrorMessage.set('');
+        this.credentialSuccessMessage.set('');
+
+        this.authService.saveBiwengerCredential({
+            token,
+        }).subscribe({
+            next: (status) => {
+                this.credentialStatus.set(status);
+                this.biwengerToken = '';
+                this.showBiwengerToken = false;
+                this.credentialSaving.set(false);
+
+                this.credentialSuccessMessage.set(
+                    'Cuenta de Biwenger vinculada correctamente.'
+                );
+            },
+            error: (error) => {
+                this.biwengerToken = '';
+                this.showBiwengerToken = false;
+                this.credentialSaving.set(false);
+
+                if (error.status === 400 || error.status === 401) {
+                    this.credentialErrorMessage.set(
+                        'El token no es válido para tu usuario de Biwenger.'
+                    );
+                    return;
+                }
+
+                this.credentialErrorMessage.set(
+                    'No se ha podido vincular la cuenta de Biwenger. Inténtalo de nuevo.'
+                );
+            },
+        });
+    }
+
+    private loadBiwengerCredentialStatus(): void {
+        this.credentialLoading.set(true);
+        this.credentialErrorMessage.set('');
+
+        this.authService.getBiwengerCredentialStatus()
+            .subscribe({
+                next: (status) => {
+                    this.credentialStatus.set(status);
+                    this.credentialLoading.set(false);
+                },
+                error: () => {
+                    this.credentialLoading.set(false);
+                    this.credentialErrorMessage.set(
+                        'No se ha podido comprobar la vinculación con Biwenger.'
+                    );
+                },
+            });
     }
 }

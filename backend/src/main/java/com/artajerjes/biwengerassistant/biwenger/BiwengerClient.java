@@ -23,6 +23,7 @@ import com.artajerjes.biwengerassistant.biwenger.dto.report.BiwengerReportRespon
 import com.artajerjes.biwengerassistant.biwenger.dto.roundleague.BiwengerRoundLeagueResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.rounds.BiwengerRoundsResponse;
 import com.artajerjes.biwengerassistant.biwenger.dto.user.BiwengerUserResponse;
+import com.artajerjes.biwengerassistant.credential.BiwengerCredentialService.BiwengerIdentity;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -278,6 +279,31 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerUserResponse getCurrentUser() {
+                return getCurrentUser(
+                                new BiwengerIdentity(
+                                                Long.valueOf(userId),
+                                                token));
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
+        public BiwengerUserResponse getCurrentUser(
+                        BiwengerIdentity identity) {
+
+                if (identity == null) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger identity cannot be null");
+                }
+
+                if (identity.userId() == null) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger user id cannot be null");
+                }
+
+                if (identity.token() == null
+                                || identity.token().isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger token cannot be blank");
+                }
 
                 byte[] responseBody = executeWithRetry(
                                 () -> restClient
@@ -289,13 +315,15 @@ public class BiwengerClient {
                                                                                 "*,lineup(type,playersID,reservesID,reserves(id,position),captain,striker,coach,date),players(id,owner),market,offers,-trophies")
                                                                 .build())
                                                 .headers(headers -> {
-                                                        headers.setBearerAuth(token);
+                                                        headers.setBearerAuth(
+                                                                        identity.token());
                                                         headers.set(
                                                                         "x-league",
                                                                         leagueId);
                                                         headers.set(
                                                                         "x-user",
-                                                                        userId);
+                                                                        String.valueOf(
+                                                                                        identity.userId()));
                                                         headers.set(
                                                                         "x-version",
                                                                         version);
@@ -476,19 +504,46 @@ public class BiwengerClient {
 
         @SuppressWarnings("UseSpecificCatch")
         public BiwengerMarketResponse getMarket() {
+                return getMarket(
+                                new BiwengerIdentity(
+                                                Long.valueOf(userId),
+                                                token));
+        }
+
+        @SuppressWarnings("UseSpecificCatch")
+        public BiwengerMarketResponse getMarket(
+                        BiwengerIdentity identity) {
+
+                if (identity == null) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger identity cannot be null");
+                }
+
+                if (identity.userId() == null) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger user id cannot be null");
+                }
+
+                if (identity.token() == null
+                                || identity.token().isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Biwenger token cannot be blank");
+                }
 
                 byte[] responseBody = executeWithRetry(
                                 () -> restClient
                                                 .get()
                                                 .uri("/api/v2/market")
                                                 .headers(headers -> {
-                                                        headers.setBearerAuth(token);
+                                                        headers.setBearerAuth(
+                                                                        identity.token());
                                                         headers.set(
                                                                         "x-league",
                                                                         leagueId);
                                                         headers.set(
                                                                         "x-user",
-                                                                        userId);
+                                                                        String.valueOf(
+                                                                                        identity.userId()));
                                                         headers.set(
                                                                         "x-version",
                                                                         version);

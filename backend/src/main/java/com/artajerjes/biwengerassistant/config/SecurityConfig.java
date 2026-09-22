@@ -120,10 +120,12 @@ public class SecurityConfig {
                                                                 "/api/leagues/*/sync/now")
                                                 .hasRole("ADMIN")
 
-                                                // De momento, resto de la API abierto
-                                                .requestMatchers("/api/**").permitAll()
+                                                // Toda la API restante requiere sesión
+                                                .requestMatchers("/api/**")
+                                                .authenticated()
 
-                                                .anyRequest().permitAll());
+                                                .anyRequest()
+                                                .permitAll());
 
                 return http.build();
         }

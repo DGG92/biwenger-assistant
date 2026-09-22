@@ -19,16 +19,20 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "offers")
+@Table(name = "offers", uniqueConstraints = @UniqueConstraint(name = "uk_offers_owner_biwenger_offer", columnNames = {
+        "owner_manager_id",
+        "biwenger_offer_id"
+}))
 public class Offer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "biwenger_offer_id", nullable = false, unique = true)
+    @Column(name = "biwenger_offer_id", nullable = false)
     private Long biwengerOfferId;
 
     @Column(nullable = false)
@@ -47,6 +51,10 @@ public class Offer {
     @ManyToOne
     @JoinColumn(name = "to_manager_id")
     private Manager toManager;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "owner_manager_id", nullable = false)
+    private Manager ownerManager;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -72,6 +80,7 @@ public class Offer {
             String type,
             Manager fromManager,
             Manager toManager,
+            Manager ownerManager,
             LocalDateTime createdAt,
             LocalDateTime expiresAt,
             List<Player> requestedPlayers,
@@ -82,6 +91,7 @@ public class Offer {
         this.type = type;
         this.fromManager = fromManager;
         this.toManager = toManager;
+        this.ownerManager = ownerManager;
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.requestedPlayers = new ArrayList<>(requestedPlayers);
@@ -134,6 +144,10 @@ public class Offer {
 
     public Manager getToManager() {
         return toManager;
+    }
+
+    public Manager getOwnerManager() {
+        return ownerManager;
     }
 
     public LocalDateTime getCreatedAt() {
