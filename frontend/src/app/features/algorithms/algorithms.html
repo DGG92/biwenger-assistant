@@ -1,0 +1,1486 @@
+<section class="algorithms-page">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Biwenger Assistant</p>
+            <h1>Algoritmos</h1>
+            <p class="page-description">
+                Cómo piensa el asistente, qué significa cada indicador y cómo se
+                calculan las recomendaciones.
+            </p>
+        </div>
+    </header>
+
+    <aside class="intro-card">
+        <strong>¿Qué encontrarás aquí?</strong>
+        <p>
+            Esta página documenta la lógica utilizada por Biwenger Assistant.
+            Los distintos porcentajes, ratings y valores sobre 100 no representan
+            lo mismo: cada indicador tiene su propia fórmula y finalidad.
+        </p>
+    </aside>
+
+    <nav class="contents">
+        <button type="button" (click)="scrollTo('puntuacion')">
+            Puntuación
+        </button>
+
+        <button type="button" (click)="scrollTo('rendimiento')">
+            Rendimiento
+        </button>
+
+        <button type="button" (click)="scrollTo('rating')">
+            Rating
+        </button>
+
+        <button type="button" (click)="scrollTo('rival')">
+            Rival
+        </button>
+
+        <button type="button" (click)="scrollTo('alineacion')">
+            Alineación
+        </button>
+
+        <button type="button" (click)="scrollTo('necesidades')">
+            Necesidades
+        </button>
+
+        <button type="button" (click)="scrollTo('mercado')">
+            Mercado
+        </button>
+
+        <button type="button" (click)="scrollTo('pujas')">
+            Pujas
+        </button>
+
+        <button type="button" (click)="scrollTo('proteccion')">
+            Protección
+        </button>
+
+        <button type="button" (click)="scrollTo('acciones')">
+            Acciones
+        </button>
+
+        <button type="button" (click)="scrollTo('economia')">
+            Economía
+        </button>
+
+        <button type="button" (click)="scrollTo('casos-especiales')">
+            Casos especiales
+        </button>
+
+        <button type="button" (click)="scrollTo('leyenda')">
+            Leyenda
+        </button>
+    </nav>
+
+    <!-- ====================================================== -->
+    <!-- PUNTUACIÓN -->
+    <!-- ====================================================== -->
+
+    <section id="puntuacion" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">01</span>
+            <div>
+                <h2>Sistema de puntuación de la liga</h2>
+                <p>
+                    Todo el análisis deportivo parte de los puntos que obtiene
+                    cada jugador en nuestra liga.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <h3>Fórmula de puntuación</h3>
+
+            <div class="formula">
+                <code>
+                    (SofaScore × 0,5) + (Estadísticas × 0,5)
+                    + penalti parado × 3
+                    − penalti fallado
+                    − gol en propia puerta
+                    + bonus de asistencias
+                    + bonus por minutos
+                    + bonus de portería a cero
+                    + bonus de gol rápido
+                </code>
+            </div>
+
+            <div class="rule-grid">
+                <div class="rule">
+                    <strong>Base</strong>
+                    <span>
+                        50 % de los puntos SofaScore + 50 % de los puntos
+                        Estadísticas.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Penalti parado</strong>
+                    <span>+3 puntos por penalti detenido.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Penalti fallado</strong>
+                    <span>−1 punto por penalti fallado.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Gol en propia puerta</strong>
+                    <span>−1 punto.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Asistencia · PT / DF</strong>
+                    <span>+2 puntos por asistencia.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Asistencia · MC / DL</strong>
+                    <span>+1 punto por asistencia.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Más de 70 minutos</strong>
+                    <span>
+                        +1 punto para PT, DF, MC y DL cuando supera los
+                        70 minutos jugados.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Portería a cero · DF</strong>
+                    <span>
+                        +1 si juega como visitante y el equipo local termina
+                        con 0 goles.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Portería a cero · PT</strong>
+                    <span>
+                        +2 si juega como visitante y el equipo local termina
+                        con 0 goles.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Gol en ≤ 30 minutos</strong>
+                    <span>
+                        +2 si marca al menos un gol habiendo jugado menos
+                        de 31 minutos.
+                    </span>
+                </div>
+            </div>
+
+            <div class="note">
+                <strong>Redondeo.</strong>
+                El resultado final se redondea al entero más próximo con
+                redondeo HALF_UP: 1,5 se convierte en 2 y −1,5 en −2.
+                Una estadística que no exista se interpreta como 0.
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- RENDIMIENTO -->
+    <!-- ====================================================== -->
+
+    <section id="rendimiento" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">02</span>
+            <div>
+                <h2>Forma reciente e histórico</h2>
+                <p>
+                    El asistente separa deliberadamente el momento actual
+                    del rendimiento acumulado.
+                </p>
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <article class="algorithm-card">
+                <h3>Forma reciente</h3>
+
+                <p>
+                    Se estudian como máximo los <strong>5 informes más
+                        recientes</strong>, pero solo se conserva la racha
+                    consecutiva que llega hasta el presente.
+                </p>
+
+                <div class="formula">
+                    <code>
+                        media ponderada =
+                        Σ (puntos × peso) / Σ pesos
+                    </code>
+                </div>
+
+                <p>
+                    El partido más reciente recibe el mayor peso. Si hay
+                    cinco partidos válidos, sus pesos son 5, 4, 3, 2 y 1.
+                </p>
+
+                <div class="thresholds">
+                    <div><span>Todos ≥ 8</span><strong>Excelente</strong></div>
+                    <div><span>Media ≥ 7</span><strong>Muy buena</strong></div>
+                    <div><span>Media ≥ 5</span><strong>Buena</strong></div>
+                    <div><span>Media ≥ 3</span><strong>Neutra</strong></div>
+                    <div><span>Media ≥ 1</span><strong>Débil</strong></div>
+                    <div><span>Media &lt; 1</span><strong>Muy débil</strong></div>
+                </div>
+
+                <div class="note">
+                    Se necesitan <strong>al menos 2 partidos consecutivos
+                        válidos</strong>. Con uno solo todavía no existe señal
+                    de forma reciente.
+                </div>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Rendimiento histórico</h3>
+
+                <p>
+                    Utiliza hasta los <strong>10 últimos partidos en los que
+                        el jugador participó y obtuvo puntuación</strong>.
+                </p>
+
+                <div class="formula">
+                    <code>
+                        media histórica =
+                        puntos de los partidos válidos / partidos válidos
+                    </code>
+                </div>
+
+                <div class="thresholds">
+                    <div><span>Media ≥ 6</span><strong>+10</strong></div>
+                    <div><span>Media ≥ 5</span><strong>+5</strong></div>
+                    <div><span>Media ≥ 3</span><strong>0</strong></div>
+                    <div><span>Media ≥ 2</span><strong>−5</strong></div>
+                    <div><span>Media &lt; 2</span><strong>−10</strong></div>
+                </div>
+
+                <div class="note">
+                    El histórico necesita una muestra mínima de
+                    <strong>5 partidos</strong> para influir en las
+                    recomendaciones. Los entrenadores quedan fuera de este
+                    cálculo porque utilizan otra escala de puntuación.
+                </div>
+            </article>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>¿Qué rompe la racha reciente?</h3>
+
+            <p>
+                La racha termina en cuanto el motor encuentra un informe que
+                pertenece a otra temporada, un partido en el que el jugador
+                no participó o un partido sin puntos disponibles.
+            </p>
+
+            <div class="example">
+                <strong>Ejemplo</strong>
+                <span>
+                    8 · 7 · 9 · no juega → la racha anterior deja de ser
+                    forma reciente. Si vuelve tres jornadas después y hace
+                    8 puntos, la muestra reciente es todavía insuficiente.
+                    Cuando dispute y puntúe el siguiente partido consecutivo,
+                    volverá a existir una muestra válida de 2.
+                </span>
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- RATING -->
+    <!-- ====================================================== -->
+
+    <section id="rating" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">03</span>
+            <div>
+                <h2>Rating deportivo del jugador</h2>
+                <p>
+                    Valor utilizado para comparar jugadores al construir
+                    alineaciones y formaciones.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <h3>Cómo se obtiene</h3>
+
+            <div class="formula">
+                <code>
+                    rating base =
+                    forma reciente × 65 %
+                    + histórico × 35 %
+                </code>
+            </div>
+
+            <p>
+                La mezcla 65/35 solo se utiliza cuando ambas muestras son
+                suficientemente fiables: al menos 2 partidos consecutivos
+                para la forma reciente y al menos 5 partidos para el
+                histórico.
+            </p>
+
+            <div class="rule-grid">
+                <div class="rule">
+                    <strong>Reciente + histórico</strong>
+                    <span>65 % reciente + 35 % histórico.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Solo reciente suficiente</strong>
+                    <span>Se utiliza la media reciente.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Solo histórico suficiente</strong>
+                    <span>Se utiliza la media histórica.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Sin muestras suficientes</strong>
+                    <span>Rating base 0.</span>
+                </div>
+            </div>
+
+            <p>
+                Después se aplica la disponibilidad del jugador y, cuando
+                existe información del próximo rival, un ajuste contextual
+                según la dificultad del partido.
+            </p>
+        </article>
+
+        <article class="algorithm-card">
+            <h3>Disponibilidad</h3>
+
+            <div class="status-grid">
+                <div><strong>OK</strong><span>× 1,00</span></div>
+                <div><strong>Apercibido</strong><span>× 1,00</span></div>
+                <div><strong>Desconocido</strong><span>× 1,00</span></div>
+                <div><strong>Duda</strong><span>× 0,50</span></div>
+                <div><strong>Lesionado</strong><span>× 0</span></div>
+                <div><strong>Sancionado</strong><span>× 0</span></div>
+                <div><strong>Descartado</strong><span>× 0</span></div>
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- RIVAL -->
+    <!-- ====================================================== -->
+
+    <section id="rival" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">04</span>
+            <div>
+                <h2>Dificultad del próximo rival</h2>
+                <p>
+                    El rating no mira únicamente al jugador: también tiene
+                    en cuenta el partido que va a disputar.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <div class="formula">
+                <code>
+                    dificultad =
+                    posición × 50 %
+                    + ataque × 25 %
+                    + defensa × 25 %
+                </code>
+            </div>
+
+            <div class="rule-grid">
+                <div class="rule">
+                    <strong>Posición · 50 %</strong>
+                    <span>
+                        El 1.º equivale a 100 y el 20.º a 0 mediante una
+                        escala lineal.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Ataque · 25 %</strong>
+                    <span>
+                        0 goles/partido = 0; 1 = 33,33; 2 = 66,67;
+                        3 o más = 100.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Defensa · 25 %</strong>
+                    <span>
+                        0 goles recibidos/partido = 100; 1 = 66,67;
+                        2 = 33,33; 3 o más = 0.
+                    </span>
+                </div>
+
+                <div class="rule">
+                    <strong>Local</strong>
+                    <span>−5 puntos de dificultad.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Visitante</strong>
+                    <span>+5 puntos de dificultad.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Datos insuficientes</strong>
+                    <span>
+                        Los componentes sin información válida utilizan
+                        un valor neutral de 50.
+                    </span>
+                </div>
+            </div>
+
+            <div class="note">
+                La dificultad queda limitada entre 0 y 100 y sus valores
+                públicos se redondean a dos decimales. Su efecto sobre el
+                rating deportivo está limitado a un máximo de
+                <strong>±8 %</strong>.
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- ALINEACIÓN -->
+    <!-- ====================================================== -->
+
+    <section id="alineacion" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">05</span>
+            <div>
+                <h2>Alineación y formación recomendadas</h2>
+                <p>
+                    El asistente busca la combinación de once jugadores
+                    disponible con mayor valoración.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Formaciones estudiadas</h3>
+
+            <div class="formation-list">
+                <span>3-4-3</span>
+                <span>3-5-2</span>
+                <span>4-3-3</span>
+                <span>4-4-2</span>
+                <span>4-5-1</span>
+                <span>5-3-2</span>
+                <span>5-4-1</span>
+                <span>3-6-1</span>
+                <span>3-3-4</span>
+                <span>4-2-4</span>
+                <span>4-6-0</span>
+                <span>5-2-3</span>
+                <span>3-2-5</span>
+                <span>5-1-4</span>
+            </div>
+
+            <p>
+                Para que una formación sea posible deben poder asignarse
+                once jugadores a sus posiciones. Un jugador con varias
+                posiciones puede cubrir cualquiera de sus posiciones
+                compatibles, pero nunca ocupa dos huecos simultáneamente.
+            </p>
+        </article>
+
+        <div class="two-columns">
+            <article class="algorithm-card">
+                <h3>Score actual y recomendado</h3>
+
+                <p>
+                    <strong>Score actual</strong> es la suma de los ratings
+                    de la mejor alineación que puede construirse con la
+                    formación actual.
+                </p>
+
+                <p>
+                    <strong>Score recomendado</strong> es la puntuación de
+                    la mejor solución encontrada al probar las formaciones
+                    admitidas.
+                </p>
+
+                <div class="formula">
+                    <code>
+                        mejora =
+                        max(score recomendado − score actual, 0)
+                    </code>
+                </div>
+
+                <div class="note">
+                    Estos scores <strong>no son porcentajes ni valores
+                        sobre 100</strong>. Son puntuaciones comparativas de la
+                    alineación completa.
+                </div>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Confianza de la formación</h3>
+
+                <p>
+                    Tampoco es una probabilidad estadística. Es un índice
+                    heurístico que refleja cuánto mejora la alternativa
+                    propuesta.
+                </p>
+
+                <div class="formula">
+                    <code>
+                        si mejora = 0 → confianza = 0
+
+                        si mejora &gt; 0 →
+                        55 + min(redondeo(mejora × 5), 35)
+                    </code>
+                </div>
+
+                <p>
+                    El máximo es <strong>90 %</strong>.
+                </p>
+            </article>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Evitar cambios tácticos irrelevantes</h3>
+
+            <p>
+                Si la formación actual es válida, el asistente no propone
+                otra únicamente por una diferencia mínima. La nueva
+                formación debe mejorar el score en al menos
+                <strong>1 punto</strong>. Si no alcanza ese margen,
+                mantiene la formación actual.
+            </p>
+        </article>
+
+        <article class="algorithm-card">
+            <h3>Jornada empezada y jugadores bloqueados</h3>
+
+            <p>
+                El optimizador respeta el estado real de la jornada.
+                Los jugadores cuyo partido ya ha comenzado no se tratan
+                como piezas libremente intercambiables.
+            </p>
+
+            <p>
+                Con <strong>onlyNoPlayed</strong> y con
+                <strong>rollingLockout</strong>, un jugador solo es
+                modificable mientras su partido siga pendiente.
+                Cuando comienza, queda bloqueado.
+            </p>
+
+            <div class="note">
+                Si la configuración de cambios no es reconocida con
+                seguridad, el asistente adopta el criterio conservador y
+                no supone que el jugador pueda modificarse.
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- NECESIDADES -->
+    <!-- ====================================================== -->
+
+    <section id="necesidades" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">06</span>
+            <div>
+                <h2>Necesidad por posición · 0/100</h2>
+                <p>
+                    Este es el valor que aparece, por ejemplo, como
+                    PT 25/100, DF 50/100 o DL 100/100.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <h3>Qué significa</h3>
+
+            <p>
+                Mide cuánto necesita la plantilla reforzar una posición.
+                <strong>No mide la calidad de los jugadores</strong> y no
+                es el score de mercado.
+            </p>
+
+            <div class="formula">
+                <code>
+                    necesidad =
+                    necesidad por profundidad
+                    + utilidad para las formaciones
+                </code>
+            </div>
+
+            <p>El resultado final queda limitado a <strong>100</strong>.</p>
+        </article>
+
+        <div class="two-columns">
+            <article class="algorithm-card">
+                <h3>1. Profundidad de plantilla</h3>
+
+                <p>El motor considera como profundidad objetivo:</p>
+
+                <div class="metric-grid">
+                    <div><strong>PT</strong><span>2</span></div>
+                    <div><strong>DF</strong><span>5</span></div>
+                    <div><strong>MC</strong><span>5</span></div>
+                    <div><strong>DL</strong><span>4</span></div>
+                </div>
+
+                <div class="formula">
+                    <code>
+                        depthScore =
+                        redondeo(jugadores efectivos que faltan × 25)
+                    </code>
+                </div>
+
+                <p>
+                    Cada jugador efectivo que falta aporta 25 puntos de
+                    necesidad.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>2. Utilidad táctica</h3>
+
+                <p>
+                    El motor comprueba todas las formaciones válidas que la
+                    plantilla no puede cubrir completamente y calcula si
+                    añadir un jugador de esa posición solucionaría alguno
+                    de los huecos.
+                </p>
+
+                <div class="formula">
+                    <code>
+                        utilidad =
+                        mejoras útiles / huecos totales
+
+                        formationScore =
+                        redondeo(utilidad × 25)
+                    </code>
+                </div>
+
+                <p>
+                    Esta parte puede aportar hasta 25 puntos adicionales.
+                </p>
+            </article>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Disponibilidad efectiva</h3>
+
+            <p>
+                No todos los jugadores cuentan como una unidad completa
+                para medir profundidad:
+            </p>
+
+            <div class="status-grid">
+                <div><strong>OK</strong><span>1 jugador</span></div>
+                <div><strong>Apercibido</strong><span>1 jugador</span></div>
+                <div><strong>Desconocido</strong><span>1 jugador</span></div>
+                <div><strong>Duda</strong><span>0,5 jugadores</span></div>
+                <div><strong>Lesionado</strong><span>0</span></div>
+                <div><strong>Sancionado</strong><span>0</span></div>
+                <div><strong>Descartado</strong><span>0</span></div>
+            </div>
+
+            <p>
+                Los entrenadores (<strong>E</strong>) no intervienen en
+                las necesidades de PT, DF, MC y DL.
+            </p>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- MERCADO -->
+    <!-- ====================================================== -->
+
+    <section id="mercado" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">07</span>
+            <div>
+                <h2>Score de mercado · 0/100</h2>
+                <p>
+                    El indicador principal para valorar una oportunidad de
+                    compra.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <h3>Fórmula general</h3>
+
+            <div class="formula">
+                <code>
+                    score previo =
+                    50
+                    + precio
+                    + tendencia de valor
+                    + necesidad de plantilla
+                    + forma reciente
+                    + histórico
+                    + estado
+                </code>
+            </div>
+
+            <p>
+                El resultado final se redondea y limita entre
+                <strong>0 y 100</strong>. Después pueden aplicarse límites
+                adicionales por presupuesto o por superar la puja máxima
+                recomendada.
+            </p>
+        </article>
+
+        <div class="score-breakdown">
+            <article class="algorithm-card">
+                <span class="score-label">Base</span>
+                <strong class="score-value">50</strong>
+                <p>Todo jugador empieza desde un punto neutral de 50.</p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Precio</span>
+                <strong class="score-value">−30…+30</strong>
+                <div class="formula compact">
+                    <code>
+                        % diferencia × 3
+                    </code>
+                </div>
+                <p>
+                    Se limita a ±30. Comprar claramente por debajo del
+                    valor de mercado favorece el score; pagar por encima
+                    lo reduce.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Tendencia</span>
+                <strong class="score-value">−25…+25</strong>
+                <p>
+                    Si existe histórico real de siete días, el porcentaje
+                    de variación se multiplica por 2. Si no existe, se usa
+                    la fluctuación disponible como señal alternativa con
+                    multiplicador 7. El resultado se limita a ±25.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Necesidad</span>
+                <strong class="score-value">0…20</strong>
+                <div class="formula compact">
+                    <code>
+                        redondeo(necesidad de posición × 0,20)
+                    </code>
+                </div>
+                <p>
+                    Un jugador que cubre una carencia importante de tu
+                    plantilla recibe más valor.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Forma reciente</span>
+                <strong class="score-value">−10…+15</strong>
+
+                <div class="thresholds">
+                    <div><span>Todos ≥ 8</span><strong>+15</strong></div>
+                    <div><span>Media ≥ 7</span><strong>+10</strong></div>
+                    <div><span>Media ≥ 5</span><strong>+5</strong></div>
+                    <div><span>Media ≥ 3</span><strong>0</strong></div>
+                    <div><span>Media ≥ 1</span><strong>−5</strong></div>
+                    <div><span>Media &lt; 1</span><strong>−10</strong></div>
+                </div>
+
+                <p>Con menos de 2 partidos válidos aporta 0.</p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Histórico</span>
+                <strong class="score-value">−10…+10</strong>
+
+                <div class="thresholds">
+                    <div><span>Media ≥ 6</span><strong>+10</strong></div>
+                    <div><span>Media ≥ 5</span><strong>+5</strong></div>
+                    <div><span>Media ≥ 3</span><strong>0</strong></div>
+                    <div><span>Media ≥ 2</span><strong>−5</strong></div>
+                    <div><span>Media &lt; 2</span><strong>−10</strong></div>
+                </div>
+
+                <p>Con menos de 5 partidos válidos aporta 0.</p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Estado</span>
+                <strong class="score-value">0…−30</strong>
+
+                <div class="thresholds">
+                    <div><span>OK</span><strong>0</strong></div>
+                    <div><span>Duda</span><strong>−10</strong></div>
+                    <div><span>Lesionado</span><strong>−30</strong></div>
+                    <div><span>Sancionado</span><strong>−30</strong></div>
+                    <div><span>Apercibido</span><strong>−5</strong></div>
+                    <div><span>Descartado</span><strong>−25</strong></div>
+                    <div><span>Desconocido</span><strong>0</strong></div>
+                </div>
+            </article>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Interpretación del score</h3>
+
+            <div class="recommendation-scale">
+                <div>
+                    <strong>80–100</strong>
+                    <span>Compra fuerte</span>
+                </div>
+                <div>
+                    <strong>60–79</strong>
+                    <span>Comprar</span>
+                </div>
+                <div>
+                    <strong>40–59</strong>
+                    <span>Vigilar</span>
+                </div>
+                <div>
+                    <strong>0–39</strong>
+                    <span>Evitar</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="algorithm-card">
+            <h3>Motivos que acompañan a una recomendación</h3>
+
+            <p>
+                Además del número, el motor explica qué señales han sido
+                relevantes. Puede indicar precio por debajo o por encima
+                del mercado, valor al alza o alza fuerte, valor a la baja,
+                buena o excelente forma reciente, histórico fuerte o
+                pobre, necesidad de esa posición, lesión o falta de
+                presupuesto.
+            </p>
+
+            <p>
+                Como referencia, una diferencia de precio de al menos
+                <strong>±5 %</strong> activa los motivos de precio.
+                Una necesidad de posición de al menos
+                <strong>50/100</strong> se considera relevante.
+            </p>
+        </article>
+
+        <article class="algorithm-card">
+            <h3>Cuando el presupuesto manda</h3>
+
+            <p>
+                El score previo puede ser alto y aun así no terminar en
+                una recomendación de compra. Si el jugador no es
+                asequible, el score final queda limitado a
+                <strong>25/100</strong>.
+            </p>
+
+            <p>
+                En una subasta sucede lo mismo cuando la puja actual ya
+                supera la puja máxima que el asistente considera
+                razonable.
+            </p>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- PUJAS -->
+    <!-- ====================================================== -->
+
+    <section id="pujas" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">08</span>
+            <div>
+                <h2>Puja máxima recomendada</h2>
+                <p>
+                    El asistente distingue entre poder pagar un jugador y
+                    considerar razonable pagar ese precio.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <p>
+                La puja parte del <strong>valor de mercado</strong> del
+                jugador y aplica una prima o descuento por tendencia y
+                estado.
+            </p>
+
+            <p>
+                Cuando existe variación real a siete días, la tendencia
+                utilizada para la puja equivale al porcentaje de cambio
+                multiplicado por <strong>0,75</strong>. Si no existe ese
+                histórico, se utiliza la fluctuación alternativa con
+                multiplicador <strong>2,5</strong>.
+            </p>
+
+            <p>
+                La prima o descuento económico queda limitada a
+                <strong>±12 %</strong>.
+            </p>
+
+            <h3>Penalización por estado</h3>
+
+            <div class="thresholds">
+                <div><span>OK</span><strong>0 %</strong></div>
+                <div><span>Duda</span><strong>−5 %</strong></div>
+                <div><span>Lesionado</span><strong>−15 %</strong></div>
+                <div><span>Sancionado</span><strong>−15 %</strong></div>
+                <div><span>Apercibido</span><strong>−2 %</strong></div>
+                <div><span>Descartado</span><strong>−12 %</strong></div>
+                <div><span>Desconocido</span><strong>0 %</strong></div>
+            </div>
+
+            <div class="note">
+                La puja calculada nunca puede superar el máximo que el
+                usuario puede permitirse según su situación económica.
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- PROTECCIÓN -->
+    <!-- ====================================================== -->
+
+    <section id="proteccion" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">09</span>
+            <div>
+                <h2>Protección del jugador · 0/100</h2>
+                <p>
+                    Indica la urgencia de proteger económicamente a un
+                    jugador de tu plantilla.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card featured">
+            <p>
+                Este score solo tiene sentido para jugadores que pertenecen
+                a un manager. Combina evolución económica, forma,
+                rentabilidad y estado.
+            </p>
+
+            <div class="rule-grid">
+                <div class="rule">
+                    <strong>Subida diaria ≥ 100.000 €</strong>
+                    <span>+40 · subida fuerte</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Subida diaria ≥ 50.000 €</strong>
+                    <span>+25 · valor al alza</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Todos los recientes ≥ 8</strong>
+                    <span>+30 · forma excelente</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Media reciente ≥ 7</strong>
+                    <span>+15 · buena forma</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Rentabilidad ≥ 500.000 €</strong>
+                    <span>+15</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Rentabilidad ≥ 200.000 €</strong>
+                    <span>+8</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Lesionado</strong>
+                    <span>−25</span>
+                </div>
+            </div>
+
+            <p>
+                La forma solo participa si existe una muestra reciente
+                válida de al menos dos partidos. El resultado se limita
+                entre 0 y 100.
+            </p>
+
+            <div class="recommendation-scale three">
+                <div>
+                    <strong>60–100</strong>
+                    <span>Proteger</span>
+                </div>
+                <div>
+                    <strong>30–59</strong>
+                    <span>Vigilar</span>
+                </div>
+                <div>
+                    <strong>0–29</strong>
+                    <span>Sin alerta</span>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- ACCIONES -->
+    <!-- ====================================================== -->
+
+    <section id="acciones" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">10</span>
+            <div>
+                <h2>Acciones recomendadas y confianza</h2>
+                <p>
+                    El asistente transforma las señales anteriores en
+                    propuestas concretas.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Tipos de acción</h3>
+
+            <div class="tag-list">
+                <span>Comprar</span>
+                <span>Pujar</span>
+                <span>Vender</span>
+                <span>Mantener</span>
+                <span>Vigilar</span>
+                <span>Cambiar titular</span>
+                <span>Cambiar formación</span>
+                <span>Proteger</span>
+            </div>
+
+            <p>
+                Cada acción puede tener prioridad alta, media o baja,
+                explicación, señales de origen, cantidad sugerida y un
+                índice de confianza.
+            </p>
+        </article>
+
+        <article class="algorithm-card featured">
+            <h3>Confianza de una acción</h3>
+
+            <div class="formula">
+                <code>
+                    confianza = 35
+                    + evidencia reciente
+                    + evidencia histórica
+                    + fuerza de la decisión
+                </code>
+            </div>
+
+            <div class="rule-grid">
+                <div class="rule">
+                    <strong>Base</strong>
+                    <span>35 puntos.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>≥ 2 recientes</strong>
+                    <span>+20.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>≥ 4 recientes</strong>
+                    <span>+10 adicionales.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>≥ 5 históricos</strong>
+                    <span>+15.</span>
+                </div>
+
+                <div class="rule">
+                    <strong>Fuerza de decisión</strong>
+                    <span>
+                        +3 por unidad, con un máximo de +20.
+                    </span>
+                </div>
+            </div>
+
+            <p>
+                El resultado se limita a <strong>100</strong>.
+                Igual que la confianza de formación, no debe interpretarse
+                como una probabilidad matemática de acertar.
+            </p>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- ECONOMÍA -->
+    <!-- ====================================================== -->
+
+    <section id="economia" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">11</span>
+            <div>
+                <h2>Estadísticas económicas y de rendimiento</h2>
+                <p>
+                    Qué significan los números utilizados para comparar
+                    jugadores y analizar tu plantilla.
+                </p>
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <article class="algorithm-card">
+                <h3>Puntos por millón</h3>
+
+                <div class="formula">
+                    <code>
+                        puntos por millón =
+                        puntos /
+                        (valor de mercado / 1.000.000)
+                    </code>
+                </div>
+
+                <p>
+                    Mide cuántos puntos está proporcionando un jugador por
+                    cada millón de euros de valor de mercado. Cuanto mayor
+                    sea, mayor rendimiento deportivo se obtiene por unidad
+                    de valor económico.
+                </p>
+
+                <p>
+                    Si el valor de mercado no existe o no es positivo, el
+                    indicador no se calcula.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Media de puntos</h3>
+
+                <div class="formula">
+                    <code>
+                        media =
+                        puntos totales / partidos puntuados
+                    </code>
+                </div>
+
+                <p>
+                    Los partidos utilizados son los informes válidos
+                    disponibles para ese cálculo.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Variación a 7 días</h3>
+
+                <div class="formula">
+                    <code>
+                        cambio = valor actual − valor hace 7 días
+
+                        cambio % =
+                        cambio / valor hace 7 días × 100
+                    </code>
+                </div>
+
+                <p>
+                    Si no existe valor histórico válido o el valor anterior
+                    no es positivo, el porcentaje no se calcula.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Beneficio latente</h3>
+
+                <div class="formula">
+                    <code>
+                        beneficio =
+                        valor actual − precio de compra
+
+                        beneficio % =
+                        beneficio / precio de compra × 100
+                    </code>
+                </div>
+
+                <p>
+                    Es la ganancia o pérdida que existiría respecto al
+                    precio de compra tomando como referencia el valor
+                    actual. No implica que el jugador ya haya sido vendido.
+                </p>
+            </article>
+        </div>
+
+        <article class="algorithm-card">
+            <h3>Cobertura de datos</h3>
+
+            <p>
+                Los porcentajes de cobertura indican qué parte del universo
+                analizado dispone realmente de datos suficientes para esa
+                estadística. Por eso una clasificación puede tener menos
+                jugadores que el total existente en la liga.
+            </p>
+
+            <div class="note">
+                <strong>Cobertura no significa calidad.</strong>
+                Un 100 % de cobertura significa que hay datos para todos,
+                no que las predicciones tengan una confianza del 100 %.
+            </div>
+        </article>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- CASOS ESPECIALES -->
+    <!-- ====================================================== -->
+
+    <section id="casos-especiales" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">12</span>
+            <div>
+                <h2>Casos especiales</h2>
+                <p>
+                    Situaciones en las que es importante entender cómo
+                    interpreta los datos el asistente.
+                </p>
+            </div>
+        </div>
+
+        <div class="case-grid">
+            <article class="algorithm-card">
+                <h3>Jugador que deja de jugar</h3>
+                <p>
+                    Una ausencia rompe la racha de forma reciente. Los
+                    partidos anteriores no siguen formando una racha
+                    continua cuando el jugador vuelve.
+                </p>
+                <p>
+                    Sin embargo, los partidos puntuados anteriores sí pueden
+                    seguir formando parte del histórico de hasta 10
+                    participaciones.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Jugador que vuelve varias jornadas después</h3>
+                <p>
+                    Su primer partido de vuelta constituye una muestra
+                    reciente de solo un partido y, por tanto, todavía no
+                    genera señal reciente. Necesita otro partido consecutivo
+                    participado y puntuado.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Fichaje de invierno</h3>
+                <p>
+                    Un jugador que llega, por ejemplo, en la jornada 17 no
+                    necesita haber estado disponible desde la jornada 1.
+                    Empieza a construir sus señales con los informes que
+                    existan para él.
+                </p>
+                <p>
+                    Al principio tendrá poca o ninguna evidencia reciente e
+                    histórica. Tras dos participaciones consecutivas podrá
+                    tener forma reciente y, cuando alcance cinco informes
+                    históricos válidos, el histórico podrá empezar a influir.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Cambio de temporada</h3>
+                <p>
+                    La forma reciente no arrastra una racha desde la
+                    temporada anterior. Al encontrar un informe de otra
+                    temporada, la racha actual se corta.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Jugador multiposición</h3>
+                <p>
+                    Puede cubrir cualquiera de sus posiciones compatibles
+                    al estudiar una formación. El algoritmo busca una
+                    asignación que maximice la cobertura, evitando contar
+                    al mismo jugador dos veces.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Lesión</h3>
+                <p>
+                    Una lesión tiene efectos distintos según el algoritmo:
+                    disponibilidad 0 para alineaciones y profundidad,
+                    −30 en el score de mercado, −15 % en la puja máxima y
+                    −25 en el score de protección.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Jornada partida</h3>
+                <p>
+                    En una jornada con bloqueo progresivo, el motor mira el
+                    estado del partido de cada equipo. Los jugadores de
+                    partidos pendientes pueden seguir siendo modificables;
+                    los de partidos comenzados quedan bloqueados.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Jugador comprado durante una jornada partida</h3>
+                <p>
+                    La fecha de adquisición no determina por sí sola si
+                    puede utilizarse. Si su partido todavía está pendiente
+                    y las reglas de la jornada permiten cambios, puede
+                    seguir siendo utilizable.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Sin datos del rival</h3>
+                <p>
+                    Si no puede resolverse el contexto del próximo partido,
+                    no se inventa un rival. El ajuste contextual deja de
+                    aportar información. Dentro del cálculo de dificultad,
+                    los componentes concretos sin datos válidos utilizan
+                    50 como valor neutral.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Pocos datos de rendimiento</h3>
+                <p>
+                    El motor evita convertir muestras demasiado pequeñas
+                    en señales fuertes. Menos de 2 partidos consecutivos no
+                    generan forma reciente y menos de 5 partidos históricos
+                    no generan contribución histórica de mercado.
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <!-- ====================================================== -->
+    <!-- LEYENDA -->
+    <!-- ====================================================== -->
+
+    <section id="leyenda" class="algorithm-section">
+        <div class="section-heading">
+            <span class="section-number">13</span>
+            <div>
+                <h2>Leyenda de indicadores</h2>
+                <p>
+                    Números parecidos pueden representar conceptos muy
+                    diferentes.
+                </p>
+            </div>
+        </div>
+
+        <article class="algorithm-card">
+            <div class="legend-table">
+                <div class="legend-row legend-header">
+                    <span>Indicador</span>
+                    <span>Escala</span>
+                    <span>Qué significa</span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Score de mercado</strong>
+                    <span>0–100</span>
+                    <span>Conveniencia global de una oportunidad de compra.</span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Necesidad por posición</strong>
+                    <span>0–100</span>
+                    <span>Urgencia de reforzar PT, DF, MC o DL.</span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Protección</strong>
+                    <span>0–100</span>
+                    <span>
+                        Urgencia de proteger económicamente a un jugador
+                        propio.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Dificultad del rival</strong>
+                    <span>0–100</span>
+                    <span>
+                        Fortaleza estimada del próximo rival teniendo en
+                        cuenta contexto local/visitante.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Confianza de acción</strong>
+                    <span>0–100</span>
+                    <span>
+                        Índice heurístico basado en cantidad de evidencia y
+                        fuerza de la señal.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Confianza de formación</strong>
+                    <span>0–90</span>
+                    <span>
+                        Índice heurístico derivado de la mejora de score que
+                        aporta el cambio táctico.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Rating del jugador</strong>
+                    <span>Puntos</span>
+                    <span>
+                        Valor deportivo esperado utilizado para comparar
+                        jugadores en la alineación.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Score de formación</strong>
+                    <span>Puntos</span>
+                    <span>
+                        Suma de ratings de la alineación construida para una
+                        formación. No es un porcentaje.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Puntos por millón</strong>
+                    <span>Ratio</span>
+                    <span>
+                        Rendimiento deportivo respecto al valor de mercado.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Rentabilidad</strong>
+                    <span>€ / %</span>
+                    <span>
+                        Diferencia entre valor actual y precio de compra.
+                    </span>
+                </div>
+
+                <div class="legend-row">
+                    <strong>Cobertura</strong>
+                    <span>%</span>
+                    <span>
+                        Porcentaje de jugadores para los que existen los
+                        datos necesarios.
+                    </span>
+                </div>
+            </div>
+        </article>
+
+        <aside class="final-note">
+            <strong>Importante</strong>
+            <p>
+                Biwenger Assistant utiliza reglas y señales deterministas
+                construidas a partir de los datos disponibles. Sus scores y
+                confianzas ayudan a comparar alternativas, pero no son
+                probabilidades de que un jugador vaya a puntuar una cantidad
+                concreta ni garantías sobre el resultado de una operación.
+            </p>
+        </aside>
+    </section>
+</section>

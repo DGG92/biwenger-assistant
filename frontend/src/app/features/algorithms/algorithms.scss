@@ -1,0 +1,786 @@
+:host {
+    display: block;
+}
+
+.algorithms-page {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    color: #e2e8f0;
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+
+    h1 {
+        margin: 0.25rem 0 0.5rem;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.05;
+        color: #f8fafc;
+    }
+}
+
+.eyebrow {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.page-description {
+    max-width: 760px;
+    margin: 0;
+    color: #94a3b8;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.intro-card,
+.final-note {
+    padding: 1.25rem 1.4rem;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    background: #172033;
+
+    strong {
+        display: block;
+        margin-bottom: 0.4rem;
+        color: #f8fafc;
+        font-size: 1rem;
+    }
+
+    p {
+        margin: 0;
+        color: #cbd5e1;
+        line-height: 1.6;
+    }
+}
+
+/* ============================================================
+   ÍNDICE
+   ============================================================ */
+
+.contents {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+
+    margin: 1.25rem 0 2rem;
+    padding: 0.75rem;
+
+    border: 1px solid #334155;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.96);
+
+    scrollbar-width: thin;
+
+    button {
+        flex: 0 0 auto;
+        padding: 0.55rem 0.8rem;
+
+        border: 1px solid #334155;
+        border-radius: 999px;
+
+        background: #1e293b;
+        color: #cbd5e1;
+
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+
+        transition:
+            background 0.15s ease,
+            border-color 0.15s ease,
+            color 0.15s ease,
+            transform 0.15s ease;
+
+        &:hover {
+            background: #273449;
+            border-color: #475569;
+            color: #f8fafc;
+            transform: translateY(-1px);
+        }
+    }
+}
+
+/* ============================================================
+   SECCIONES
+   ============================================================ */
+
+.algorithm-section {
+    scroll-margin-top: 6rem;
+    margin-bottom: 3.5rem;
+}
+
+.section-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+
+    h2 {
+        margin: 0;
+        color: #f8fafc;
+        font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+        line-height: 1.2;
+    }
+
+    p {
+        margin: 0.35rem 0 0;
+        color: #94a3b8;
+        line-height: 1.5;
+    }
+}
+
+.section-number {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 2.75rem;
+    height: 2.75rem;
+
+    border: 1px solid #475569;
+    border-radius: 10px;
+
+    background: #1e293b;
+    color: #f8fafc;
+
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+/* ============================================================
+   TARJETAS
+   ============================================================ */
+
+.algorithm-card {
+    min-width: 0;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+
+    border: 1px solid #334155;
+    border-radius: 14px;
+
+    background: #111b2e;
+
+    h3 {
+        margin: 0 0 0.85rem;
+        color: #f8fafc;
+        font-size: 1.05rem;
+        line-height: 1.3;
+    }
+
+    p {
+        margin: 0.7rem 0;
+        color: #cbd5e1;
+        line-height: 1.65;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    strong {
+        color: #f8fafc;
+    }
+
+    &.featured {
+        border-color: #475569;
+        background: #162136;
+    }
+}
+
+.two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+
+    .algorithm-card {
+        margin-bottom: 1rem;
+    }
+}
+
+.case-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+
+    .algorithm-card {
+        margin-bottom: 0;
+    }
+}
+
+/* ============================================================
+   FÓRMULAS
+   ============================================================ */
+
+.formula {
+    margin: 1rem 0;
+    padding: 1rem;
+
+    overflow-x: auto;
+
+    border: 1px solid #334155;
+    border-radius: 10px;
+
+    background: #0b1220;
+
+    code {
+        display: block;
+        min-width: max-content;
+
+        color: #dbeafe;
+        font-family:
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            Menlo,
+            monospace;
+
+        font-size: 0.9rem;
+        line-height: 1.7;
+        white-space: pre-line;
+    }
+
+    &.compact {
+        padding: 0.7rem 0.8rem;
+
+        code {
+            font-size: 0.82rem;
+        }
+    }
+}
+
+/* ============================================================
+   REGLAS
+   ============================================================ */
+
+.rule-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.rule {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    min-width: 0;
+    padding: 0.85rem 0.95rem;
+
+    border: 1px solid #334155;
+    border-radius: 10px;
+
+    background: #0f192b;
+
+    strong {
+        color: #f8fafc;
+        font-size: 0.88rem;
+    }
+
+    span {
+        color: #94a3b8;
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+}
+
+/* ============================================================
+   NOTAS Y EJEMPLOS
+   ============================================================ */
+
+.note,
+.example {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+
+    border-left: 3px solid #64748b;
+    border-radius: 0 9px 9px 0;
+
+    background: #0f192b;
+    color: #cbd5e1;
+
+    font-size: 0.88rem;
+    line-height: 1.6;
+
+    strong {
+        color: #f8fafc;
+    }
+}
+
+.example {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+/* ============================================================
+   UMBRALES
+   ============================================================ */
+
+.thresholds {
+    display: grid;
+    gap: 0.4rem;
+    margin: 1rem 0;
+
+    >div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+
+        padding: 0.55rem 0.7rem;
+
+        border-bottom: 1px solid #273449;
+
+        &:last-child {
+            border-bottom: 0;
+        }
+
+        span {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        strong {
+            flex: 0 0 auto;
+            color: #f8fafc;
+            font-size: 0.85rem;
+        }
+    }
+}
+
+/* ============================================================
+   ESTADOS
+   ============================================================ */
+
+.status-grid,
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+
+    >div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+
+        min-height: 4.5rem;
+        padding: 0.7rem;
+
+        border: 1px solid #334155;
+        border-radius: 10px;
+
+        background: #0f192b;
+        text-align: center;
+
+        strong {
+            color: #f8fafc;
+            font-size: 0.85rem;
+        }
+
+        span {
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+    }
+}
+
+/* ============================================================
+   FORMACIONES
+   ============================================================ */
+
+.formation-list,
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+
+    span {
+        padding: 0.45rem 0.7rem;
+
+        border: 1px solid #334155;
+        border-radius: 999px;
+
+        background: #0f192b;
+        color: #cbd5e1;
+
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+}
+
+/* ============================================================
+   SCORE DE MERCADO
+   ============================================================ */
+
+.score-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    .algorithm-card {
+        margin-bottom: 0;
+    }
+}
+
+.score-label {
+    display: block;
+    margin-bottom: 0.4rem;
+
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.score-value {
+    display: block;
+    margin-bottom: 0.75rem;
+
+    color: #f8fafc;
+    font-size: 1.55rem;
+    line-height: 1;
+}
+
+/* ============================================================
+   ESCALAS DE RECOMENDACIÓN
+   ============================================================ */
+
+.recommendation-scale {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+
+    &.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    >div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+
+        min-height: 5rem;
+        padding: 0.8rem;
+
+        border: 1px solid #334155;
+        border-radius: 10px;
+
+        background: #0f192b;
+        text-align: center;
+
+        strong {
+            color: #f8fafc;
+            font-size: 1rem;
+        }
+
+        span {
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+    }
+}
+
+/* ============================================================
+   LEYENDA
+   ============================================================ */
+
+.legend-table {
+    width: 100%;
+    overflow: hidden;
+
+    border: 1px solid #334155;
+    border-radius: 10px;
+}
+
+.legend-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.8fr) 100px minmax(220px, 2fr);
+    gap: 1rem;
+
+    padding: 0.8rem 1rem;
+
+    border-bottom: 1px solid #273449;
+
+    &:last-child {
+        border-bottom: 0;
+    }
+
+    >* {
+        min-width: 0;
+    }
+
+    strong {
+        color: #f8fafc;
+        font-size: 0.85rem;
+    }
+
+    span {
+        color: #cbd5e1;
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+
+    span:nth-child(2) {
+        color: #94a3b8;
+        font-weight: 600;
+    }
+}
+
+.legend-header {
+    background: #1e293b;
+
+    span {
+        color: #f8fafc;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+}
+
+.final-note {
+    margin-top: 1rem;
+}
+
+/* ============================================================
+   SCROLL
+   ============================================================ */
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1100px) {
+    .score-breakdown {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .status-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* ============================================================
+   TABLET PEQUEÑA
+   ============================================================ */
+
+@media (max-width: 800px) {
+    .algorithms-page {
+        padding: 1rem;
+    }
+
+    .two-columns,
+    .case-grid,
+    .score-breakdown {
+        grid-template-columns: 1fr;
+    }
+
+    .rule-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .status-grid,
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .recommendation-scale,
+    .recommendation-scale.three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .legend-row {
+        grid-template-columns: minmax(120px, 0.8fr) 80px minmax(180px, 2fr);
+        gap: 0.75rem;
+    }
+}
+
+/* ============================================================
+   MÓVIL
+   ============================================================ */
+
+@media (max-width: 600px) {
+    .algorithms-page {
+        padding: 0.8rem;
+    }
+
+    .page-header {
+        margin-bottom: 1rem;
+
+        h1 {
+            font-size: 2rem;
+        }
+    }
+
+    .page-description {
+        font-size: 0.92rem;
+    }
+
+    .intro-card,
+    .final-note,
+    .algorithm-card {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .contents {
+        top: 0;
+        margin: 1rem 0 1.75rem;
+        padding: 0.6rem;
+
+        button {
+            padding: 0.5rem 0.7rem;
+            font-size: 0.78rem;
+        }
+    }
+
+    .algorithm-section {
+        margin-bottom: 2.5rem;
+        scroll-margin-top: 5rem;
+    }
+
+    .section-heading {
+        gap: 0.7rem;
+
+        h2 {
+            font-size: 1.25rem;
+        }
+
+        p {
+            font-size: 0.88rem;
+        }
+    }
+
+    .section-number {
+        min-width: 2.3rem;
+        height: 2.3rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+    }
+
+    .algorithm-card {
+        h3 {
+            font-size: 1rem;
+        }
+
+        p {
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+    }
+
+    .formula {
+        margin: 0.85rem 0;
+        padding: 0.8rem;
+
+        code {
+            min-width: 0;
+            font-size: 0.78rem;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    .status-grid,
+    .metric-grid,
+    .recommendation-scale,
+    .recommendation-scale.three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .legend-table {
+        border: 0;
+        overflow: visible;
+    }
+
+    .legend-header {
+        display: none;
+    }
+
+    .legend-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.35rem 0.75rem;
+
+        margin-bottom: 0.65rem;
+        padding: 0.85rem;
+
+        border: 1px solid #334155;
+        border-radius: 10px;
+
+        background: #0f192b;
+
+        strong {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        span:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1;
+            text-align: right;
+        }
+
+        span:nth-child(3) {
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
+    }
+}
+
+/* ============================================================
+   MÓVIL ESTRECHO
+   ============================================================ */
+
+@media (max-width: 390px) {
+    .algorithms-page {
+        padding: 0.65rem;
+    }
+
+    .status-grid,
+    .metric-grid,
+    .recommendation-scale,
+    .recommendation-scale.three {
+        grid-template-columns: 1fr;
+    }
+
+    .section-heading {
+        align-items: center;
+
+        p {
+            display: none;
+        }
+    }
+}

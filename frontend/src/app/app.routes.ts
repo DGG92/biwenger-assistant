@@ -106,6 +106,15 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'algorithms',
+                loadComponent: () =>
+                    import(
+                        './features/algorithms/algorithms'
+                    ).then(
+                        (m) => m.Algorithms
+                    ),
+            },
+            {
                 path: 'profile',
                 loadComponent: () =>
                     import(
