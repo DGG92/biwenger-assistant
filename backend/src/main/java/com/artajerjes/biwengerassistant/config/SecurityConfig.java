@@ -120,6 +120,38 @@ public class SecurityConfig {
                                                                 "/api/leagues/*/sync/now")
                                                 .hasRole("ADMIN")
 
+                                                // Gestión manual de ligas
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues")
+                                                .hasRole("ADMIN")
+
+                                                .requestMatchers(
+                                                                HttpMethod.PUT,
+                                                                "/api/leagues/*")
+                                                .hasRole("ADMIN")
+
+                                                .requestMatchers(
+                                                                HttpMethod.DELETE,
+                                                                "/api/leagues/*")
+                                                .hasRole("ADMIN")
+
+                                                // Gestión manual de jugadores
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/leagues/*/players")
+                                                .hasRole("ADMIN")
+
+                                                .requestMatchers(
+                                                                HttpMethod.PUT,
+                                                                "/api/leagues/*/players/*")
+                                                .hasRole("ADMIN")
+
+                                                .requestMatchers(
+                                                                HttpMethod.DELETE,
+                                                                "/api/leagues/*/players/*")
+                                                .hasRole("ADMIN")
+
                                                 // Toda la API restante requiere sesión
                                                 .requestMatchers("/api/**")
                                                 .authenticated()
