@@ -29,6 +29,7 @@ export class Sync implements OnInit, OnDestroy {
     readonly successMessage = signal('');
 
     private pollingId: ReturnType<typeof setInterval> | null = null;
+    private awaitingManualSyncCompletion = false;
 
     ngOnInit(): void {
         this.loadStatus();
@@ -54,6 +55,25 @@ export class Sync implements OnInit, OnDestroy {
                 } else {
                     this.syncing.set(false);
                     this.stopPolling();
+
+                    if (this.awaitingManualSyncCompletion) {
+                        if (status.execution.status === 'SUCCESS') {
+                            this.successMessage.set(
+                                'Sincronización completada correctamente.'
+                            );
+                        } else if (status.execution.status === 'PARTIAL') {
+                            this.successMessage.set(
+                                'Sincronización completada parcialmente.'
+                            );
+                        } else if (status.execution.status === 'FAILED') {
+                            this.successMessage.set('');
+                            this.errorMessage.set(
+                                'La sincronización ha finalizado con errores.'
+                            );
+                        }
+
+                        this.awaitingManualSyncCompletion = false;
+                    }
                 }
             },
             error: () => {
@@ -69,6 +89,7 @@ export class Sync implements OnInit, OnDestroy {
         }
 
         this.syncing.set(true);
+        this.awaitingManualSyncCompletion = true;
         this.errorMessage.set('');
         this.successMessage.set('');
 
@@ -88,6 +109,7 @@ export class Sync implements OnInit, OnDestroy {
             },
             error: () => {
                 this.syncing.set(false);
+                this.awaitingManualSyncCompletion = false;
                 this.errorMessage.set(
                     'No se ha podido iniciar la sincronización.'
                 );
@@ -109,10 +131,23 @@ export class Sync implements OnInit, OnDestroy {
                         this.syncing.set(false);
                         this.stopPolling();
 
-                        if (status.execution.status === 'SUCCESS') {
-                            this.successMessage.set(
-                                'Sincronización completada correctamente.'
-                            );
+                        if (this.awaitingManualSyncCompletion) {
+                            if (status.execution.status === 'SUCCESS') {
+                                this.successMessage.set(
+                                    'Sincronización completada correctamente.'
+                                );
+                            } else if (status.execution.status === 'PARTIAL') {
+                                this.successMessage.set(
+                                    'Sincronización completada parcialmente.'
+                                );
+                            } else if (status.execution.status === 'FAILED') {
+                                this.successMessage.set('');
+                                this.errorMessage.set(
+                                    'La sincronización ha finalizado con errores.'
+                                );
+                            }
+
+                            this.awaitingManualSyncCompletion = false;
                         }
                     }
                 },
