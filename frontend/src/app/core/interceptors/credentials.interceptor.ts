@@ -1,19 +1,12 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
 
-function getCookie(name: string): string | null {
-    const cookie = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith(`${name}=`));
-
-    if (!cookie) {
-        return null;
-    }
-
-    return decodeURIComponent(cookie.substring(name.length + 1));
-}
+import { CsrfTokenService } from '../services/csrf-token';
 
 export const credentialsInterceptor: HttpInterceptorFn = (req, next) => {
-    const csrfToken = getCookie('XSRF-TOKEN');
+
+    const csrfTokenService = inject(CsrfTokenService);
+    const csrfToken = csrfTokenService.token();
 
     const isMutatingRequest =
         req.method !== 'GET' &&

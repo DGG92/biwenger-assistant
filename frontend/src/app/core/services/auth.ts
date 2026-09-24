@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { map, Observable, switchMap, tap, timeout } from 'rxjs';
+import { CsrfTokenService } from './csrf-token';
 
 import { API_CONFIG } from '../config/api.config';
 
@@ -34,6 +35,12 @@ export interface SaveBiwengerCredentialRequest {
     token: string;
 }
 
+interface CsrfTokenResponse {
+    token: string;
+    headerName: string;
+    parameterName: string;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -41,14 +48,21 @@ export class AuthService {
 
     private readonly http = inject(HttpClient);
 
+    private readonly csrfTokenService = inject(CsrfTokenService);
+
     private readonly currentUserSignal = signal<CurrentUser | null>(null);
 
     readonly currentUser = this.currentUserSignal.asReadonly();
 
-    loadCsrfToken(): Observable<unknown> {
-        return this.http.get(
+    loadCsrfToken(): Observable<void> {
+        return this.http.get<CsrfTokenResponse>(
             `${API_CONFIG.baseUrl}/auth/csrf`,
             { withCredentials: true }
+        ).pipe(
+            tap((response) =>
+                this.csrfTokenService.setToken(response.token)
+            ),
+            map(() => void 0)
         );
     }
 
@@ -73,6 +87,11 @@ export class AuthService {
             `${API_CONFIG.baseUrl}/auth/me`,
             { withCredentials: true }
         ).pipe(
+            switchMap((user) =>
+                this.loadCsrfToken().pipe(
+                    map(() => user)
+                )
+            ),
             tap((user) => this.currentUserSignal.set(user))
         );
     }
@@ -106,7 +125,10 @@ export class AuthService {
             {},
             { withCredentials: true }
         ).pipe(
-            tap(() => this.currentUserSignal.set(null))
+            tap(() => {
+                this.currentUserSignal.set(null);
+                this.csrfTokenService.clear();
+            })
         );
     }
 
