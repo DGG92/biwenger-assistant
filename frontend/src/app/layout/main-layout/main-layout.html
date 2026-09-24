@@ -78,7 +78,23 @@
                 </a>
                 }
             </nav>
+            <div class="sync-freshness" [class.sync-freshness--success]="syncState() === 'success'"
+                [class.sync-freshness--running]="syncState() === 'running'"
+                [class.sync-freshness--warning]="syncState() === 'warning'"
+                [class.sync-freshness--failed]="syncState() === 'failed'"
+                [class.sync-freshness--unavailable]="syncState() === 'unavailable'" [attr.title]="syncTitle()">
+                <span class="sync-freshness-dot" aria-hidden="true"></span>
 
+                <div class="sync-freshness-info">
+                    <span class="sync-freshness-caption">
+                        Estado de los datos
+                    </span>
+
+                    <strong>
+                        {{ syncLabel() }}
+                    </strong>
+                </div>
+            </div>
             @if (authService.currentUser(); as user) {
             <div class="manager">
                 <div class="manager-avatar">
