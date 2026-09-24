@@ -13,6 +13,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.mockito.Mockito.verify;
 
@@ -28,10 +30,13 @@ class AuthControllerTest {
 
         private final AssistantUserService assistantUserService = mock(AssistantUserService.class);
 
+        private final LoginRateLimitService loginRateLimitService = mock(LoginRateLimitService.class);
+
         private final AuthController controller = new AuthController(
                         authenticationManager,
                         assistantUserRepository,
-                        assistantUserService);
+                        assistantUserService,
+                        loginRateLimitService);
 
         @Test
         void shouldLoginAndCreateSession() {
@@ -53,9 +58,12 @@ class AuthControllerTest {
 
                 MockHttpServletRequest request = new MockHttpServletRequest();
 
+                MockHttpServletResponse httpResponse = new MockHttpServletResponse();
+
                 CurrentUserResponse response = controller.login(
                                 new LoginRequest("diego", "secret"),
-                                request);
+                                request,
+                                httpResponse);
 
                 assertThat(request.getSession(false)).isNotNull();
 
@@ -67,6 +75,8 @@ class AuthControllerTest {
 
         @Test
         void shouldRejectInvalidCredentials() {
+                MockHttpServletResponse response = new MockHttpServletResponse();
+
                 when(authenticationManager.authenticate(any(Authentication.class)))
                                 .thenThrow(new BadCredentialsException(
                                                 "Bad credentials"));
@@ -75,7 +85,8 @@ class AuthControllerTest {
 
                 assertThatThrownBy(() -> controller.login(
                                 new LoginRequest("diego", "wrong"),
-                                request))
+                                request,
+                                response))
                                 .isInstanceOf(BadCredentialsException.class);
         }
 
@@ -118,5 +129,31 @@ class AuthControllerTest {
                                 .changeCurrentUserPassword(
                                                 "new-password",
                                                 "new-password");
+        }
+
+        @Test
+        void shouldRejectLoginWhenClientIpIsBlocked() {
+
+                when(loginRateLimitService.isBlocked("127.0.0.1"))
+                                .thenReturn(true);
+
+                when(loginRateLimitService.retryAfterSeconds("127.0.0.1"))
+                                .thenReturn(600L);
+
+                MockHttpServletRequest request = new MockHttpServletRequest();
+
+                request.setRemoteAddr("127.0.0.1");
+
+                MockHttpServletResponse response = new MockHttpServletResponse();
+
+                assertThatThrownBy(() -> controller.login(
+                                new LoginRequest("diego", "secret"),
+                                request,
+                                response))
+                                .isInstanceOf(ResponseStatusException.class)
+                                .hasMessageContaining("429");
+
+                assertThat(response.getHeader("Retry-After"))
+                                .isEqualTo("600");
         }
 }

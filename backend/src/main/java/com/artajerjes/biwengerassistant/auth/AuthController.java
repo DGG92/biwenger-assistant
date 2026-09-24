@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.core.AuthenticationException;
 
 import com.artajerjes.biwengerassistant.auth.dto.CurrentUserResponse;
 import com.artajerjes.biwengerassistant.auth.dto.LoginRequest;
@@ -22,6 +23,7 @@ import com.artajerjes.biwengerassistant.auth.dto.ChangePasswordRequest;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,14 +32,18 @@ public class AuthController {
         private final AuthenticationManager authenticationManager;
         private final AssistantUserRepository assistantUserRepository;
         private final AssistantUserService assistantUserService;
+        private final LoginRateLimitService loginRateLimitService;
 
         public AuthController(
                         AuthenticationManager authenticationManager,
                         AssistantUserRepository assistantUserRepository,
-                        AssistantUserService assistantUserService) {
+                        AssistantUserService assistantUserService,
+                        LoginRateLimitService loginRateLimitService) {
+
                 this.authenticationManager = authenticationManager;
                 this.assistantUserRepository = assistantUserRepository;
                 this.assistantUserService = assistantUserService;
+                this.loginRateLimitService = loginRateLimitService;
         }
 
         @GetMapping("/csrf")
@@ -48,12 +54,36 @@ public class AuthController {
         @PostMapping("/login")
         public CurrentUserResponse login(
                         @RequestBody LoginRequest request,
-                        HttpServletRequest httpRequest) {
+                        HttpServletRequest httpRequest,
+                        HttpServletResponse httpResponse) {
 
-                Authentication authentication = authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(
-                                                request.username(),
-                                                request.password()));
+                String clientIp = getClientIp(httpRequest);
+
+                if (loginRateLimitService.isBlocked(clientIp)) {
+                        long retryAfter = loginRateLimitService.retryAfterSeconds(clientIp);
+
+                        httpResponse.setHeader(
+                                        "Retry-After",
+                                        Long.toString(retryAfter));
+
+                        throw new ResponseStatusException(
+                                        HttpStatus.TOO_MANY_REQUESTS,
+                                        "Too many failed login attempts");
+                }
+
+                Authentication authentication;
+
+                try {
+                        authentication = authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(
+                                                        request.username(),
+                                                        request.password()));
+                } catch (AuthenticationException exception) {
+                        loginRateLimitService.registerFailure(clientIp);
+                        throw exception;
+                }
+
+                loginRateLimitService.registerSuccess(clientIp);
 
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
@@ -78,6 +108,17 @@ public class AuthController {
                 }
 
                 return getCurrentUser(authentication);
+        }
+
+        private String getClientIp(HttpServletRequest request) {
+
+                String forwardedFor = request.getHeader("X-Forwarded-For");
+
+                if (forwardedFor != null && !forwardedFor.isBlank()) {
+                        return forwardedFor.split(",")[0].trim();
+                }
+
+                return request.getRemoteAddr();
         }
 
         private CurrentUserResponse getCurrentUser(
