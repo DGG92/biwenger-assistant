@@ -134,11 +134,15 @@ public class SecurityConfig {
                                                 .hasRole("ADMIN")
 
                                                 // Sync Center
+                                                // El estado puede consultarlo cualquier usuario autenticado.
+                                                // LeagueAccessInterceptor valida que el usuario tenga acceso
+                                                // a la liga solicitada.
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
                                                                 "/api/leagues/*/sync/status")
-                                                .hasRole("ADMIN")
+                                                .authenticated()
 
+                                                // Iniciar una sincronización sigue siendo exclusivo de ADMIN.
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
                                                                 "/api/leagues/*/sync/now")
