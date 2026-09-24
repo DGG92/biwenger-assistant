@@ -3,16 +3,16 @@
     <div class="page-header">
         <div>
             <h1>Sincronización</h1>
-            <p>Estado de los datos almacenados desde Biwenger.</p>
+            <p>Estado de actualización de los datos almacenados desde Biwenger.</p>
         </div>
 
         <div class="header-actions">
 
             <button type="button" (click)="loadStatus()" [disabled]="loading() || syncing()">
                 @if (loading()) {
-                Actualizando...
+                Refrescando...
                 } @else {
-                Actualizar estado
+                Refrescar estado
                 }
             </button>
 
@@ -77,15 +77,15 @@
         <article class="status-card">
             <span>Última ejecución</span>
             <strong>
-                {{ syncStatus.execution.status }}
+                {{ formatExecutionStatus(syncStatus.execution.status) }}
             </strong>
         </article>
 
         <article class="status-card">
-            <span>Jugadores disponibles</span>
+            <span>Jugadores sincronizables</span>
             <strong>
                 {{ syncStatus.players.eligible }}
-                /
+                de
                 {{ syncStatus.players.total }}
             </strong>
         </article>
@@ -113,7 +113,7 @@
         </article>
 
         <article class="status-card">
-            <span>Último Player Details actualizado</span>
+            <span>Player Details más reciente</span>
             <strong>
                 {{ formatDateTime(syncStatus.players.reports.lastSuccessAt) }}
             </strong>
@@ -140,7 +140,7 @@
         <article class="status-card">
             <span>Estado Player Details</span>
             <strong>
-                {{ syncStatus.details.state }}
+                {{ formatDetailStatus(syncStatus.details.state) }}
             </strong>
         </article>
 
@@ -148,8 +148,23 @@
 
     <div class="sync-info">
         <p>
-            Los informes y el histórico de precios se actualizan conjuntamente
-            mediante Player Details en tandas de 25 jugadores.
+            Player Details actualiza conjuntamente los informes y el histórico
+            de precios de los jugadores sincronizables, en tandas de 25 jugadores.
+        </p>
+
+        <p>
+            Se pueden sincronizar {{ syncStatus.players.eligible }} de los
+            {{ syncStatus.players.total }} jugadores almacenados.
+            Los {{ syncStatus.players.total - syncStatus.players.eligible }}
+            restantes no tienen Player Details disponible y se conservan en los
+            datos históricos, pero este proceso no los actualiza.
+        </p>
+
+        <p>
+            La cobertura indica cuántos jugadores sincronizables tienen datos
+            almacenados. Una cobertura del 100% significa que todos ellos tienen
+            información disponible; cada ejecución sigue actualizando una tanda
+            de 25 para mantener esos datos al día.
         </p>
 
         @if (syncStatus.scheduler.enabled) {

@@ -126,6 +126,27 @@ export class Sync implements OnInit, OnDestroy {
         }, 3000);
     }
 
+    formatExecutionStatus(status: string): string {
+        const labels: Record<string, string> = {
+            IDLE: 'Pendiente',
+            RUNNING: 'En curso',
+            SUCCESS: 'Correcta',
+            PARTIAL: 'Parcial',
+            FAILED: 'Con errores',
+        };
+
+        return labels[status] ?? status;
+    }
+
+    formatDetailStatus(status: string): string {
+        const labels: Record<string, string> = {
+            READY: 'Disponible',
+            RATE_LIMITED: 'Limitado temporalmente',
+        };
+
+        return labels[status] ?? status;
+    }
+
     formatDateTime(value: string | null): string {
         if (!value) {
             return 'Nunca';

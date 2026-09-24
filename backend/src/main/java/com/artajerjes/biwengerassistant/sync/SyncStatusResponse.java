@@ -1,6 +1,6 @@
 package com.artajerjes.biwengerassistant.sync;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public record SyncStatusResponse(
                 Long leagueId,
@@ -16,17 +16,17 @@ public record SyncStatusResponse(
 
         public record ExecutionStatus(
                         SyncExecutionStatus status,
-                        LocalDateTime startedAt,
-                        LocalDateTime finishedAt,
+                        OffsetDateTime startedAt,
+                        OffsetDateTime finishedAt,
                         String lastError) {
         }
 
         public record DetailSyncStatus(
                         String state,
-                        LocalDateTime lastRateLimitAt,
+                        OffsetDateTime lastRateLimitAt,
                         Long rateLimitedPlayerId,
                         Long retryAfterSeconds,
-                        LocalDateTime cooldownUntil) {
+                        OffsetDateTime cooldownUntil) {
         }
 
         public record PlayerSyncStatus(
@@ -40,9 +40,9 @@ public record SyncStatusResponse(
                         int completed,
                         int pending,
                         double coveragePercent,
-                        LocalDateTime oldestSuccessAt,
-                        LocalDateTime lastSuccessAt,
-                        LocalDateTime lastAttemptAt) {
+                        OffsetDateTime oldestSuccessAt,
+                        OffsetDateTime lastSuccessAt,
+                        OffsetDateTime lastAttemptAt) {
         }
 
         public record PriceHistorySyncStatus(

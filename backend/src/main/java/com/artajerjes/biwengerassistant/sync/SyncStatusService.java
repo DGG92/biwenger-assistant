@@ -1,6 +1,8 @@
 package com.artajerjes.biwengerassistant.sync;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -116,10 +118,10 @@ public class SyncStatusService {
                                                 executionStatus,
                                                 executionState == null
                                                                 ? null
-                                                                : executionState.getStartedAt(),
+                                                                : asUtc(executionState.getStartedAt()),
                                                 executionState == null
                                                                 ? null
-                                                                : executionState.getFinishedAt(),
+                                                                : asUtc(executionState.getFinishedAt()),
                                                 executionState == null
                                                                 ? null
                                                                 : executionState.getLastError()),
@@ -129,7 +131,7 @@ public class SyncStatusService {
                                                                 : "READY",
                                                 detailSyncState == null
                                                                 ? null
-                                                                : detailSyncState.getLastRateLimitAt(),
+                                                                : asUtc(detailSyncState.getLastRateLimitAt()),
                                                 detailSyncState == null
                                                                 ? null
                                                                 : detailSyncState.getRateLimitedPlayerId(),
@@ -138,7 +140,7 @@ public class SyncStatusService {
                                                                 : detailSyncState.getRetryAfterSeconds(),
                                                 detailSyncState == null
                                                                 ? null
-                                                                : detailSyncState.getCooldownUntil()),
+                                                                : asUtc(detailSyncState.getCooldownUntil())),
                                 new SyncStatusResponse.PlayerSyncStatus(
                                                 players.size(),
                                                 eligiblePlayers.size(),
@@ -148,9 +150,9 @@ public class SyncStatusService {
                                                                 calculateCoverage(
                                                                                 reportsCompleted,
                                                                                 eligiblePlayers.size()),
-                                                                oldestSuccessAt,
-                                                                lastSuccessAt,
-                                                                lastAttemptAt),
+                                                                asUtc(oldestSuccessAt),
+                                                                asUtc(lastSuccessAt),
+                                                                asUtc(lastAttemptAt)),
                                                 new SyncStatusResponse.PriceHistorySyncStatus(
                                                                 priceHistoryCompleted,
                                                                 priceHistoryPending,
@@ -177,5 +179,13 @@ public class SyncStatusService {
                 return Math.round(
                                 ((double) completed / total) * 10000.0)
                                 / 100.0;
+        }
+
+        private OffsetDateTime asUtc(
+                        LocalDateTime value) {
+
+                return value == null
+                                ? null
+                                : value.atOffset(ZoneOffset.UTC);
         }
 }

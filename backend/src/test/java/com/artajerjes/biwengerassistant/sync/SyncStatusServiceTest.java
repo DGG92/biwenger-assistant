@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.sync;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -140,13 +141,13 @@ class SyncStatusServiceTest {
                                 .isEqualTo(66.67);
 
                 assertThat(response.players().reports().oldestSuccessAt())
-                                .isEqualTo(oldestSuccess);
+                                .isEqualTo(oldestSuccess.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.players().reports().lastSuccessAt())
-                                .isEqualTo(newestSuccess);
+                                .isEqualTo(newestSuccess.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.players().reports().lastAttemptAt())
-                                .isEqualTo(newestAttempt);
+                                .isEqualTo(newestAttempt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.players().priceHistory().completed())
                                 .isEqualTo(2);
@@ -217,7 +218,7 @@ class SyncStatusServiceTest {
                                 .isEqualTo("RATE_LIMITED");
 
                 assertThat(response.details().lastRateLimitAt())
-                                .isEqualTo(lastRateLimitAt);
+                                .isEqualTo(lastRateLimitAt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.details().rateLimitedPlayerId())
                                 .isEqualTo(502L);
@@ -226,7 +227,7 @@ class SyncStatusServiceTest {
                                 .isEqualTo(3600L);
 
                 assertThat(response.details().cooldownUntil())
-                                .isEqualTo(cooldownUntil);
+                                .isEqualTo(cooldownUntil.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.execution().status())
                                 .isEqualTo(SyncExecutionStatus.IDLE);
@@ -330,10 +331,10 @@ class SyncStatusServiceTest {
                                 .isEqualTo(SyncExecutionStatus.SUCCESS);
 
                 assertThat(response.execution().startedAt())
-                                .isEqualTo(startedAt);
+                                .isEqualTo(startedAt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.execution().finishedAt())
-                                .isEqualTo(finishedAt);
+                                .isEqualTo(finishedAt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.execution().lastError())
                                 .isNull();
@@ -391,10 +392,10 @@ class SyncStatusServiceTest {
                                 .isEqualTo(SyncExecutionStatus.FAILED);
 
                 assertThat(response.execution().startedAt())
-                                .isEqualTo(startedAt);
+                                .isEqualTo(startedAt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.execution().finishedAt())
-                                .isEqualTo(finishedAt);
+                                .isEqualTo(finishedAt.atOffset(ZoneOffset.UTC));
 
                 assertThat(response.execution().lastError())
                                 .isEqualTo("Biwenger unavailable");
