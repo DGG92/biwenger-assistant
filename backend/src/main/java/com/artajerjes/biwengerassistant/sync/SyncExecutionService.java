@@ -3,6 +3,7 @@ package com.artajerjes.biwengerassistant.sync;
 import org.springframework.stereotype.Service;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerSyncService;
+import com.artajerjes.biwengerassistant.biwenger.ScheduledSyncResult;
 
 @Service
 public class SyncExecutionService {
@@ -65,16 +66,32 @@ public class SyncExecutionService {
 
                 try {
 
-                        boolean started = biwengerSyncService
+                        ScheduledSyncResult result = biwengerSyncService
                                         .syncScheduled(leagueId);
 
-                        if (!started) {
+                        if (!result.started()) {
                                 syncExecutionStateService.markIdle(leagueId);
 
                                 return new SyncNowResponse(
                                                 leagueId,
                                                 false,
                                                 SyncExecutionStatus.RUNNING);
+                        }
+
+                        if (result.partial()) {
+
+                                String details = String.join(
+                                                "; ",
+                                                result.partialReasons());
+
+                                syncExecutionStateService.markPartial(
+                                                leagueId,
+                                                details);
+
+                                return new SyncNowResponse(
+                                                leagueId,
+                                                true,
+                                                SyncExecutionStatus.PARTIAL);
                         }
 
                         syncExecutionStateService.markSuccess(leagueId);

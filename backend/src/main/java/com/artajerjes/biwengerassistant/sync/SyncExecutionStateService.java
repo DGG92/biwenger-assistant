@@ -47,6 +47,20 @@ public class SyncExecutionStateService {
     }
 
     @Transactional
+    public SyncExecutionState markPartial(
+            Long leagueId,
+            String details) {
+
+        SyncExecutionState state = findOrCreate(leagueId);
+
+        state.markPartial(
+                LocalDateTime.now(),
+                details);
+
+        return repository.save(state);
+    }
+
+    @Transactional
     public SyncExecutionState markFailed(
             Long leagueId,
             String error) {

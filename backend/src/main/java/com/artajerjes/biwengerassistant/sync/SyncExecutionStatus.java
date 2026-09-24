@@ -4,5 +4,6 @@ public enum SyncExecutionStatus {
     IDLE,
     RUNNING,
     SUCCESS,
+    PARTIAL,
     FAILED
 }

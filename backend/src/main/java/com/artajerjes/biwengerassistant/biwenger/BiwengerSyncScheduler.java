@@ -48,6 +48,14 @@ public class BiwengerSyncScheduler {
                                 return;
                         }
 
+                        if (response.status() == SyncExecutionStatus.PARTIAL) {
+                                log.warn(
+                                                "Automatic Biwenger sync completed partially for league {}",
+                                                DEFAULT_LEAGUE_ID);
+
+                                return;
+                        }
+
                         log.info(
                                         "Automatic Biwenger sync completed successfully for league {}",
                                         DEFAULT_LEAGUE_ID);

@@ -66,6 +66,15 @@ public class SyncExecutionState {
         this.lastError = null;
     }
 
+    public void markPartial(
+            LocalDateTime finishedAt,
+            String lastError) {
+
+        this.status = SyncExecutionStatus.PARTIAL;
+        this.finishedAt = finishedAt;
+        this.lastError = lastError;
+    }
+
     public void markFailed(
             LocalDateTime finishedAt,
             String lastError) {

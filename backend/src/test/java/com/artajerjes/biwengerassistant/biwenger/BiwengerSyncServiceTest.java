@@ -119,6 +119,26 @@ class BiwengerSyncServiceTest {
                                 .thenReturn(details);
         }
 
+        private void mockSuccessfulScheduledPlayerDetailsSync(Long leagueId) {
+
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                25,
+                                25,
+                                6344,
+                                67,
+                                true,
+                                null,
+                                79L,
+                                null,
+                                null);
+
+                when(playerDetailSyncService
+                                .syncLeaguePlayerDetails(leagueId))
+                                .thenReturn(details);
+        }
+
         @Test
         void syncAllShouldExecuteAllSyncsInCorrectOrder() {
                 PlayerSyncResponse players = new PlayerSyncResponse(
@@ -687,9 +707,16 @@ class BiwengerSyncServiceTest {
                                                 new IllegalStateException(
                                                                 "Market temporarily unavailable"));
 
-                assertDoesNotThrow(
-                                () -> biwengerSyncService.syncScheduled(
-                                                LEAGUE_ID));
+                mockSuccessfulScheduledPlayerDetailsSync(LEAGUE_ID);
+
+                ScheduledSyncResult result = biwengerSyncService.syncScheduled(LEAGUE_ID);
+
+                assertEquals(true, result.started());
+                assertEquals(true, result.partial());
+                assertEquals(
+                                List.of(
+                                                "market: Market temporarily unavailable"),
+                                result.partialReasons());
 
                 verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -734,9 +761,16 @@ class BiwengerSyncServiceTest {
                                                 new IllegalStateException(
                                                                 "Movements temporarily unavailable"));
 
-                assertDoesNotThrow(
-                                () -> biwengerSyncService.syncScheduled(
-                                                LEAGUE_ID));
+                mockSuccessfulScheduledPlayerDetailsSync(LEAGUE_ID);
+
+                ScheduledSyncResult result = biwengerSyncService.syncScheduled(LEAGUE_ID);
+
+                assertEquals(true, result.started());
+                assertEquals(true, result.partial());
+                assertEquals(
+                                List.of(
+                                                "movements: Movements temporarily unavailable"),
+                                result.partialReasons());
 
                 verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -876,9 +910,16 @@ class BiwengerSyncServiceTest {
                                                 new IllegalStateException(
                                                                 "Offers temporarily unavailable"));
 
-                assertDoesNotThrow(
-                                () -> biwengerSyncService.syncScheduled(
-                                                LEAGUE_ID));
+                mockSuccessfulScheduledPlayerDetailsSync(LEAGUE_ID);
+
+                ScheduledSyncResult result = biwengerSyncService.syncScheduled(LEAGUE_ID);
+
+                assertEquals(true, result.started());
+                assertEquals(true, result.partial());
+                assertEquals(
+                                List.of(
+                                                "offers for manager 13: Offers temporarily unavailable"),
+                                result.partialReasons());
 
                 verify(managerService)
                                 .sync(LEAGUE_ID);
@@ -967,9 +1008,14 @@ class BiwengerSyncServiceTest {
                 when(playerDetailSyncService.syncLeaguePlayerDetails(LEAGUE_ID))
                                 .thenReturn(details);
 
-                assertDoesNotThrow(
-                                () -> biwengerSyncService.syncScheduled(
-                                                LEAGUE_ID));
+                ScheduledSyncResult result = biwengerSyncService.syncScheduled(LEAGUE_ID);
+
+                assertEquals(true, result.started());
+                assertEquals(true, result.partial());
+                assertEquals(
+                                List.of(
+                                                "player details: rate limited at player 29"),
+                                result.partialReasons());
 
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetails(LEAGUE_ID);
@@ -989,9 +1035,14 @@ class BiwengerSyncServiceTest {
                                 SyncType.PLAYER_DETAILS))
                                 .thenReturn(true);
 
-                assertDoesNotThrow(
-                                () -> biwengerSyncService.syncScheduled(
-                                                LEAGUE_ID));
+                ScheduledSyncResult result = biwengerSyncService.syncScheduled(LEAGUE_ID);
+
+                assertEquals(true, result.started());
+                assertEquals(true, result.partial());
+                assertEquals(
+                                List.of(
+                                                "player details: rate-limit cooldown active"),
+                                result.partialReasons());
 
                 verify(syncStateService)
                                 .isInCooldown(

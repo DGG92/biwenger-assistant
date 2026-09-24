@@ -1,5 +1,7 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -193,16 +195,19 @@ public class BiwengerSyncService {
                 return leaguesBeingSynced.contains(leagueId);
         }
 
-        public boolean syncScheduled(Long leagueId) {
+        public ScheduledSyncResult syncScheduled(Long leagueId) {
 
                 if (!leaguesBeingSynced.add(leagueId)) {
                         log.warn(
                                         "Skipping scheduled Biwenger sync for league {} because another sync is already running",
                                         leagueId);
-                        return false;
+
+                        return ScheduledSyncResult.notStarted();
                 }
 
                 long startedAt = System.currentTimeMillis();
+
+                List<String> partialReasons = new ArrayList<>();
 
                 try {
                         log.info(
@@ -245,6 +250,7 @@ public class BiwengerSyncService {
                         runScheduledPhase(
                                         leagueId,
                                         "market",
+                                        partialReasons,
                                         () -> {
                                                 marketService.sync(leagueId);
 
@@ -260,27 +266,32 @@ public class BiwengerSyncService {
                         runScheduledPhase(
                                         leagueId,
                                         "movements",
+                                        partialReasons,
                                         () -> movementService.sync(leagueId));
 
                         runScheduledPhase(
                                         leagueId,
                                         "matchday context",
+                                        partialReasons,
                                         () -> matchdayContextService.syncCurrentMatchday(leagueId));
 
                         runScheduledPhase(
                                         leagueId,
                                         "matchday round data",
+                                        partialReasons,
                                         () -> matchdayRoundSyncService.syncCurrentMatchday(leagueId));
 
                         runScheduledPhase(
                                         leagueId,
                                         "private user data",
-                                        () -> syncPrivateUserData(leagueId));
+                                        partialReasons,
+                                        () -> syncPrivateUserData(leagueId, partialReasons));
 
                         runScheduledPhase(
                                         leagueId,
                                         "player details",
-                                        () -> syncPlayerDetailsBatch(leagueId, false));
+                                        partialReasons,
+                                        () -> syncPlayerDetailsBatch(leagueId, false, partialReasons));
 
                         long elapsed = System.currentTimeMillis() - startedAt;
 
@@ -305,10 +316,14 @@ public class BiwengerSyncService {
                         leaguesBeingSynced.remove(leagueId);
                 }
 
-                return true;
+                return new ScheduledSyncResult(
+                                true,
+                                partialReasons);
         }
 
-        private void syncPrivateUserData(Long leagueId) {
+        private void syncPrivateUserData(
+                        Long leagueId,
+                        List<String> partialReasons) {
 
                 for (BiwengerIdentity identity : biwengerCredentialService.getAllIdentities()) {
 
@@ -320,7 +335,8 @@ public class BiwengerSyncService {
                                                         manager -> syncPrivateUserData(
                                                                         leagueId,
                                                                         manager,
-                                                                        identity),
+                                                                        identity,
+                                                                        partialReasons),
                                                         () -> log.warn(
                                                                         "Skipping private scheduled sync for Biwenger user {} because no manager exists in league {}",
                                                                         identity.userId(),
@@ -331,11 +347,13 @@ public class BiwengerSyncService {
         private void syncPrivateUserData(
                         Long leagueId,
                         Manager manager,
-                        BiwengerIdentity identity) {
+                        BiwengerIdentity identity,
+                        List<String> partialReasons) {
 
                 runScheduledPhase(
                                 leagueId,
                                 "current lineup for manager " + manager.getId(),
+                                partialReasons,
                                 () -> playerService.syncCurrentLineup(
                                                 leagueId,
                                                 identity));
@@ -343,6 +361,7 @@ public class BiwengerSyncService {
                 runScheduledPhase(
                                 leagueId,
                                 "offers for manager " + manager.getId(),
+                                partialReasons,
                                 () -> offerService.sync(
                                                 leagueId,
                                                 manager,
@@ -352,6 +371,7 @@ public class BiwengerSyncService {
         private void runScheduledPhase(
                         Long leagueId,
                         String phaseName,
+                        List<String> partialReasons,
                         Runnable phase) {
 
                 long startedAt = System.currentTimeMillis();
@@ -376,6 +396,15 @@ public class BiwengerSyncService {
 
                         long elapsed = System.currentTimeMillis() - startedAt;
 
+                        String message = exception.getMessage();
+
+                        partialReasons.add(
+                                        phaseName
+                                                        + ": "
+                                                        + (message == null || message.isBlank()
+                                                                        ? exception.getClass().getSimpleName()
+                                                                        : message));
+
                         log.error(
                                         "Scheduled {} sync failed for league {} after {} ms. Continuing with remaining phases.",
                                         phaseName,
@@ -385,7 +414,10 @@ public class BiwengerSyncService {
                 }
         }
 
-        private void syncPlayerDetailsBatch(Long leagueId, boolean prioritizeLineup) {
+        private void syncPlayerDetailsBatch(
+                        Long leagueId,
+                        boolean prioritizeLineup,
+                        List<String> partialReasons) {
 
                 if (syncStateService.isInCooldown(
                                 leagueId,
@@ -394,6 +426,9 @@ public class BiwengerSyncService {
                         log.warn(
                                         "Skipping player details sync for league {} because rate-limit cooldown is still active",
                                         leagueId);
+
+                        partialReasons.add(
+                                        "player details: rate-limit cooldown active");
 
                         return;
                 }
@@ -439,8 +474,21 @@ public class BiwengerSyncService {
                                         result.rateLimitedPlayerId(),
                                         result.retryAfterSeconds());
 
+                        partialReasons.add(
+                                        "player details: rate limited"
+                                                        + (result.rateLimitedPlayerId() == null
+                                                                        ? ""
+                                                                        : " at player " + result
+                                                                                        .rateLimitedPlayerId()));
+
                         return;
                 }
+
+                partialReasons.add(
+                                "player details: "
+                                                + (result.stopReason() == null
+                                                                ? "incomplete batch"
+                                                                : result.stopReason()));
 
                 log.warn(
                                 "Player details batch finished partially for league {}: attempted={}, completed={}, pricesProcessed={}, reportsProcessed={}, stopReason={}",
@@ -450,5 +498,15 @@ public class BiwengerSyncService {
                                 result.pricesProcessed(),
                                 result.reportsProcessed(),
                                 result.stopReason());
+        }
+
+        private void syncPlayerDetailsBatch(
+                        Long leagueId,
+                        boolean prioritizeLineup) {
+
+                syncPlayerDetailsBatch(
+                                leagueId,
+                                prioritizeLineup,
+                                new ArrayList<>());
         }
 }
