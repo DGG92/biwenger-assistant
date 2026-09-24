@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, tap, timeout } from 'rxjs';
+import { map, Observable, switchMap, tap, timeout } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
 
@@ -45,6 +45,13 @@ export class AuthService {
 
     readonly currentUser = this.currentUserSignal.asReadonly();
 
+    loadCsrfToken(): Observable<unknown> {
+        return this.http.get(
+            `${API_CONFIG.baseUrl}/auth/csrf`,
+            { withCredentials: true }
+        );
+    }
+
     login(request: LoginRequest): Observable<CurrentUser> {
         return this.http.post<CurrentUser>(
             `${API_CONFIG.baseUrl}/auth/login`,
@@ -52,6 +59,11 @@ export class AuthService {
             { withCredentials: true }
         ).pipe(
             timeout(10000),
+            switchMap((user) =>
+                this.loadCsrfToken().pipe(
+                    map(() => user)
+                )
+            ),
             tap((user) => this.currentUserSignal.set(user))
         );
     }

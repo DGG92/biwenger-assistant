@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.web.csrf.CsrfToken;
 
 import com.artajerjes.biwengerassistant.auth.dto.CurrentUserResponse;
 import com.artajerjes.biwengerassistant.auth.dto.LoginRequest;
@@ -37,6 +38,11 @@ public class AuthController {
                 this.authenticationManager = authenticationManager;
                 this.assistantUserRepository = assistantUserRepository;
                 this.assistantUserService = assistantUserService;
+        }
+
+        @GetMapping("/csrf")
+        public CsrfToken csrf(CsrfToken csrfToken) {
+                return csrfToken;
         }
 
         @PostMapping("/login")
