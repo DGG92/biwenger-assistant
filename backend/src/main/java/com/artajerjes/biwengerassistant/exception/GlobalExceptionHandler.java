@@ -16,6 +16,7 @@ import com.artajerjes.biwengerassistant.manager.ManagerNotFoundException;
 import com.artajerjes.biwengerassistant.player.PlayerAlreadyExistsException;
 import com.artajerjes.biwengerassistant.player.PlayerNotFoundException;
 import com.artajerjes.biwengerassistant.credential.InvalidBiwengerCredentialException;
+import com.artajerjes.biwengerassistant.auth.LeagueAccessDeniedException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -146,6 +147,24 @@ public class GlobalExceptionHandler {
 
                 return ResponseEntity
                                 .status(HttpStatus.BAD_REQUEST)
+                                .body(apiError);
+        }
+
+        @ExceptionHandler(LeagueAccessDeniedException.class)
+        public ResponseEntity<ApiError> handleLeagueAccessDenied(
+                        LeagueAccessDeniedException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                LocalDateTime.now(),
+                                HttpStatus.FORBIDDEN.value(),
+                                "Forbidden",
+                                exception.getMessage(),
+                                request.getRequestURI(),
+                                Map.of());
+
+                return ResponseEntity
+                                .status(HttpStatus.FORBIDDEN)
                                 .body(apiError);
         }
 }

@@ -120,7 +120,17 @@ public class SecurityConfig {
                                                                 "/api/leagues/*/sync/now")
                                                 .hasRole("ADMIN")
 
-                                                // Gestión manual de ligas
+                                                // Gestión directa de ligas
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/leagues")
+                                                .hasRole("ADMIN")
+
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/leagues/*")
+                                                .hasRole("ADMIN")
+
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
                                                                 "/api/leagues")
