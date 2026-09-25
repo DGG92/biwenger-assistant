@@ -85,9 +85,19 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/admin/**")
                                                 .hasRole("ADMIN")
 
-                                                // Sincronización general
+                                                // Estadísticas funcionales de la aplicación.
+                                                // Disponibles para cualquier usuario autenticado.
                                                 .requestMatchers(
-                                                                HttpMethod.POST,
+                                                                HttpMethod.GET,
+                                                                "/api/biwenger/reports")
+                                                .authenticated()
+
+                                                // Endpoints técnicos directos de Biwenger.
+                                                // Exclusivos del ADMIN de Biwenger Assistant.
+                                                .requestMatchers(
+                                                                "/api/biwenger/test",
+                                                                "/api/biwenger/league",
+                                                                "/api/biwenger/competition",
                                                                 "/api/biwenger/sync/*")
                                                 .hasRole("ADMIN")
 

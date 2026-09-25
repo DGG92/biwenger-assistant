@@ -22,6 +22,7 @@ import {
   OfferPlayer,
 } from '../../core/models/offer.model';
 import { OfferService } from '../../core/services/offer';
+import { LeagueContextService } from '../../core/services/league-context';
 
 type OfferTab = 'received' | 'sent';
 
@@ -39,7 +40,7 @@ export class Offers {
   private readonly offerService: OfferService =
     inject(OfferService);
 
-  private readonly leagueId = 1;
+  private readonly leagueContext = inject(LeagueContextService);
 
   readonly activeTab =
     signal<OfferTab>('received');
@@ -53,11 +54,11 @@ export class Offers {
         forkJoin({
           offers:
             this.offerService.getOffers(
-              this.leagueId
+              this.leagueContext.requireLeagueId()
             ),
           economicStatus:
             this.offerService.getEconomicStatus(
-              this.leagueId
+              this.leagueContext.requireLeagueId()
             ),
         }).pipe(
           map(data => ({

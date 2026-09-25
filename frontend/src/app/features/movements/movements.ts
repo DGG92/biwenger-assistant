@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { LeagueContextService } from '../../core/services/league-context';
 
 import {
   Movement,
@@ -30,8 +31,7 @@ interface ManagerOption {
 })
 export class Movements {
   private readonly movementService = inject(MovementService);
-
-  private readonly leagueId = 1;
+  private readonly leagueContext = inject(LeagueContextService);
 
   readonly movements = signal<Movement[]>([]);
   readonly loading = signal(true);
@@ -126,7 +126,7 @@ export class Movements {
     this.error.set(null);
 
     this.movementService
-      .getMovements(this.leagueId)
+      .getMovements(this.leagueContext.requireLeagueId())
       .subscribe({
         next: (movements) => {
           this.movements.set(movements);

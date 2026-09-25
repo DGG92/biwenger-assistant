@@ -913,7 +913,12 @@ La normalización de fechas y zonas horarias puede reforzarse para garantizar un
 
 ## API Biwenger
 
-La superficie de determinados endpoints relacionados con `/api/biwenger/**` puede endurecerse y simplificarse en una futura revisión.
+La superficie directa de Biwenger está restringida según su finalidad:
+
+- `/api/biwenger/reports` forma parte de la funcionalidad de estadísticas y está disponible para usuarios autenticados.
+- `/api/biwenger/test`, `/api/biwenger/league`, `/api/biwenger/competition` y `/api/biwenger/sync/*` son endpoints técnicos reservados al rol `ADMIN` de Biwenger Assistant.
+
+El rol `ADMIN` de Biwenger Assistant es independiente de cualquier rol de administración que un usuario pueda tener dentro de una liga en Biwenger.
 
 ---
 
@@ -951,9 +956,7 @@ La superficie de determinados endpoints relacionados con `/api/biwenger/**` pued
 
 ## Post-V1
 
-- [ ] Eliminar dependencias del league ID fijo.
 - [ ] Mejorar soporte multi-liga.
-- [ ] Revisar/endurecer `/api/biwenger/**`.
 - [ ] Aumentar tests frontend.
 - [ ] Mejorar normalización de fechas y zonas horarias.
 - [ ] Unificar completamente sync manual y automática.

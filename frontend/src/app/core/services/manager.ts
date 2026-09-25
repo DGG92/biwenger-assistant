@@ -4,16 +4,21 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
 import { Manager } from '../models/manager.model';
+import { LeagueContextService } from './league-context';
 
 @Injectable({
     providedIn: 'root',
 })
 export class ManagerService {
+
     private readonly http = inject(HttpClient);
+    private readonly leagueContext = inject(LeagueContextService);
 
     getManagers(): Observable<Manager[]> {
+        const leagueId = this.leagueContext.requireLeagueId();
+
         return this.http.get<Manager[]>(
-            `${API_CONFIG.baseUrl}/leagues/${API_CONFIG.leagueId}/managers`
+            `${API_CONFIG.baseUrl}/leagues/${leagueId}/managers`
         );
     }
 }
