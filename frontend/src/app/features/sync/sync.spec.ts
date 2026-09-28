@@ -1,4 +1,4 @@
-﻿import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 
 import {
@@ -129,27 +129,27 @@ describe('Sync', () => {
         expect(syncServiceMock.syncNow).not.toHaveBeenCalled();
     });
 
-    it('should show that a manual synchronization has started', () => {
-        const runningStatus = createStatus('RUNNING');
+    it('should show that a manual synchronization is in progress before the request completes', () => {
+        const syncNow$ = new Subject<{
+            leagueId: number;
+            started: boolean;
+            status: string;
+        }>();
 
-        syncServiceMock.syncNow.mockReturnValue(of({
-            leagueId: 1,
-            started: true,
-            status: 'RUNNING',
-        }));
-
-        syncServiceMock.getStatus.mockReturnValue(of(runningStatus));
+        syncServiceMock.syncNow.mockReturnValue(
+            syncNow$.asObservable()
+        );
 
         component.syncNow();
 
         expect(syncServiceMock.syncNow).toHaveBeenCalledOnce();
         expect(component.syncing()).toBe(true);
         expect(component.successMessage()).toBe(
-            'Sincronización iniciada correctamente.'
+            'Sincronización en curso...'
         );
         expect(component.errorMessage()).toBe('');
+        expect(syncServiceMock.getStatus).not.toHaveBeenCalled();
     });
-
     it('should report SUCCESS when polling detects manual sync completion', () => {
         vi.useFakeTimers();
 
@@ -168,7 +168,7 @@ describe('Sync', () => {
         component.syncNow();
 
         expect(component.successMessage()).toBe(
-            'Sincronización iniciada correctamente.'
+            'Sincronización en curso...'
         );
 
         vi.advanceTimersByTime(3000);

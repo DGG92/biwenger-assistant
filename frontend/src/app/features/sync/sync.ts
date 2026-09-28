@@ -91,15 +91,11 @@ export class Sync implements OnInit, OnDestroy {
         this.syncing.set(true);
         this.awaitingManualSyncCompletion = true;
         this.errorMessage.set('');
-        this.successMessage.set('');
+        this.successMessage.set('Sincronización en curso...');
 
         this.syncService.syncNow().subscribe({
             next: (response) => {
-                if (response.started) {
-                    this.successMessage.set(
-                        'Sincronización iniciada correctamente.'
-                    );
-                } else if (response.status === 'RUNNING') {
+                if (!response.started && response.status === 'RUNNING') {
                     this.successMessage.set(
                         'Ya había una sincronización en curso.'
                     );
@@ -110,6 +106,7 @@ export class Sync implements OnInit, OnDestroy {
             error: () => {
                 this.syncing.set(false);
                 this.awaitingManualSyncCompletion = false;
+                this.successMessage.set('');
                 this.errorMessage.set(
                     'No se ha podido iniciar la sincronización.'
                 );
