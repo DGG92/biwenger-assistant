@@ -402,6 +402,142 @@ class BiwengerSyncServiceTest {
                                 result.lineup().formation());
 
                 assertEquals(14, result.managers().total());
+
+                assertEquals(
+                                List.of(),
+                                result.partialReasons());
+
+                assertEquals(
+                                false,
+                                result.partial());
+        }
+
+        @Test
+        void syncAllShouldReturnPartialWhenPlayerDetailsHitRateLimit() {
+
+                mockMatchdayRoundSync(LEAGUE_ID);
+
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                4,
+                                3,
+                                900,
+                                12,
+                                false,
+                                "RATE_LIMIT",
+                                28L,
+                                29L,
+                                120L);
+
+                when(playerDetailSyncService
+                                .syncLeaguePlayerDetailsPrioritizingLineup(LEAGUE_ID))
+                                .thenReturn(details);
+
+                BiwengerSyncResponse result = biwengerSyncService.syncAll(
+                                LEAGUE_ID);
+
+                assertEquals(
+                                true,
+                                result.partial());
+
+                assertEquals(
+                                List.of(
+                                                "player details: rate limited at player 29"),
+                                result.partialReasons());
+
+                verify(syncStateService)
+                                .registerRateLimit(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS,
+                                                29L,
+                                                120L);
+
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetailsPrioritizingLineup(
+                                                LEAGUE_ID);
+        }
+
+        @Test
+        void syncAllShouldReturnPartialWhilePlayerDetailsCooldownIsActive() {
+
+                mockMatchdayRoundSync(LEAGUE_ID);
+
+                when(syncStateService.isInCooldown(
+                                LEAGUE_ID,
+                                SyncType.PLAYER_DETAILS))
+                                .thenReturn(true);
+
+                BiwengerSyncResponse result = biwengerSyncService.syncAll(
+                                LEAGUE_ID);
+
+                assertEquals(
+                                true,
+                                result.partial());
+
+                assertEquals(
+                                List.of(
+                                                "player details: rate-limit cooldown active"),
+                                result.partialReasons());
+
+                verify(syncStateService)
+                                .isInCooldown(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS);
+
+                verify(
+                                playerDetailSyncService,
+                                never())
+                                .syncLeaguePlayerDetailsPrioritizingLineup(
+                                                LEAGUE_ID);
+        }
+
+        @Test
+        void syncAllShouldReturnPartialWhenPlayerDetailsBatchIsIncomplete() {
+
+                mockMatchdayRoundSync(LEAGUE_ID);
+
+                PlayerDetailSyncResponse details = new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                25,
+                                20,
+                                5000,
+                                50,
+                                false,
+                                "INCOMPLETE",
+                                79L,
+                                null,
+                                null);
+
+                when(playerDetailSyncService
+                                .syncLeaguePlayerDetailsPrioritizingLineup(LEAGUE_ID))
+                                .thenReturn(details);
+
+                BiwengerSyncResponse result = biwengerSyncService.syncAll(
+                                LEAGUE_ID);
+
+                assertEquals(
+                                true,
+                                result.partial());
+
+                assertEquals(
+                                List.of(
+                                                "player details: INCOMPLETE"),
+                                result.partialReasons());
+
+                verify(playerDetailSyncService)
+                                .syncLeaguePlayerDetailsPrioritizingLineup(
+                                                LEAGUE_ID);
+
+                verify(
+                                syncStateService,
+                                never())
+                                .registerRateLimit(
+                                                LEAGUE_ID,
+                                                SyncType.PLAYER_DETAILS,
+                                                null,
+                                                null);
         }
 
         @Test
@@ -1069,6 +1205,20 @@ class BiwengerSyncServiceTest {
 
         @Test
         void syncScheduledShouldSyncPrivateDataForEveryLinkedIdentity() {
+                when(playerDetailSyncService.syncLeaguePlayerDetails(
+                                LEAGUE_ID))
+                                .thenReturn(new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                25,
+                                25,
+                                6344,
+                                67,
+                                true,
+                                null,
+                                79L,
+                                null,
+                                null));
 
                 BiwengerIdentity firstIdentity = new BiwengerIdentity(
                                 11_467_137L,
@@ -1131,6 +1281,20 @@ class BiwengerSyncServiceTest {
 
         @Test
         void syncScheduledShouldSkipIdentityWithoutManagerInLeague() {
+                when(playerDetailSyncService.syncLeaguePlayerDetails(
+                                LEAGUE_ID))
+                                .thenReturn(new PlayerDetailSyncResponse(
+                                604,
+                                552,
+                                25,
+                                25,
+                                6344,
+                                67,
+                                true,
+                                null,
+                                79L,
+                                null,
+                                null));
 
                 BiwengerIdentity identity = new BiwengerIdentity(
                                 6_743_399L,

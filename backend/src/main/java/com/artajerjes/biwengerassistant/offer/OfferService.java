@@ -317,7 +317,7 @@ public class OfferService {
 
                 return LocalDateTime.ofInstant(
                                 Instant.ofEpochSecond(timestamp),
-                                ZoneId.systemDefault());
+                                ZoneId.of("Europe/Madrid"));
         }
 
         private void syncEconomicStatus(

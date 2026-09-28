@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerSyncService;
 import com.artajerjes.biwengerassistant.biwenger.ScheduledSyncResult;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
 
 @Service
 public class SyncExecutionService {
@@ -33,7 +34,24 @@ public class SyncExecutionService {
 
                 try {
 
-                        biwengerSyncService.syncAll(leagueId);
+                        BiwengerSyncResponse result = biwengerSyncService
+                                        .syncAll(leagueId);
+
+                        if (result.partial()) {
+
+                                String details = String.join(
+                                                "; ",
+                                                result.partialReasons());
+
+                                syncExecutionStateService.markPartial(
+                                                leagueId,
+                                                details);
+
+                                return new SyncNowResponse(
+                                                leagueId,
+                                                true,
+                                                SyncExecutionStatus.PARTIAL);
+                        }
 
                         syncExecutionStateService.markSuccess(leagueId);
 

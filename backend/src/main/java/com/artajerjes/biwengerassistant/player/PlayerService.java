@@ -590,7 +590,7 @@ public class PlayerService {
 
                 return LocalDateTime.ofInstant(
                                 Instant.ofEpochSecond(timestamp),
-                                ZoneId.systemDefault());
+                                ZoneId.of("Europe/Madrid"));
         }
 
         private Map<Long, PlayerPosition> buildBenchPositions(

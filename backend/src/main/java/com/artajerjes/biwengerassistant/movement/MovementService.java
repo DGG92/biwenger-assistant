@@ -284,7 +284,7 @@ public class MovementService {
 
                 return LocalDateTime.ofInstant(
                                 Instant.ofEpochSecond(timestamp),
-                                ZoneId.systemDefault());
+                                ZoneId.of("Europe/Madrid"));
         }
 
         @Transactional(readOnly = true)

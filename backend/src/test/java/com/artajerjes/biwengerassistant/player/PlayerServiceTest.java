@@ -1141,13 +1141,13 @@ class PlayerServiceTest {
                 assertEquals(
                                 LocalDateTime.ofInstant(
                                                 Instant.ofEpochSecond(signedTimestamp),
-                                                ZoneId.systemDefault()),
+                                                ZoneId.of("Europe/Madrid")),
                                 player.getSignedAt());
 
                 assertEquals(
                                 LocalDateTime.ofInstant(
                                                 Instant.ofEpochSecond(clauseLockedTimestamp),
-                                                ZoneId.systemDefault()),
+                                                ZoneId.of("Europe/Madrid")),
                                 player.getClauseLockedUntil());
 
                 assertFalse(player.isFreePlayer());

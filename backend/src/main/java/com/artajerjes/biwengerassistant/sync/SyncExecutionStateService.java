@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.sync;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class SyncExecutionStateService {
 
         SyncExecutionState state = findOrCreate(leagueId);
 
-        state.markRunning(LocalDateTime.now());
+        state.markRunning(LocalDateTime.now(ZoneOffset.UTC));
 
         return repository.save(state);
     }
@@ -41,7 +42,7 @@ public class SyncExecutionStateService {
 
         SyncExecutionState state = findOrCreate(leagueId);
 
-        state.markSuccess(LocalDateTime.now());
+        state.markSuccess(LocalDateTime.now(ZoneOffset.UTC));
 
         return repository.save(state);
     }
@@ -54,7 +55,7 @@ public class SyncExecutionStateService {
         SyncExecutionState state = findOrCreate(leagueId);
 
         state.markPartial(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 details);
 
         return repository.save(state);
@@ -68,7 +69,7 @@ public class SyncExecutionStateService {
         SyncExecutionState state = findOrCreate(leagueId);
 
         state.markFailed(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 error);
 
         return repository.save(state);
@@ -80,7 +81,7 @@ public class SyncExecutionStateService {
         List<SyncExecutionState> runningStates = repository.findAllByStatus(
                 SyncExecutionStatus.RUNNING);
 
-        LocalDateTime finishedAt = LocalDateTime.now();
+        LocalDateTime finishedAt = LocalDateTime.now(ZoneOffset.UTC);
 
         for (SyncExecutionState state : runningStates) {
             state.markFailed(

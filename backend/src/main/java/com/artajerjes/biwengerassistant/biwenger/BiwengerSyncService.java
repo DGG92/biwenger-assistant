@@ -152,8 +152,10 @@ public class BiwengerSyncService {
                         OfferSyncResponse offers = offerService.sync(leagueId);
                         log.info("Offers synced for league {}", leagueId);
 
+                        List<String> partialReasons = new ArrayList<>();
+
                         log.info("Syncing player details for league {}", leagueId);
-                        syncPlayerDetailsBatch(leagueId, true);
+                        syncPlayerDetailsBatch(leagueId, true, partialReasons);
                         log.info("Player details synced for league {}", leagueId);
 
                         long elapsed = System.currentTimeMillis() - startedAt;
@@ -170,7 +172,8 @@ public class BiwengerSyncService {
                                         market,
                                         offers,
                                         movements,
-                                        lineup);
+                                        lineup,
+                                        partialReasons);
 
                 } catch (Exception exception) {
 
@@ -498,15 +501,5 @@ public class BiwengerSyncService {
                                 result.pricesProcessed(),
                                 result.reportsProcessed(),
                                 result.stopReason());
-        }
-
-        private void syncPlayerDetailsBatch(
-                        Long leagueId,
-                        boolean prioritizeLineup) {
-
-                syncPlayerDetailsBatch(
-                                leagueId,
-                                prioritizeLineup,
-                                new ArrayList<>());
         }
 }

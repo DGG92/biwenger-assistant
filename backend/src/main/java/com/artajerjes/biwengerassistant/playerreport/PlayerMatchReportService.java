@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.playerreport;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 
@@ -201,7 +202,7 @@ public class PlayerMatchReportService {
 
                         playersAttempted++;
 
-                        LocalDateTime attemptTime = LocalDateTime.now();
+                        LocalDateTime attemptTime = LocalDateTime.now(ZoneOffset.UTC);
 
                         player.markReportsSyncAttempt(
                                         attemptTime);
@@ -215,7 +216,7 @@ public class PlayerMatchReportService {
                                                 scoreConfig);
 
                                 player.markReportsSyncSuccess(
-                                                LocalDateTime.now());
+                                                LocalDateTime.now(ZoneOffset.UTC));
 
                                 playerRepository.save(player);
 

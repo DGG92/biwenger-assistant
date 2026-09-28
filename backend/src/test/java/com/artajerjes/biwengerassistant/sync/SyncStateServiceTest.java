@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.sync;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,7 +43,7 @@ class SyncStateServiceTest {
         when(syncStateRepository.save(any(SyncState.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime before = LocalDateTime.now(ZoneOffset.UTC);
 
         SyncState result = service.registerRateLimit(
                 1L,
@@ -50,7 +51,7 @@ class SyncStateServiceTest {
                 502L,
                 120L);
 
-        LocalDateTime after = LocalDateTime.now();
+        LocalDateTime after = LocalDateTime.now(ZoneOffset.UTC);
 
         assertNotNull(result);
 
@@ -97,7 +98,7 @@ class SyncStateServiceTest {
         when(syncStateRepository.save(any(SyncState.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime before = LocalDateTime.now(ZoneOffset.UTC);
 
         SyncState result = service.registerRateLimit(
                 1L,
@@ -105,7 +106,7 @@ class SyncStateServiceTest {
                 502L,
                 null);
 
-        LocalDateTime after = LocalDateTime.now();
+        LocalDateTime after = LocalDateTime.now(ZoneOffset.UTC);
 
         assertNull(
                 result.getRetryAfterSeconds());
@@ -156,10 +157,10 @@ class SyncStateServiceTest {
                 SyncType.PLAYER_DETAILS);
 
         state.registerRateLimit(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 502L,
                 120L,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
                         .plusMinutes(10));
 
         when(syncStateRepository.findByLeagueIdAndSyncType(
@@ -181,11 +182,11 @@ class SyncStateServiceTest {
                 SyncType.PLAYER_DETAILS);
 
         state.registerRateLimit(
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
                         .minusHours(2),
                 502L,
                 null,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
                         .minusHours(1));
 
         when(syncStateRepository.findByLeagueIdAndSyncType(

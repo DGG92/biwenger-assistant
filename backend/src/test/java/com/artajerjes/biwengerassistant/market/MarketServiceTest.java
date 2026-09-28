@@ -822,6 +822,6 @@ class MarketServiceTest {
             Long timestamp) {
         return LocalDateTime.ofInstant(
                 Instant.ofEpochSecond(timestamp),
-                ZoneId.systemDefault());
+                ZoneId.of("Europe/Madrid"));
     }
 }

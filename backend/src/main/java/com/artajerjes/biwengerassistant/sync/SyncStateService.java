@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.sync;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class SyncStateService {
             Long leagueId,
             SyncType syncType) {
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         return syncStateRepository
                 .findByLeagueIdAndSyncType(
@@ -43,7 +44,7 @@ public class SyncStateService {
             Long rateLimitedPlayerId,
             Long retryAfterSeconds) {
 
-        LocalDateTime detectedAt = LocalDateTime.now();
+        LocalDateTime detectedAt = LocalDateTime.now(ZoneOffset.UTC);
 
         long effectiveRetryAfterSeconds = retryAfterSeconds != null
                 ? Math.max(retryAfterSeconds, 0L)

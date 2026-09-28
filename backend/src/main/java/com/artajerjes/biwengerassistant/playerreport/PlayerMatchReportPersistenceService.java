@@ -48,7 +48,7 @@ public class PlayerMatchReportPersistenceService {
                 : LocalDateTime.ofInstant(
                         Instant.ofEpochSecond(
                                 report.match().date()),
-                        ZoneId.systemDefault());
+                        ZoneId.of("Europe/Madrid"));
 
         String season = resolveSeason(matchDate);
 

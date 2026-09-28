@@ -1,6 +1,7 @@
 package com.artajerjes.biwengerassistant.biwenger;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -154,7 +155,7 @@ public class PlayerDetailSyncService {
                          * y las dos persistencias hayan terminado.
                          */
                         player.markReportsSyncAttempt(
-                                        LocalDateTime.now());
+                                        LocalDateTime.now(ZoneOffset.UTC));
 
                         playerRepository.save(
                                         player);
@@ -186,7 +187,7 @@ public class PlayerDetailSyncService {
                                  * Solo ahora consideramos terminado al jugador.
                                  */
                                 player.markReportsSyncSuccess(
-                                                LocalDateTime.now());
+                                                LocalDateTime.now(ZoneOffset.UTC));
 
                                 playerRepository.save(
                                                 player);

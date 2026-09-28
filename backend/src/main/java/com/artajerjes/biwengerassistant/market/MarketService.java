@@ -217,7 +217,7 @@ public class MarketService {
 
                 return LocalDateTime.ofInstant(
                                 Instant.ofEpochSecond(timestamp),
-                                ZoneId.systemDefault());
+                                ZoneId.of("Europe/Madrid"));
         }
 
         private record MarketBuildResult(

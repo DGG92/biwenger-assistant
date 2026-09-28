@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import com.artajerjes.biwengerassistant.biwenger.BiwengerSyncService;
 import com.artajerjes.biwengerassistant.biwenger.ScheduledSyncResult;
+import com.artajerjes.biwengerassistant.biwenger.dto.sync.BiwengerSyncResponse;
 
 class SyncExecutionServiceTest {
 
@@ -28,6 +29,18 @@ class SyncExecutionServiceTest {
 
                 when(biwengerSyncService.isSyncRunning(LEAGUE_ID))
                                 .thenReturn(false);
+
+                when(biwengerSyncService.syncAll(LEAGUE_ID))
+                                .thenReturn(
+                                                new BiwengerSyncResponse(
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                java.util.List.of()));
 
                 SyncExecutionService service = new SyncExecutionService(
                                 biwengerSyncService,
@@ -54,6 +67,69 @@ class SyncExecutionServiceTest {
                                 .markFailed(
                                                 org.mockito.ArgumentMatchers.anyLong(),
                                                 org.mockito.ArgumentMatchers.any());
+
+                verify(biwengerSyncService)
+                                .syncAll(LEAGUE_ID);
+
+                verify(biwengerSyncService, never())
+                                .syncScheduled(LEAGUE_ID);
+        }
+
+        @Test
+        void syncNowShouldMarkPartialWhenManualSyncIsIncomplete() {
+
+                BiwengerSyncService biwengerSyncService = mock(BiwengerSyncService.class);
+
+                SyncExecutionStateService syncExecutionStateService = mock(SyncExecutionStateService.class);
+
+                when(biwengerSyncService.isSyncRunning(LEAGUE_ID))
+                                .thenReturn(false);
+
+                when(biwengerSyncService.syncAll(LEAGUE_ID))
+                                .thenReturn(
+                                                new BiwengerSyncResponse(
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                java.util.List.of(
+                                                                                "player details: rate limited at player 29",
+                                                                                "player details: incomplete batch")));
+
+                SyncExecutionService service = new SyncExecutionService(
+                                biwengerSyncService,
+                                syncExecutionStateService);
+
+                SyncNowResponse response = service.syncNow(LEAGUE_ID);
+
+                assertThat(response.leagueId())
+                                .isEqualTo(LEAGUE_ID);
+
+                assertThat(response.started())
+                                .isTrue();
+
+                assertThat(response.status())
+                                .isEqualTo(SyncExecutionStatus.PARTIAL);
+
+                verify(syncExecutionStateService)
+                                .markRunning(LEAGUE_ID);
+
+                verify(syncExecutionStateService)
+                                .markPartial(
+                                                LEAGUE_ID,
+                                                "player details: rate limited at player 29; "
+                                                                + "player details: incomplete batch");
+
+                verify(syncExecutionStateService, never())
+                                .markSuccess(LEAGUE_ID);
+
+                verify(syncExecutionStateService, never())
+                                .markFailed(
+                                                eq(LEAGUE_ID),
+                                                anyString());
 
                 verify(biwengerSyncService)
                                 .syncAll(LEAGUE_ID);
