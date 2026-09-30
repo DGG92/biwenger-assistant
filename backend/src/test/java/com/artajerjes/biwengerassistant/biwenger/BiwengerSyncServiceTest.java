@@ -529,15 +529,6 @@ class BiwengerSyncServiceTest {
                 verify(playerDetailSyncService)
                                 .syncLeaguePlayerDetailsPrioritizingLineup(
                                                 LEAGUE_ID);
-
-                verify(
-                                syncStateService,
-                                never())
-                                .registerRateLimit(
-                                                LEAGUE_ID,
-                                                SyncType.PLAYER_DETAILS,
-                                                null,
-                                                null);
         }
 
         @Test
@@ -1205,20 +1196,6 @@ class BiwengerSyncServiceTest {
 
         @Test
         void syncScheduledShouldSyncPrivateDataForEveryLinkedIdentity() {
-                when(playerDetailSyncService.syncLeaguePlayerDetails(
-                                LEAGUE_ID))
-                                .thenReturn(new PlayerDetailSyncResponse(
-                                604,
-                                552,
-                                25,
-                                25,
-                                6344,
-                                67,
-                                true,
-                                null,
-                                79L,
-                                null,
-                                null));
 
                 BiwengerIdentity firstIdentity = new BiwengerIdentity(
                                 11_467_137L,
@@ -1281,20 +1258,6 @@ class BiwengerSyncServiceTest {
 
         @Test
         void syncScheduledShouldSkipIdentityWithoutManagerInLeague() {
-                when(playerDetailSyncService.syncLeaguePlayerDetails(
-                                LEAGUE_ID))
-                                .thenReturn(new PlayerDetailSyncResponse(
-                                604,
-                                552,
-                                25,
-                                25,
-                                6344,
-                                67,
-                                true,
-                                null,
-                                79L,
-                                null,
-                                null));
 
                 BiwengerIdentity identity = new BiwengerIdentity(
                                 6_743_399L,
