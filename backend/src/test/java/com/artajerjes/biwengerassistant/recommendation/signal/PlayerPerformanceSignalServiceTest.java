@@ -3,12 +3,16 @@ package com.artajerjes.biwengerassistant.recommendation.signal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -64,7 +68,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 29,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 5),
                                 report(
@@ -75,7 +79,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 25,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 7),
                                 report(
@@ -86,7 +90,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 21,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 5));
 
@@ -126,7 +130,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 11,
                                                 8,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 8),
                                 report(
@@ -137,7 +141,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 11,
                                                 1,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 6),
                                 report(
@@ -148,7 +152,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 9,
                                                 27,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 false,
                                                 null),
                                 report(
@@ -159,7 +163,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 9,
                                                 20,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 10));
 
@@ -176,6 +180,16 @@ class PlayerPerformanceSignalServiceTest {
                 assertEquals(
                                 2,
                                 result.recentSampleSize());
+
+                assertEquals(
+                                2,
+                                result.recentObservedMatches());
+
+                assertTrue(
+                                result.recentSignalAvailable());
+
+                assertTrue(
+                                result.hasAnyPerformanceEvidence());
 
                 assertEquals(
                                 7.333333333333333,
@@ -203,7 +217,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 11,
                                                 1,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 9),
                                 report(
@@ -214,7 +228,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 9,
                                                 27,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 false,
                                                 null),
                                 report(
@@ -225,7 +239,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 9,
                                                 20,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 7));
 
@@ -241,6 +255,16 @@ class PlayerPerformanceSignalServiceTest {
                 assertEquals(
                                 0,
                                 result.recentSampleSize());
+
+                assertEquals(
+                                1,
+                                result.recentObservedMatches());
+
+                assertFalse(
+                                result.recentSignalAvailable());
+
+                assertTrue(
+                                result.hasAnyPerformanceEvidence());
 
                 assertEquals(
                                 0.0,
@@ -268,7 +292,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 23,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 8),
                                 report(
@@ -279,7 +303,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 16,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 6),
                                 report(
@@ -290,7 +314,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 5,
                                                 24,
-                                                "2025-2026",
+                                                previousSeason(),
                                                 true,
                                                 10),
                                 report(
@@ -301,7 +325,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 5,
                                                 17,
-                                                "2025-2026",
+                                                previousSeason(),
                                                 true,
                                                 9));
 
@@ -332,7 +356,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 23,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 8),
                                 report(
@@ -343,7 +367,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 8,
                                                 16,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 6),
                                 report(
@@ -354,7 +378,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 5,
                                                 24,
-                                                "2025-2026",
+                                                previousSeason(),
                                                 true,
                                                 10),
                                 report(
@@ -365,7 +389,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2026,
                                                 5,
                                                 17,
-                                                "2025-2026",
+                                                previousSeason(),
                                                 true,
                                                 4));
 
@@ -400,7 +424,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2027,
                                                 1,
                                                 17,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 8),
                                 report(
@@ -411,7 +435,7 @@ class PlayerPerformanceSignalServiceTest {
                                                 2027,
                                                 1,
                                                 10,
-                                                "2026-2027",
+                                                currentSeason(),
                                                 true,
                                                 6));
 
@@ -438,6 +462,141 @@ class PlayerPerformanceSignalServiceTest {
                                 7.0,
                                 result.historicalAveragePoints(),
                                 0.000001);
+
+                assertEquals(
+                                2,
+                                result.recentObservedMatches());
+
+                assertTrue(
+                                result.recentSignalAvailable());
+
+                assertFalse(
+                                result.historicalSignalAvailable());
+
+                assertTrue(
+                                result.hasAnyPerformanceEvidence());
+        }
+
+        @Test
+        void shouldExposeNoPerformanceEvidenceWhenPlayerHasNoReports() {
+                mockRecent(List.of());
+                mockHistorical(List.of());
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertEquals(
+                                0,
+                                result.recentObservedMatches());
+
+                assertEquals(
+                                0,
+                                result.recentSampleSize());
+
+                assertEquals(
+                                0,
+                                result.historicalSampleSize());
+
+                assertFalse(
+                                result.recentSignalAvailable());
+
+                assertFalse(
+                                result.historicalSignalAvailable());
+
+                assertFalse(
+                                result.hasAnyPerformanceEvidence());
+        }
+
+        @Test
+        void shouldExposeHistoricalSignalOnlyWhenMinimumSampleIsReached() {
+                List<PlayerMatchReport> historicalReports = List.of(
+                                report(
+                                                54005L,
+                                                5405L,
+                                                "Jornada 5",
+                                                "J5",
+                                                2026,
+                                                9,
+                                                13,
+                                                currentSeason(),
+                                                true,
+                                                10),
+                                report(
+                                                54004L,
+                                                5404L,
+                                                "Jornada 4",
+                                                "J4",
+                                                2026,
+                                                9,
+                                                6,
+                                                currentSeason(),
+                                                true,
+                                                8),
+                                report(
+                                                54003L,
+                                                5403L,
+                                                "Jornada 3",
+                                                "J3",
+                                                2026,
+                                                8,
+                                                30,
+                                                currentSeason(),
+                                                true,
+                                                6),
+                                report(
+                                                54002L,
+                                                5402L,
+                                                "Jornada 2",
+                                                "J2",
+                                                2026,
+                                                8,
+                                                23,
+                                                currentSeason(),
+                                                true,
+                                                4),
+                                report(
+                                                54001L,
+                                                5401L,
+                                                "Jornada 1",
+                                                "J1",
+                                                2026,
+                                                8,
+                                                16,
+                                                currentSeason(),
+                                                true,
+                                                2));
+
+                mockRecent(List.of());
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertEquals(
+                                0,
+                                result.recentObservedMatches());
+
+                assertEquals(
+                                0,
+                                result.recentSampleSize());
+
+                assertFalse(
+                                result.recentSignalAvailable());
+
+                assertEquals(
+                                5,
+                                result.historicalSampleSize());
+
+                assertEquals(
+                                6.0,
+                                result.historicalAveragePoints(),
+                                0.000001);
+
+                assertTrue(
+                                result.historicalSignalAvailable());
+
+                assertTrue(
+                                result.hasAnyPerformanceEvidence());
         }
 
         private void mockRecent(List<PlayerMatchReport> reports) {
@@ -484,5 +643,23 @@ class PlayerPerformanceSignalServiceTest {
                                 participated,
                                 null,
                                 points);
+        }
+
+        private String currentSeason() {
+                LocalDate today = LocalDate.now();
+                int year = today.getYear();
+
+                return today.getMonthValue() >= 7
+                                ? year + "-" + (year + 1)
+                                : (year - 1) + "-" + year;
+        }
+
+        private String previousSeason() {
+                LocalDate today = LocalDate.now();
+                int year = today.getYear();
+
+                return today.getMonthValue() >= 7
+                                ? (year - 1) + "-" + year
+                                : (year - 2) + "-" + (year - 1);
         }
 }

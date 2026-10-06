@@ -720,7 +720,7 @@ public class RecommendationService {
                         PlayerPerformanceSignals performance) {
 
                 if (performance == null
-                                || performance.recentSampleSize() < 2) {
+                                || !performance.recentSignalAvailable()) {
                         return 0;
                 }
 
@@ -753,7 +753,7 @@ public class RecommendationService {
                         PlayerPerformanceSignals performance) {
 
                 if (performance == null
-                                || performance.historicalSampleSize() < 5) {
+                                || !performance.historicalSignalAvailable()) {
                         return 0;
                 }
 
@@ -1870,9 +1870,9 @@ public class RecommendationService {
                                 player.getId(),
                                 ignored -> playerPerformanceSignalService.analyze(player));
 
-                boolean hasRecentData = performance.recentSampleSize() >= 2;
+                boolean hasRecentData = performance.recentSignalAvailable();
 
-                boolean hasHistoricalData = performance.historicalSampleSize() >= 5;
+                boolean hasHistoricalData = performance.historicalSignalAvailable();
 
                 double rating;
 

@@ -603,7 +603,7 @@ public class ActionRecommendationService {
                  * RENDIMIENTO RECIENTE
                  */
 
-                if (performance.recentSampleSize() >= 2) {
+                if (performance.recentSignalAvailable()) {
 
                         double recentAverage = performance.recentWeightedAverage();
 
@@ -653,7 +653,7 @@ public class ActionRecommendationService {
                  * HISTÓRICO
                  */
 
-                if (performance.historicalSampleSize() >= 5) {
+                if (performance.historicalSignalAvailable()) {
 
                         double historicalAverage = performance.historicalAveragePoints();
 
@@ -853,7 +853,7 @@ public class ActionRecommendationService {
 
                 int confidence = 35;
 
-                if (performance.recentSampleSize() >= 2) {
+                if (performance.recentSignalAvailable()) {
                         confidence += 20;
                 }
 
@@ -861,7 +861,7 @@ public class ActionRecommendationService {
                         confidence += 10;
                 }
 
-                if (performance.historicalSampleSize() >= 5) {
+                if (performance.historicalSignalAvailable()) {
                         confidence += 15;
                 }
 
@@ -935,7 +935,7 @@ public class ActionRecommendationService {
                         reasons.add(buildProfitText(profit));
                 }
 
-                if (performance.recentSampleSize() >= 2) {
+                if (performance.recentSignalAvailable()) {
                         reasons.add(
                                         "su forma reciente es de "
                                                         + round(performance.recentWeightedAverage())
@@ -1021,7 +1021,7 @@ public class ActionRecommendationService {
         private String buildRecentFormText(
                         PlayerPerformanceSignals performance) {
 
-                if (performance.recentSampleSize() >= 2) {
+                if (performance.recentSignalAvailable()) {
                         return round(performance.recentWeightedAverage())
                                         + " puntos de media reciente";
                 }

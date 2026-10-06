@@ -98,7 +98,7 @@ public class PlayerProtectionService {
          * - participación real
          * - mínimo 2 partidos
          */
-        if (performance.recentSampleSize() >= 2) {
+        if (performance.recentSignalAvailable()) {
 
             if (performance.allRecentMatchesExcellent()) {
                 score += 30;

@@ -190,7 +190,8 @@ public class PlayerPerformanceSignalService {
                                 recentSampleSize,
                                 allRecentMatchesExcellent,
                                 historicalAveragePoints,
-                                historicalSampleSize);
+                                historicalSampleSize,
+                                streak.size());
         }
 
         private List<PlayerMatchReport> buildCurrentConsecutiveStreak(
