@@ -70,4 +70,15 @@ public interface PlayerPriceHistoryRepository
                         """)
         List<PlayerPriceHistory> findAllByLeagueIdOrderByPlayerAndPriceDate(
                         @Param("leagueId") Long leagueId);
+
+        @Query("""
+                        SELECT p
+                        FROM PlayerPriceHistory p
+                        WHERE p.leagueId = :leagueId
+                          AND p.priceDate >= :fromDate
+                        ORDER BY p.playerId ASC, p.priceDate ASC
+                        """)
+        List<PlayerPriceHistory> findRecentPricesByLeagueId(
+                        @Param("leagueId") Long leagueId,
+                        @Param("fromDate") LocalDate fromDate);
 }
