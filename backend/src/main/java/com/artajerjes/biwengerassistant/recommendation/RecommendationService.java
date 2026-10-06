@@ -101,6 +101,9 @@ public class RecommendationService {
         private static final double ECONOMIC_ACCELERATION_WEIGHT = 2.0;
         private static final double ECONOMIC_ACCELERATION_MAX_CORRECTION = 3.0;
         private static final double ECONOMIC_DYNAMIC_MAX_CORRECTION = 5.0;
+        private static final double SPORTS_FORM_DELTA_WEIGHT = 1.5;
+        private static final double SPORTS_FORM_DELTA_MAX_CORRECTION = 3.0;
+        private static final double SPORTS_MIN_CONSISTENCY_WEIGHT = 0.5;
 
         public RecommendationService(
                         LeagueRepository leagueRepository,
@@ -293,7 +296,8 @@ public class RecommendationService {
                                 performance.historicalSampleSize(),
                                 historicalPerformanceScore,
                                 changePercent7Days,
-                                economicSignals);
+                                economicSignals,
+                                performance);
 
                 int score = calculateScore(
                                 scoreBreakdown,
@@ -594,7 +598,8 @@ public class RecommendationService {
                         int historicalSampleSize,
                         int historicalPerformanceScore,
                         Double changePercent7Days,
-                        PlayerEconomicSignals economicSignals) {
+                        PlayerEconomicSignals economicSignals,
+                        PlayerPerformanceSignals performance) {
 
                 double baseScore = 50;
 
@@ -627,12 +632,16 @@ public class RecommendationService {
                 double statusPenalty = calculateStatusPenalty(
                                 player.getStatus());
 
+                double sportsTrendCorrection = calculateSportsTrendCorrection(
+                                performance);
+
                 double scoreBeforeCaps = baseScore
                                 + priceScore
                                 + valueTrendScore
                                 + squadNeedContribution
                                 + recentFormScore
                                 + historicalPerformanceScore
+                                + sportsTrendCorrection
                                 + statusPenalty;
 
                 return new MarketScoreBreakdown(
@@ -649,6 +658,59 @@ public class RecommendationService {
                                 scoreBeforeCaps,
                                 false,
                                 false);
+        }
+
+        private double calculateSportsTrendCorrection(
+                        PlayerPerformanceSignals performance) {
+
+                if (performance == null
+                                || !performance.recentFormDeltaAvailable()) {
+
+                        return 0;
+                }
+
+                double deltaCorrection = clampDouble(
+                                performance.recentFormDelta()
+                                                * SPORTS_FORM_DELTA_WEIGHT,
+                                -SPORTS_FORM_DELTA_MAX_CORRECTION,
+                                SPORTS_FORM_DELTA_MAX_CORRECTION);
+
+                double recentSampleWeight = calculateRecentSampleWeight(
+                                performance.recentSampleSize());
+
+                double consistencyWeight = SPORTS_MIN_CONSISTENCY_WEIGHT;
+
+                if (performance.historicalConsistencyAvailable()) {
+
+                        double consistency = clampDouble(
+                                        performance.historicalConsistency(),
+                                        0,
+                                        1);
+
+                        consistencyWeight = SPORTS_MIN_CONSISTENCY_WEIGHT
+                                        + consistency
+                                                        * (1 - SPORTS_MIN_CONSISTENCY_WEIGHT);
+                }
+
+                return clampDouble(
+                                deltaCorrection
+                                                * recentSampleWeight
+                                                * consistencyWeight,
+                                -SPORTS_FORM_DELTA_MAX_CORRECTION,
+                                SPORTS_FORM_DELTA_MAX_CORRECTION);
+        }
+
+        private double calculateRecentSampleWeight(
+                        int recentSampleSize) {
+
+                return switch (recentSampleSize) {
+                        case 2 -> 0.50;
+                        case 3 -> 0.70;
+                        case 4 -> 0.85;
+                        default -> recentSampleSize >= 5
+                                        ? 1.00
+                                        : 0.00;
+                };
         }
 
         private double calculateEconomicTrendScore(

@@ -5646,6 +5646,219 @@ class RecommendationServiceTest {
                                 fullResult.confidence() > recentResult.confidence());
         }
 
+        @Test
+        void sportsTrendCorrectionShouldKeepExactFallbackWithoutAdvancedSignal() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                8.0,
+                                5,
+                                true,
+                                6.0,
+                                7);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                0.0,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldRewardPositiveFormDelta() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                8.0,
+                                5,
+                                false,
+                                6.0,
+                                7,
+                                5,
+                                1.0,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                1.5,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldPenalizeNegativeFormDelta() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                4.0,
+                                5,
+                                false,
+                                6.0,
+                                7,
+                                5,
+                                -1.0,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                -1.5,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldCapExtremePositiveDelta() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                11.0,
+                                5,
+                                false,
+                                4.8,
+                                5,
+                                5,
+                                6.2,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                3.0,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldCapExtremeNegativeDelta() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                -1.0,
+                                5,
+                                false,
+                                2.83,
+                                6,
+                                5,
+                                -3.83,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                -3.0,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldReduceImpactWithOnlyTwoRecentMatches() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                11.0,
+                                2,
+                                false,
+                                4.8,
+                                5,
+                                2,
+                                6.2,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                1.5,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldReduceImpactForInconsistentPlayer() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                8.0,
+                                5,
+                                false,
+                                6.0,
+                                7,
+                                5,
+                                2.0,
+                                0.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                1.5,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldCombineSampleAndConsistencyReliability() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                11.0,
+                                2,
+                                false,
+                                4.8,
+                                5,
+                                2,
+                                6.2,
+                                0.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                0.75,
+                                correction,
+                                0.000001);
+        }
+
+        @Test
+        void sportsTrendCorrectionShouldBeNeutralWhenDeltaIsZero() {
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                6.0,
+                                5,
+                                false,
+                                6.0,
+                                7,
+                                5,
+                                0.0,
+                                1.0);
+
+                Double correction = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateSportsTrendCorrection",
+                                performance);
+
+                assertEquals(
+                                0.0,
+                                correction,
+                                0.000001);
+        }
+
         private void mockCommon(
                         Long maximumBid,
                         List<MarketListing> listings) {
