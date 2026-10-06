@@ -904,18 +904,23 @@ public class RecommendationService {
                                         0);
                 }
 
-                double currentScore = calculateFormationPerformanceScore(
+                Map<Long, PlayerPerformanceSignals> performanceByPlayerId = new HashMap<>();
+
+                FormationLineup currentLineup = calculateBestFormationLineup(
                                 squadPlayers,
                                 current,
-                                difficultyByTeamId);
+                                difficultyByTeamId,
+                                Set.of(),
+                                performanceByPlayerId);
 
-                boolean currentFormationIsFeasible = currentScore != IMPOSSIBLE_FORMATION_SCORE;
+                boolean currentFormationIsFeasible = currentLineup.score() != IMPOSSIBLE_FORMATION_SCORE;
 
-                Formation bestFormation = current;
-
-                double bestScore = currentFormationIsFeasible
-                                ? currentScore
-                                : IMPOSSIBLE_FORMATION_SCORE;
+                FormationLineup bestLineup = currentFormationIsFeasible
+                                ? currentLineup
+                                : new FormationLineup(
+                                                current,
+                                                IMPOSSIBLE_FORMATION_SCORE,
+                                                List.of());
 
                 for (Formation formation : VALID_FORMATIONS) {
 
@@ -923,17 +928,23 @@ public class RecommendationService {
                                 continue;
                         }
 
-                        double score = calculateFormationPerformanceScore(
+                        FormationLineup candidateLineup = calculateBestFormationLineup(
                                         squadPlayers,
                                         formation,
-                                        difficultyByTeamId);
+                                        difficultyByTeamId,
+                                        Set.of(),
+                                        performanceByPlayerId);
 
-                        if (score > bestScore) {
-
-                                bestScore = score;
-                                bestFormation = formation;
+                        if (candidateLineup.score() > bestLineup.score()) {
+                                bestLineup = candidateLineup;
                         }
                 }
+
+                Formation bestFormation = bestLineup.formation();
+
+                double currentScore = currentLineup.score();
+
+                double bestScore = bestLineup.score();
 
                 boolean bestFormationIsFeasible = bestScore != IMPOSSIBLE_FORMATION_SCORE;
 
@@ -960,13 +971,16 @@ public class RecommendationService {
                                 && !bestFormation.equals(current)
                                 && improvement < MIN_FORMATION_CHANGE_IMPROVEMENT) {
 
+                        bestLineup = currentLineup;
                         bestFormation = current;
                         publicBestScore = publicCurrentScore;
                         improvement = 0;
                 }
 
                 int confidence = calculateFormationRecommendationConfidence(
-                                improvement);
+                                improvement,
+                                bestLineup,
+                                performanceByPlayerId);
 
                 return new
 
@@ -1148,7 +1162,9 @@ public class RecommendationService {
                 }
 
                 int confidence = calculateFormationRecommendationConfidence(
-                                improvement);
+                                improvement,
+                                bestLineup,
+                                performanceByPlayerId);
 
                 List<RecommendedLineupPlayerResponse> recommendedStarters = bestLineup.assignments()
                                 .stream()
@@ -1449,37 +1465,6 @@ public class RecommendationService {
                 return calculateCoverageForRequiredPositions(
                                 players,
                                 buildRequiredPositions(formation));
-        }
-
-        private double calculateFormationPerformanceScore(
-                        List<Player> players,
-                        Formation formation,
-                        Map<Long, OpponentDifficulty> difficultyByTeamId) {
-
-                List<PlayerPosition> requiredPositions = buildRequiredPositions(formation);
-
-                /*
-                 * Si ni siquiera podemos cubrir los 11 puestos
-                 * de la formación, no puede ser candidata.
-                 */
-                if (calculateFormationCoverage(
-                                players,
-                                formation) < requiredPositions.size()) {
-
-                        return IMPOSSIBLE_FORMATION_SCORE;
-                }
-
-                Map<Long, Double> memo = new HashMap<>();
-
-                return maximizeFormationPerformance(
-                                players,
-                                requiredPositions,
-                                0,
-                                0,
-                                memo,
-                                difficultyByTeamId,
-                                Set.of(),
-                                new HashMap<>());
         }
 
         private FormationLineup calculateBestFormationLineup(
@@ -1949,21 +1934,60 @@ public class RecommendationService {
                                 * difficultyMultiplier;
         }
 
-        private int calculateFormationRecommendationConfidence(
-                        double improvement) {
+        private double calculatePerformanceEvidenceWeight(
+                        PlayerPerformanceSignals performance) {
 
-                if (improvement <= 0) {
+                if (performance == null
+                                || !performance.hasAnyPerformanceEvidence()) {
+
+                        return 0.0;
+                }
+
+                if (performance.recentSignalAvailable()
+                                && performance.historicalSignalAvailable()) {
+
+                        return 1.0;
+                }
+
+                if (performance.recentSignalAvailable()
+                                || performance.historicalSignalAvailable()) {
+
+                        return 0.7;
+                }
+
+                return 0.25;
+        }
+
+        private int calculateFormationRecommendationConfidence(
+                        double improvement,
+                        FormationLineup recommendedLineup,
+                        Map<Long, PlayerPerformanceSignals> performanceByPlayerId) {
+
+                if (improvement <= 0
+                                || recommendedLineup == null
+                                || recommendedLineup.assignments().isEmpty()) {
+
                         return 0;
                 }
 
-                int confidence = 55
+                int strengthConfidence = 55
                                 + Math.min(
                                                 (int) Math.round(
                                                                 improvement * 5),
                                                 35);
 
-                return Math.min(
-                                confidence,
+                double evidenceCoverage = recommendedLineup.assignments()
+                                .stream()
+                                .map(FormationAssignment::player)
+                                .mapToDouble(player -> calculatePerformanceEvidenceWeight(
+                                                performanceByPlayerId.get(player.getId())))
+                                .average()
+                                .orElse(0);
+
+                return clamp(
+                                (int) Math.round(
+                                                strengthConfidence * evidenceCoverage),
+                                0,
                                 90);
         }
 

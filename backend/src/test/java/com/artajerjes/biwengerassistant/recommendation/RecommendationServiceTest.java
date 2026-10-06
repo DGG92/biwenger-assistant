@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 import com.artajerjes.biwengerassistant.auth.CurrentAssistantUserService;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistory;
 import com.artajerjes.biwengerassistant.history.PlayerPriceHistoryRepository;
@@ -57,6 +58,16 @@ class RecommendationServiceTest {
 
         private static final Long LEAGUE_ID = 1L;
         private static final Long BIWENGER_USER_ID = 11_467_137L;
+
+        private record RecommendedLineupConfidenceFixture(
+                        List<Player> squad,
+                        Player weakDefender,
+                        Player strongDefender) {
+        }
+
+        private record FormationConfidenceFixture(
+                        List<Player> squad) {
+        }
 
         @Mock
         private LeagueRepository leagueRepository;
@@ -4635,6 +4646,115 @@ class RecommendationServiceTest {
                                 .thenReturn(reports);
         }
 
+        private void mockSinglePerformanceReport(
+                        Player player,
+                        int points) {
+
+                PlayerMatchReport report = new PlayerMatchReport(
+                                player,
+                                400_000L + player.getId(),
+                                5001L,
+                                "Jornada 1",
+                                "J1",
+                                LocalDateTime.of(
+                                                2026,
+                                                8,
+                                                24,
+                                                21,
+                                                0),
+                                "2026-2027",
+                                true,
+                                null,
+                                points);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(
+                                                                player.getId()))
+                                .thenReturn(List.of(report));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                                player.getId()))
+                                .thenReturn(List.of(report));
+
+        }
+
+        private void mockHistoricalPerformanceReports(
+                        Player player,
+                        int points) {
+
+                List<PlayerMatchReport> reports = List.of(
+                                new PlayerMatchReport(
+                                                player,
+                                                500_000L + player.getId(),
+                                                5005L,
+                                                "Jornada 5",
+                                                "J5",
+                                                LocalDateTime.of(2026, 9, 7, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                points),
+                                new PlayerMatchReport(
+                                                player,
+                                                600_000L + player.getId(),
+                                                5004L,
+                                                "Jornada 4",
+                                                "J4",
+                                                LocalDateTime.of(2026, 8, 31, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                points),
+                                new PlayerMatchReport(
+                                                player,
+                                                700_000L + player.getId(),
+                                                5003L,
+                                                "Jornada 3",
+                                                "J3",
+                                                LocalDateTime.of(2026, 8, 24, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                points),
+                                new PlayerMatchReport(
+                                                player,
+                                                800_000L + player.getId(),
+                                                5002L,
+                                                "Jornada 2",
+                                                "J2",
+                                                LocalDateTime.of(2026, 8, 17, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                points),
+                                new PlayerMatchReport(
+                                                player,
+                                                900_000L + player.getId(),
+                                                5001L,
+                                                "Jornada 1",
+                                                "J1",
+                                                LocalDateTime.of(2026, 8, 10, 21, 0),
+                                                "2026-2027",
+                                                true,
+                                                null,
+                                                points));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ByPlayer_IdOrderByMatchDateDesc(
+                                                                player.getId()))
+                                .thenReturn(reports);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ByPlayer_IdAndParticipatedTrueAndPointsIsNotNullOrderByMatchDateDesc(
+                                                                player.getId()))
+                                .thenReturn(reports);
+        }
+
         @Test
         void recommendedLineupShouldKeepLockedStarterEvenWhenBetterReplacementExists() {
 
@@ -5019,6 +5139,281 @@ class RecommendationServiceTest {
                 assertFalse(lockedForwardPresent);
         }
 
+        @Test
+        void performanceEvidenceShouldBeZeroWithoutEvidence() {
+
+                PlayerPerformanceSignals signals = new PlayerPerformanceSignals(
+                                0,
+                                0,
+                                false,
+                                0,
+                                0,
+                                0);
+
+                double result = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculatePerformanceEvidenceWeight",
+                                signals);
+
+                assertEquals(
+                                0.0,
+                                result,
+                                0.0001);
+        }
+
+        @Test
+        void performanceEvidenceShouldBeLowWhenObservedDataIsStillInsufficient() {
+
+                PlayerPerformanceSignals signals = new PlayerPerformanceSignals(
+                                0,
+                                0,
+                                false,
+                                0,
+                                1,
+                                1);
+
+                double result = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculatePerformanceEvidenceWeight",
+                                signals);
+
+                assertEquals(
+                                0.25,
+                                result,
+                                0.0001);
+        }
+
+        @Test
+        void performanceEvidenceShouldBeUsefulWithOneAvailableSignal() {
+
+                PlayerPerformanceSignals signals = new PlayerPerformanceSignals(
+                                6.5,
+                                3,
+                                false,
+                                0,
+                                3,
+                                3);
+
+                double result = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculatePerformanceEvidenceWeight",
+                                signals);
+
+                assertEquals(
+                                0.7,
+                                result,
+                                0.0001);
+        }
+
+        @Test
+        void performanceEvidenceShouldBeFullWithRecentAndHistoricalSignals() {
+
+                PlayerPerformanceSignals signals = new PlayerPerformanceSignals(
+                                7.0,
+                                5,
+                                false,
+                                6.0,
+                                5,
+                                5);
+
+                double result = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculatePerformanceEvidenceWeight",
+                                signals);
+
+                assertEquals(
+                                1.0,
+                                result,
+                                0.0001);
+        }
+
+        @Test
+        void recommendedLineupConfidenceShouldUseRecentEvidenceFromRecommendedEleven() {
+
+                RecommendedLineupConfidenceFixture fixture = createRecommendedLineupConfidenceFixture();
+
+                for (Player player : fixture.squad()) {
+
+                        mockPerformanceReports(
+                                        player,
+                                        recommendedLineupFixturePoints(player));
+                }
+
+                RecommendedLineupResponse result = recommendationService
+                                .getRecommendedLineup(LEAGUE_ID);
+
+                assertTrue(result.improvement() > 0);
+
+                assertTrue(
+                                result.recommendedStarters()
+                                                .stream()
+                                                .anyMatch(player -> player.playerId()
+                                                                .equals(6112L)));
+
+                assertFalse(
+                                result.recommendedStarters()
+                                                .stream()
+                                                .anyMatch(player -> player.playerId()
+                                                                .equals(6106L)));
+
+                assertTrue(result.confidence() > 0);
+                assertTrue(result.confidence() < 90);
+        }
+
+        @Test
+        void recommendedLineupConfidenceShouldIncreaseWithFullPerformanceEvidence() {
+
+                RecommendedLineupConfidenceFixture recentFixture = createRecommendedLineupConfidenceFixture();
+
+                for (Player player : recentFixture.squad()) {
+
+                        mockPerformanceReports(
+                                        player,
+                                        recommendedLineupFixturePoints(player));
+                }
+
+                RecommendedLineupResponse recentResult = recommendationService
+                                .getRecommendedLineup(LEAGUE_ID);
+
+                RecommendedLineupConfidenceFixture fullFixture = createRecommendedLineupConfidenceFixture();
+
+                for (Player player : fullFixture.squad()) {
+
+                        mockHistoricalPerformanceReports(
+                                        player,
+                                        recommendedLineupFixturePoints(player));
+                }
+
+                RecommendedLineupResponse fullResult = recommendationService
+                                .getRecommendedLineup(LEAGUE_ID);
+
+                assertTrue(recentResult.improvement() > 0);
+                assertTrue(fullResult.improvement() > 0);
+
+                assertTrue(
+                                fullResult.confidence() > recentResult.confidence());
+        }
+
+        @Test
+        void recommendedLineupConfidenceShouldIgnoreSparseEvidenceOutsideRecommendedEleven() {
+
+                RecommendedLineupConfidenceFixture sparseFixture = createRecommendedLineupConfidenceFixture();
+
+                for (Player player : sparseFixture.squad()) {
+
+                        if (player.getId().equals(6106L)) {
+
+                                mockSinglePerformanceReport(
+                                                player,
+                                                2);
+
+                                continue;
+                        }
+
+                        mockHistoricalPerformanceReports(
+                                        player,
+                                        recommendedLineupFixturePoints(player));
+                }
+
+                RecommendedLineupResponse sparseResult = recommendationService
+                                .getRecommendedLineup(LEAGUE_ID);
+
+                assertTrue(sparseResult.improvement() > 0);
+
+                assertFalse(
+                                sparseResult.recommendedStarters()
+                                                .stream()
+                                                .anyMatch(player -> player.playerId()
+                                                                .equals(6106L)));
+
+                RecommendedLineupConfidenceFixture baselineFixture = createRecommendedLineupConfidenceFixture();
+
+                for (Player player : baselineFixture.squad()) {
+
+                        mockHistoricalPerformanceReports(
+                                        player,
+                                        recommendedLineupFixturePoints(player));
+                }
+
+                RecommendedLineupResponse baselineResult = recommendationService
+                                .getRecommendedLineup(LEAGUE_ID);
+
+                assertEquals(
+                                baselineResult.confidence(),
+                                sparseResult.confidence());
+        }
+
+        @Test
+        void formationRecommendationConfidenceShouldUseRecentEvidenceFromRecommendedEleven() {
+
+                FormationConfidenceFixture fixture = createFormationConfidenceFixture();
+
+                for (Player player : fixture.squad()) {
+                        mockPerformanceReports(
+                                        player,
+                                        formationConfidenceFixturePoints(player));
+                }
+
+                FormationRecommendationResponse result = recommendationService.getFormationRecommendation(
+                                LEAGUE_ID);
+
+                assertEquals(
+                                "5-4-1",
+                                result.currentFormation());
+
+                assertEquals(
+                                "4-4-2",
+                                result.recommendedFormation());
+
+                assertTrue(
+                                result.recommendedScore() > result.currentScore());
+
+                assertTrue(result.improvement() > 0);
+
+                assertTrue(result.confidence() > 0);
+                assertTrue(result.confidence() < 90);
+        }
+
+        @Test
+        void formationRecommendationConfidenceShouldIncreaseWithFullPerformanceEvidence() {
+
+                FormationConfidenceFixture recentFixture = createFormationConfidenceFixture();
+
+                for (Player player : recentFixture.squad()) {
+                        mockPerformanceReports(
+                                        player,
+                                        formationConfidenceFixturePoints(player));
+                }
+
+                FormationRecommendationResponse recentResult = recommendationService.getFormationRecommendation(
+                                LEAGUE_ID);
+
+                FormationConfidenceFixture fullFixture = createFormationConfidenceFixture();
+
+                for (Player player : fullFixture.squad()) {
+                        mockHistoricalPerformanceReports(
+                                        player,
+                                        formationConfidenceFixturePoints(player));
+                }
+
+                FormationRecommendationResponse fullResult = recommendationService.getFormationRecommendation(
+                                LEAGUE_ID);
+
+                assertEquals(
+                                "4-4-2",
+                                recentResult.recommendedFormation());
+
+                assertEquals(
+                                "4-4-2",
+                                fullResult.recommendedFormation());
+
+                assertTrue(recentResult.improvement() > 0);
+                assertTrue(fullResult.improvement() > 0);
+
+                assertTrue(
+                                fullResult.confidence() > recentResult.confidence());
+        }
+
         private void mockCommon(
                         Long maximumBid,
                         List<MarketListing> listings) {
@@ -5296,5 +5691,250 @@ class RecommendationServiceTest {
                                                 manager));
 
                 return squad;
+        }
+
+        private RecommendedLineupConfidenceFixture createRecommendedLineupConfidenceFixture() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                Player goalkeeper = createOwnedPlayer(
+                                6101L,
+                                "6101",
+                                "PT",
+                                List.of(PlayerPosition.PT),
+                                manager);
+
+                Player defenderOne = createOwnedPlayer(
+                                6102L,
+                                "6102",
+                                "DF 1",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderTwo = createOwnedPlayer(
+                                6103L,
+                                "6103",
+                                "DF 2",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderThree = createOwnedPlayer(
+                                6104L,
+                                "6104",
+                                "DF 3",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player defenderFour = createOwnedPlayer(
+                                6105L,
+                                "6105",
+                                "DF 4",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player weakDefender = createOwnedPlayer(
+                                6106L,
+                                "6106",
+                                "DF titular flojo",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                Player midfielderOne = createOwnedPlayer(
+                                6107L,
+                                "6107",
+                                "MC 1",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderTwo = createOwnedPlayer(
+                                6108L,
+                                "6108",
+                                "MC 2",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderThree = createOwnedPlayer(
+                                6109L,
+                                "6109",
+                                "MC 3",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player midfielderFour = createOwnedPlayer(
+                                6110L,
+                                "6110",
+                                "MC 4",
+                                List.of(PlayerPosition.MC),
+                                manager);
+
+                Player forward = createOwnedPlayer(
+                                6111L,
+                                "6111",
+                                "DL",
+                                List.of(PlayerPosition.DL),
+                                manager);
+
+                Player strongDefender = createOwnedPlayer(
+                                6112L,
+                                "6112",
+                                "DF suplente fuerte",
+                                List.of(PlayerPosition.DF),
+                                manager);
+
+                List<Player> squad = List.of(
+                                goalkeeper,
+                                defenderOne,
+                                defenderTwo,
+                                defenderThree,
+                                defenderFour,
+                                weakDefender,
+                                midfielderOne,
+                                midfielderTwo,
+                                midfielderThree,
+                                midfielderFour,
+                                forward,
+                                strongDefender);
+
+                for (Player player : squad) {
+
+                        ReflectionTestUtils.setField(
+                                        player,
+                                        "starter",
+                                        !player.getId().equals(6112L));
+                }
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                return new RecommendedLineupConfidenceFixture(
+                                squad,
+                                weakDefender,
+                                strongDefender);
+        }
+
+        private int recommendedLineupFixturePoints(Player player) {
+
+                if (player.getId().equals(6106L)) {
+                        return 2;
+                }
+
+                if (player.getId().equals(6112L)) {
+                        return 9;
+                }
+
+                return 5;
+        }
+
+        private FormationConfidenceFixture createFormationConfidenceFixture() {
+
+                Manager manager = createManager();
+
+                ReflectionTestUtils.setField(
+                                manager,
+                                "currentFormation",
+                                "5-4-1");
+
+                List<Player> squad = List.of(
+                                createOwnedPlayer(
+                                                6201L,
+                                                "6201",
+                                                "PT",
+                                                List.of(PlayerPosition.PT),
+                                                manager),
+                                createOwnedPlayer(
+                                                6202L,
+                                                "6202",
+                                                "DF 1",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                6203L,
+                                                "6203",
+                                                "DF 2",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                6204L,
+                                                "6204",
+                                                "DF 3",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                6205L,
+                                                "6205",
+                                                "DF 4",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                6206L,
+                                                "6206",
+                                                "DF 5 flojo",
+                                                List.of(PlayerPosition.DF),
+                                                manager),
+                                createOwnedPlayer(
+                                                6207L,
+                                                "6207",
+                                                "MC 1",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                6208L,
+                                                "6208",
+                                                "MC 2",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                6209L,
+                                                "6209",
+                                                "MC 3",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                6210L,
+                                                "6210",
+                                                "MC 4",
+                                                List.of(PlayerPosition.MC),
+                                                manager),
+                                createOwnedPlayer(
+                                                6211L,
+                                                "6211",
+                                                "DL 1",
+                                                List.of(PlayerPosition.DL),
+                                                manager),
+                                createOwnedPlayer(
+                                                6212L,
+                                                "6212",
+                                                "DL 2 fuerte",
+                                                List.of(PlayerPosition.DL),
+                                                manager));
+
+                when(leagueRepository.existsById(LEAGUE_ID))
+                                .thenReturn(true);
+
+                when(playerRepository.findAllByLeague_Id(LEAGUE_ID))
+                                .thenReturn(squad);
+
+                return new FormationConfidenceFixture(squad);
+        }
+
+        private int formationConfidenceFixturePoints(Player player) {
+
+                if (player.getId().equals(6206L)) {
+                        return 2;
+                }
+
+                if (player.getId().equals(6212L)) {
+                        return 9;
+                }
+
+                return 5;
         }
 }
