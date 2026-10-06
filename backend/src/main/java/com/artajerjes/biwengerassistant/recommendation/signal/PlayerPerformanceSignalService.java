@@ -16,6 +16,11 @@ import com.artajerjes.biwengerassistant.playerreport.PlayerMatchReportRepository
 @Service
 public class PlayerPerformanceSignalService {
 
+        private static final int MIN_HISTORICAL_SAMPLE_SIZE = 5;
+
+        private static final double CONSISTENCY_EXCELLENT_STDDEV = 1.0;
+        private static final double CONSISTENCY_POOR_STDDEV = 6.0;
+
         private final PlayerMatchReportRepository playerMatchReportRepository;
 
         public PlayerPerformanceSignalService(
@@ -162,6 +167,7 @@ public class PlayerPerformanceSignalService {
 
                 double historicalAveragePoints = 0;
                 int historicalSampleSize = 0;
+                Double historicalConsistency = null;
 
                 /*
                  * Los entrenadores utilizan otra escala de puntuación
@@ -182,8 +188,18 @@ public class PlayerPerformanceSignalService {
                                                 .orElse(0);
 
                                 historicalSampleSize = historicalReports.size();
+
+                                historicalConsistency = calculateHistoricalConsistency(
+                                                historicalReports,
+                                                historicalAveragePoints);
                         }
                 }
+
+                Double recentFormDelta = calculateRecentFormDelta(
+                                recentWeightedAverage,
+                                recentSampleSize,
+                                historicalAveragePoints,
+                                historicalSampleSize);
 
                 return new PlayerPerformanceSignals(
                                 recentWeightedAverage,
@@ -191,7 +207,68 @@ public class PlayerPerformanceSignalService {
                                 allRecentMatchesExcellent,
                                 historicalAveragePoints,
                                 historicalSampleSize,
-                                streak.size());
+                                streak.size(),
+                                recentFormDelta,
+                                historicalConsistency);
+        }
+
+        private Double calculateRecentFormDelta(
+                        double recentWeightedAverage,
+                        int recentSampleSize,
+                        double historicalAveragePoints,
+                        int historicalSampleSize) {
+
+                if (recentSampleSize < 2
+                                || historicalSampleSize < MIN_HISTORICAL_SAMPLE_SIZE) {
+                        return null;
+                }
+
+                return recentWeightedAverage - historicalAveragePoints;
+        }
+
+        private Double calculateHistoricalConsistency(
+                        List<PlayerMatchReport> historicalReports,
+                        double historicalAveragePoints) {
+
+                if (historicalReports == null
+                                || historicalReports.size() < MIN_HISTORICAL_SAMPLE_SIZE) {
+                        return null;
+                }
+
+                double squaredDifferences = historicalReports.stream()
+                                .map(PlayerMatchReport::getPoints)
+                                .mapToDouble(points -> {
+                                        double difference = points - historicalAveragePoints;
+                                        return difference * difference;
+                                })
+                                .average()
+                                .orElse(0);
+
+                double standardDeviation = Math.sqrt(
+                                squaredDifferences);
+
+                return normalizeConsistency(
+                                standardDeviation);
+        }
+
+        private double normalizeConsistency(
+                        double standardDeviation) {
+
+                if (standardDeviation <= CONSISTENCY_EXCELLENT_STDDEV) {
+                        return 1.0;
+                }
+
+                if (standardDeviation >= CONSISTENCY_POOR_STDDEV) {
+                        return 0.0;
+                }
+
+                double range = CONSISTENCY_POOR_STDDEV
+                                - CONSISTENCY_EXCELLENT_STDDEV;
+
+                return 1.0
+                                - ((standardDeviation
+                                                - CONSISTENCY_EXCELLENT_STDDEV)
+                                                / range);
         }
 
         private List<PlayerMatchReport> buildCurrentConsecutiveStreak(

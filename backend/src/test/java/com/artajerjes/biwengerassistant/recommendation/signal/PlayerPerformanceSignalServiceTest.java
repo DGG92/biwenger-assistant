@@ -2,6 +2,7 @@ package com.artajerjes.biwengerassistant.recommendation.signal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -597,6 +598,453 @@ class PlayerPerformanceSignalServiceTest {
 
                 assertTrue(
                                 result.hasAnyPerformanceEvidence());
+        }
+
+        @Test
+        void shouldKeepAdvancedSignalsUnavailableWithInsufficientHistoricalSample() {
+                List<PlayerMatchReport> recentReports = List.of(
+                                report(
+                                                55002L,
+                                                5502L,
+                                                "Jornada 2",
+                                                "J2",
+                                                2026,
+                                                8,
+                                                23,
+                                                currentSeason(),
+                                                true,
+                                                8),
+                                report(
+                                                55001L,
+                                                5501L,
+                                                "Jornada 1",
+                                                "J1",
+                                                2026,
+                                                8,
+                                                16,
+                                                currentSeason(),
+                                                true,
+                                                6));
+
+                mockRecent(recentReports);
+                mockHistorical(recentReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.recentSignalAvailable());
+                assertFalse(result.historicalSignalAvailable());
+
+                assertFalse(result.recentFormDeltaAvailable());
+                assertFalse(result.historicalConsistencyAvailable());
+
+                assertNull(result.recentFormDelta());
+                assertNull(result.historicalConsistency());
+        }
+
+        @Test
+        void shouldExposePerfectConsistencyForStableHistoricalPerformance() {
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                6,
+                                6,
+                                6,
+                                6,
+                                6);
+
+                mockRecent(List.of());
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.historicalSignalAvailable());
+                assertTrue(result.historicalConsistencyAvailable());
+
+                assertEquals(
+                                1.0,
+                                result.historicalConsistency(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldExposeZeroConsistencyForExtremelyVolatileHistoricalPerformance() {
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                0,
+                                12,
+                                0,
+                                12,
+                                0,
+                                12);
+
+                mockRecent(List.of());
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.historicalConsistencyAvailable());
+
+                assertEquals(
+                                0.0,
+                                result.historicalConsistency(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldNormalizeIntermediateHistoricalConsistency() {
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                2,
+                                4,
+                                6,
+                                8,
+                                10);
+
+                mockRecent(List.of());
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                /*
+                 * Media = 6.
+                 *
+                 * Desviación poblacional:
+                 * sqrt((16 + 4 + 0 + 4 + 16) / 5)
+                 * = sqrt(8)
+                 * = 2.828427...
+                 *
+                 * Normalización 14.C:
+                 * 1 - ((2.828427 - 1) / (6 - 1))
+                 * = 0.634314...
+                 */
+                assertEquals(
+                                0.634314575,
+                                result.historicalConsistency(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldExposePositiveRecentFormDeltaWhenPlayerIsImproving() {
+                List<PlayerMatchReport> recentReports = List.of(
+                                report(
+                                                56002L,
+                                                5602L,
+                                                "Jornada 7",
+                                                "J7",
+                                                2026,
+                                                9,
+                                                27,
+                                                currentSeason(),
+                                                true,
+                                                10),
+                                report(
+                                                56001L,
+                                                5601L,
+                                                "Jornada 6",
+                                                "J6",
+                                                2026,
+                                                9,
+                                                20,
+                                                currentSeason(),
+                                                true,
+                                                8));
+
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                4,
+                                4,
+                                4,
+                                4,
+                                4);
+
+                mockRecent(recentReports);
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.recentFormDeltaAvailable());
+
+                /*
+                 * Forma reciente ponderada:
+                 * (10 * 2 + 8 * 1) / 3 = 9.333333...
+                 *
+                 * Histórico = 4.
+                 */
+                assertEquals(
+                                5.333333333333333,
+                                result.recentFormDelta(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldExposeNegativeRecentFormDeltaWhenPlayerIsDeclining() {
+                List<PlayerMatchReport> recentReports = List.of(
+                                report(
+                                                57002L,
+                                                5702L,
+                                                "Jornada 7",
+                                                "J7",
+                                                2026,
+                                                9,
+                                                27,
+                                                currentSeason(),
+                                                true,
+                                                2),
+                                report(
+                                                57001L,
+                                                5701L,
+                                                "Jornada 6",
+                                                "J6",
+                                                2026,
+                                                9,
+                                                20,
+                                                currentSeason(),
+                                                true,
+                                                4));
+
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                8,
+                                8,
+                                8,
+                                8,
+                                8);
+
+                mockRecent(recentReports);
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.recentFormDeltaAvailable());
+
+                assertEquals(
+                                -5.333333333333333,
+                                result.recentFormDelta(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldExposeNeutralRecentFormDeltaWhenRecentFormMatchesBaseline() {
+                List<PlayerMatchReport> recentReports = List.of(
+                                report(
+                                                58002L,
+                                                5802L,
+                                                "Jornada 7",
+                                                "J7",
+                                                2026,
+                                                9,
+                                                27,
+                                                currentSeason(),
+                                                true,
+                                                6),
+                                report(
+                                                58001L,
+                                                5801L,
+                                                "Jornada 6",
+                                                "J6",
+                                                2026,
+                                                9,
+                                                20,
+                                                currentSeason(),
+                                                true,
+                                                6));
+
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                6,
+                                6,
+                                6,
+                                6,
+                                6);
+
+                mockRecent(recentReports);
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertTrue(result.recentFormDeltaAvailable());
+
+                assertEquals(
+                                0.0,
+                                result.recentFormDelta(),
+                                0.000001);
+        }
+
+        @Test
+        void shouldKeepRecentFormDeltaUnavailableWithoutReliableRecentSignal() {
+                List<PlayerMatchReport> recentReports = List.of(
+                                report(
+                                                59001L,
+                                                5901L,
+                                                "Jornada 7",
+                                                "J7",
+                                                2026,
+                                                9,
+                                                27,
+                                                currentSeason(),
+                                                true,
+                                                10));
+
+                List<PlayerMatchReport> historicalReports = historicalReports(
+                                4,
+                                5,
+                                6,
+                                7,
+                                8);
+
+                mockRecent(recentReports);
+                mockHistorical(historicalReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(player);
+
+                assertFalse(result.recentSignalAvailable());
+                assertTrue(result.historicalSignalAvailable());
+
+                assertFalse(result.recentFormDeltaAvailable());
+                assertNull(result.recentFormDelta());
+
+                assertTrue(result.historicalConsistencyAvailable());
+        }
+
+        @Test
+        void shouldKeepAdvancedHistoricalSignalsUnavailableForCoach() {
+                League league = new League(
+                                "Liga",
+                                "league-coach");
+
+                Player coach = new Player(
+                                "99999",
+                                "Entrenador",
+                                List.of(PlayerPosition.E),
+                                "Club",
+                                1_000_000L,
+                                league);
+
+                ReflectionTestUtils.setField(
+                                coach,
+                                "id",
+                                PLAYER_ID);
+
+                List<PlayerMatchReport> recentReports = List.of(
+                                reportForPlayer(
+                                                coach,
+                                                60002L,
+                                                6002L,
+                                                2026,
+                                                9,
+                                                27,
+                                                currentSeason(),
+                                                3),
+                                reportForPlayer(
+                                                coach,
+                                                60001L,
+                                                6001L,
+                                                2026,
+                                                9,
+                                                20,
+                                                currentSeason(),
+                                                3));
+
+                mockRecent(recentReports);
+
+                PlayerPerformanceSignals result = playerPerformanceSignalService
+                                .analyze(coach);
+
+                assertEquals(
+                                0,
+                                result.historicalSampleSize());
+
+                assertFalse(result.historicalSignalAvailable());
+                assertFalse(result.historicalConsistencyAvailable());
+                assertFalse(result.recentFormDeltaAvailable());
+
+                assertNull(result.historicalConsistency());
+                assertNull(result.recentFormDelta());
+        }
+
+        @Test
+        void shouldKeepLegacyConstructorsCompatibleWithAdvancedSignalsUnavailable() {
+                PlayerPerformanceSignals motor20 = new PlayerPerformanceSignals(
+                                7.0,
+                                3,
+                                false,
+                                6.0,
+                                8);
+
+                assertEquals(
+                                3,
+                                motor20.recentObservedMatches());
+
+                assertNull(motor20.recentFormDelta());
+                assertNull(motor20.historicalConsistency());
+
+                PlayerPerformanceSignals sparseData = new PlayerPerformanceSignals(
+                                7.0,
+                                3,
+                                false,
+                                6.0,
+                                8,
+                                4);
+
+                assertEquals(
+                                4,
+                                sparseData.recentObservedMatches());
+
+                assertNull(sparseData.recentFormDelta());
+                assertNull(sparseData.historicalConsistency());
+        }
+
+        private List<PlayerMatchReport> historicalReports(
+                        Integer... points) {
+
+                java.util.ArrayList<PlayerMatchReport> reports = new java.util.ArrayList<>();
+
+                for (int index = 0; index < points.length; index++) {
+
+                        reports.add(
+                                        report(
+                                                        70000L + index,
+                                                        7000L + index,
+                                                        "Jornada " + (index + 1),
+                                                        "J" + (index + 1),
+                                                        2026,
+                                                        8,
+                                                        1 + index,
+                                                        currentSeason(),
+                                                        true,
+                                                        points[index]));
+                }
+
+                return List.copyOf(reports);
+        }
+
+        private PlayerMatchReport reportForPlayer(
+                        Player reportPlayer,
+                        Long matchId,
+                        Long roundId,
+                        int year,
+                        int month,
+                        int day,
+                        String season,
+                        Integer points) {
+
+                return new PlayerMatchReport(
+                                reportPlayer,
+                                matchId,
+                                roundId,
+                                "Jornada",
+                                "J",
+                                LocalDateTime.of(
+                                                year,
+                                                month,
+                                                day,
+                                                20,
+                                                0),
+                                season,
+                                true,
+                                null,
+                                points);
         }
 
         private void mockRecent(List<PlayerMatchReport> reports) {
