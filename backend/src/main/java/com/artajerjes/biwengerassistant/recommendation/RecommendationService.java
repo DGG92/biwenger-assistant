@@ -39,6 +39,8 @@ import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupChan
 import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupPlayerResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerEconomicSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerEconomicSignals;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignals;
 
@@ -87,12 +89,18 @@ public class RecommendationService {
         private final MatchdayDifficultyService matchdayDifficultyService;
         private final MatchdayChangeEligibilityService matchdayChangeEligibilityService;
         private final PlayerPriceHistoryRepository playerPriceHistoryRepository;
+        private final PlayerEconomicSignalService playerEconomicSignalService;
         private final CurrentAssistantUserService currentAssistantUserService;
 
         private static final double IMPOSSIBLE_FORMATION_SCORE = -1_000_000;
         private static final double MATCHDAY_DIFFICULTY_MAX_ADJUSTMENT = 0.08;
         private static final double MIN_FORMATION_CHANGE_IMPROVEMENT = 1.0;
         private static final int ECONOMIC_CHANGE_DAYS = 7;
+        private static final double ECONOMIC_MOMENTUM_DELTA_WEIGHT = 1.5;
+        private static final double ECONOMIC_MOMENTUM_MAX_CORRECTION = 4.0;
+        private static final double ECONOMIC_ACCELERATION_WEIGHT = 2.0;
+        private static final double ECONOMIC_ACCELERATION_MAX_CORRECTION = 3.0;
+        private static final double ECONOMIC_DYNAMIC_MAX_CORRECTION = 5.0;
 
         public RecommendationService(
                         LeagueRepository leagueRepository,
@@ -103,6 +111,7 @@ public class RecommendationService {
                         MatchdayDifficultyService matchdayDifficultyService,
                         MatchdayChangeEligibilityService matchdayChangeEligibilityService,
                         PlayerPriceHistoryRepository playerPriceHistoryRepository,
+                        PlayerEconomicSignalService playerEconomicSignalService,
                         CurrentAssistantUserService currentAssistantUserService) {
 
                 this.leagueRepository = leagueRepository;
@@ -113,6 +122,7 @@ public class RecommendationService {
                 this.matchdayDifficultyService = matchdayDifficultyService;
                 this.matchdayChangeEligibilityService = matchdayChangeEligibilityService;
                 this.playerPriceHistoryRepository = playerPriceHistoryRepository;
+                this.playerEconomicSignalService = playerEconomicSignalService;
                 this.currentAssistantUserService = currentAssistantUserService;
         }
 
@@ -175,6 +185,9 @@ public class RecommendationService {
                                 .analyzeMarketPlayers(
                                                 marketPlayers);
 
+                Map<Long, PlayerEconomicSignals> economicSignalsByPlayerId = playerEconomicSignalService
+                                .analyzeLeague(leagueId);
+
                 return recommendationListings
                                 .stream()
                                 .map(listing -> toRecommendation(
@@ -182,7 +195,8 @@ public class RecommendationService {
                                                 economicStatus.maximumBid(),
                                                 squadNeeds.needScoreByPosition(),
                                                 value7DaysAgoByPlayer,
-                                                performanceByPlayerId))
+                                                performanceByPlayerId,
+                                                economicSignalsByPlayerId))
                                 .sorted(
                                                 Comparator.comparingInt(
                                                                 MarketRecommendationResponse::score)
@@ -195,7 +209,8 @@ public class RecommendationService {
                         Long maximumBid,
                         Map<String, Integer> needScoreByPosition,
                         Map<Long, Long> value7DaysAgoByPlayer,
-                        Map<Long, PlayerPerformanceSignals> performanceByPlayerId) {
+                        Map<Long, PlayerPerformanceSignals> performanceByPlayerId,
+                        Map<Long, PlayerEconomicSignals> economicSignalsByPlayerId) {
                 Player player = listing.getPlayer();
 
                 Long marketValue = player.getMarketValue();
@@ -266,6 +281,8 @@ public class RecommendationService {
 
                 int historicalPerformanceScore = calculateHistoricalPerformanceScore(performance);
 
+                PlayerEconomicSignals economicSignals = economicSignalsByPlayerId.get(player.getId());
+
                 MarketScoreBreakdown scoreBreakdown = calculateScoreBreakdown(
                                 player,
                                 differencePercentage,
@@ -275,7 +292,8 @@ public class RecommendationService {
                                 performance.historicalAveragePoints(),
                                 performance.historicalSampleSize(),
                                 historicalPerformanceScore,
-                                changePercent7Days);
+                                changePercent7Days,
+                                economicSignals);
 
                 int score = calculateScore(
                                 scoreBreakdown,
@@ -575,7 +593,8 @@ public class RecommendationService {
                         double historicalAveragePoints,
                         int historicalSampleSize,
                         int historicalPerformanceScore,
-                        Double changePercent7Days) {
+                        Double changePercent7Days,
+                        PlayerEconomicSignals economicSignals) {
 
                 double baseScore = 50;
 
@@ -592,11 +611,15 @@ public class RecommendationService {
                                 ? 2.0
                                 : 7.0;
 
-                double valueTrendScore = Math.round(
+                double v1ValueTrendScore = Math.round(
                                 clampDouble(
                                                 marketTrendPercentage * trendMultiplier,
                                                 -25,
                                                 25));
+
+                double valueTrendScore = calculateEconomicTrendScore(
+                                v1ValueTrendScore,
+                                economicSignals);
 
                 double squadNeedContribution = (int) Math.round(
                                 squadNeedScore * 0.20);
@@ -626,6 +649,61 @@ public class RecommendationService {
                                 scoreBeforeCaps,
                                 false,
                                 false);
+        }
+
+        private double calculateEconomicTrendScore(
+                        double v1ValueTrendScore,
+                        PlayerEconomicSignals economicSignals) {
+
+                if (economicSignals == null
+                                || !economicSignals.valueTrendAvailable()
+                                || !economicSignals.momentumAvailable()) {
+
+                        return v1ValueTrendScore;
+                }
+
+                double weeklyVelocity = economicSignals.valueTrend7DaysPercent()
+                                / ECONOMIC_CHANGE_DAYS;
+
+                double momentumDelta = economicSignals.marketMomentumPercentPerDay()
+                                - weeklyVelocity;
+
+                double momentumCorrection = clampDouble(
+                                momentumDelta * ECONOMIC_MOMENTUM_DELTA_WEIGHT,
+                                -ECONOMIC_MOMENTUM_MAX_CORRECTION,
+                                ECONOMIC_MOMENTUM_MAX_CORRECTION);
+
+                double accelerationCorrection = 0;
+
+                if (economicSignals.accelerationAvailable()) {
+                        accelerationCorrection = clampDouble(
+                                        economicSignals.valueAccelerationPercentPerDaySquared()
+                                                        * ECONOMIC_ACCELERATION_WEIGHT,
+                                        -ECONOMIC_ACCELERATION_MAX_CORRECTION,
+                                        ECONOMIC_ACCELERATION_MAX_CORRECTION);
+                }
+
+                double consistencyWeight = 0.5;
+
+                if (economicSignals.consistencyAvailable()) {
+                        consistencyWeight = 0.5
+                                        + clampDouble(
+                                                        economicSignals.trendConsistency(),
+                                                        0,
+                                                        1) * 0.5;
+                }
+
+                double dynamicCorrection = clampDouble(
+                                (momentumCorrection + accelerationCorrection)
+                                                * consistencyWeight,
+                                -ECONOMIC_DYNAMIC_MAX_CORRECTION,
+                                ECONOMIC_DYNAMIC_MAX_CORRECTION);
+
+                return Math.round(
+                                clampDouble(
+                                                v1ValueTrendScore + dynamicCorrection,
+                                                -25,
+                                                25));
         }
 
         private int calculateScore(

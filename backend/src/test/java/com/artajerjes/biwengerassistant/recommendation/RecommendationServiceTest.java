@@ -52,6 +52,8 @@ import com.artajerjes.biwengerassistant.recommendation.dto.MarketRecommendationR
 import com.artajerjes.biwengerassistant.recommendation.dto.RecommendedLineupResponse;
 import com.artajerjes.biwengerassistant.recommendation.dto.SquadNeedsResponse;
 import com.artajerjes.biwengerassistant.recommendation.signal.PlayerPerformanceSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerEconomicSignalService;
+import com.artajerjes.biwengerassistant.recommendation.signal.PlayerEconomicSignals;
 
 @ExtendWith(MockitoExtension.class)
 class RecommendationServiceTest {
@@ -94,6 +96,9 @@ class RecommendationServiceTest {
         private PlayerPriceHistoryRepository playerPriceHistoryRepository;
 
         @Mock
+        private PlayerEconomicSignalService playerEconomicSignalService;
+
+        @Mock
         private CurrentAssistantUserService currentAssistantUserService;
 
         private RecommendationService recommendationService;
@@ -131,6 +136,7 @@ class RecommendationServiceTest {
                                 matchdayDifficultyService,
                                 matchdayChangeEligibilityService,
                                 playerPriceHistoryRepository,
+                                playerEconomicSignalService,
                                 currentAssistantUserService);
 
                 lenient()
@@ -140,6 +146,10 @@ class RecommendationServiceTest {
                                                                                 anyLong(),
                                                                                 any(LocalDate.class)))
                                 .thenReturn(List.of());
+
+                lenient()
+                                .when(playerEconomicSignalService.analyzeLeague(anyLong()))
+                                .thenReturn(Map.of());
 
                 lenient().when(
                                 matchdayDifficultyService.resolveForTeams(
@@ -386,6 +396,228 @@ class RecommendationServiceTest {
                 assertFalse(
                                 result.reasons().contains(
                                                 MarketRecommendationReason.VALUE_FALLING));
+        }
+
+        @Test
+        void marketRecommendationShouldKeepV1TrendWhenEconomicSignalsAreMissing() {
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                100L,
+                                1_100_000L,
+                                1_000_000L,
+                                null);
+
+                assertEquals(
+                                10.0,
+                                result.changePercent7Days(),
+                                0.0001);
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldNotDoubleCountSteadyEconomicMomentum() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                10.0 / 7.0,
+                                0.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                101L,
+                                1_100_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldStrengthenTrendWhenEconomicMomentumAccelerates() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                2.0,
+                                1.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                102L,
+                                1_100_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                23.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldWeakenTrendWhenEconomicMomentumDecelerates() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                1.0,
+                                -1.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                103L,
+                                1_100_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                17.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldDetectPositiveWeeklyTrendThatIsReversingNow() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                -1.0,
+                                -1.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                104L,
+                                1_100_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                15.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldDetectFallingWeeklyTrendThatIsRecoveringNow() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                -10.0,
+                                1.0,
+                                1.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                105L,
+                                900_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                -15.0,
+                                result.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldUseConsistencyOnlyAsDynamicCorrectionWeight() {
+                PlayerEconomicSignals consistentSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                2.0,
+                                1.0,
+                                1.0);
+
+                PlayerEconomicSignals inconsistentSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                10.0,
+                                2.0,
+                                1.0,
+                                0.0);
+
+                MarketRecommendationResponse consistent = executeEconomicTrendScenario(
+                                106L,
+                                1_100_000L,
+                                1_000_000L,
+                                consistentSignals);
+
+                MarketRecommendationResponse inconsistent = executeEconomicTrendScenario(
+                                107L,
+                                1_100_000L,
+                                1_000_000L,
+                                inconsistentSignals);
+
+                assertEquals(
+                                23.0,
+                                consistent.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                21.0,
+                                inconsistent.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldKeepEconomicTrendScoreWithinExistingCap() {
+                PlayerEconomicSignals risingSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                20.0,
+                                20.0,
+                                10.0,
+                                1.0);
+
+                PlayerEconomicSignals fallingSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                8,
+                                -20.0,
+                                -20.0,
+                                -10.0,
+                                1.0);
+
+                MarketRecommendationResponse rising = executeEconomicTrendScenario(
+                                108L,
+                                1_200_000L,
+                                1_000_000L,
+                                risingSignals);
+
+                MarketRecommendationResponse falling = executeEconomicTrendScenario(
+                                109L,
+                                800_000L,
+                                1_000_000L,
+                                fallingSignals);
+
+                assertEquals(
+                                25.0,
+                                rising.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                -25.0,
+                                falling.scoreBreakdown().valueTrend());
+        }
+
+        @Test
+        void marketRecommendationShouldKeepV1TrendWhenEconomicWeeklyTrendIsUnavailable() {
+                PlayerEconomicSignals economicSignals = new PlayerEconomicSignals(
+                                LocalDate.now(),
+                                4,
+                                null,
+                                5.0,
+                                2.0,
+                                1.0);
+
+                MarketRecommendationResponse result = executeEconomicTrendScenario(
+                                110L,
+                                1_100_000L,
+                                1_000_000L,
+                                economicSignals);
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrend());
         }
 
         @Test
@@ -5936,5 +6168,63 @@ class RecommendationServiceTest {
                 }
 
                 return 5;
+        }
+
+        private MarketRecommendationResponse executeEconomicTrendScenario(
+                        Long playerId,
+                        Long currentValue,
+                        Long value7DaysAgo,
+                        PlayerEconomicSignals economicSignals) {
+
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                playerId,
+                                String.valueOf(9000 + playerId),
+                                "Jugador económico " + playerId,
+                                List.of(PlayerPosition.DL),
+                                currentValue,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                currentValue,
+                                null,
+                                league);
+
+                PlayerPriceHistory historicalPrice = new PlayerPriceHistory(
+                                playerId,
+                                LEAGUE_ID,
+                                LocalDate.now().minusDays(7),
+                                value7DaysAgo,
+                                PlayerPriceSource.BIWENGER_DETAIL,
+                                LocalDateTime.now().minusDays(7));
+
+                when(
+                                playerPriceHistoryRepository
+                                                .findLatestPricesAtOrBeforeDateByLeagueId(
+                                                                eq(LEAGUE_ID),
+                                                                any(LocalDate.class)))
+                                .thenReturn(List.of(historicalPrice));
+
+                if (economicSignals == null) {
+                        when(playerEconomicSignalService.analyzeLeague(LEAGUE_ID))
+                                        .thenReturn(Map.of());
+                } else {
+                        when(playerEconomicSignalService.analyzeLeague(LEAGUE_ID))
+                                        .thenReturn(Map.of(
+                                                        playerId,
+                                                        economicSignals));
+                }
+
+                mockCommon(
+                                currentValue * 2,
+                                List.of(listing));
+
+                return recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
         }
 }
