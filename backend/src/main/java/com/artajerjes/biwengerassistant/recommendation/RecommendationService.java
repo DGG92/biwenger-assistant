@@ -319,7 +319,8 @@ public class RecommendationService {
                                 squadNeedScore,
                                 recentFormScore,
                                 historicalPerformanceScore,
-                                changePercent7Days);
+                                changePercent7Days,
+                                scoreBreakdown);
 
                 /*
                  * En una subasta que ya ha superado nuestro límite
@@ -338,12 +339,20 @@ public class RecommendationService {
                                 scoreBreakdown.base(),
                                 scoreBreakdown.price(),
                                 scoreBreakdown.valueTrend(),
+                                scoreBreakdown.valueTrendBase(),
+                                scoreBreakdown.economicTrendCorrection(),
+                                scoreBreakdown.marketMomentumPercentPerDay(),
+                                scoreBreakdown.valueAccelerationPercentPerDaySquared(),
+                                scoreBreakdown.economicTrendConsistency(),
                                 scoreBreakdown.squadNeed(),
                                 scoreBreakdown.recentForm(),
                                 scoreBreakdown.recentFormSampleSize(),
                                 scoreBreakdown.historicalAveragePoints(),
                                 scoreBreakdown.historicalSampleSize(),
                                 scoreBreakdown.historicalPerformance(),
+                                scoreBreakdown.sportsTrendCorrection(),
+                                scoreBreakdown.recentFormDelta(),
+                                scoreBreakdown.historicalConsistency(),
                                 scoreBreakdown.status(),
                                 scoreBreakdown.scoreBeforeCaps(),
                                 affordabilityCapApplied,
@@ -453,7 +462,8 @@ public class RecommendationService {
                         int squadNeedScore,
                         int recentFormScore,
                         int historicalPerformanceScore,
-                        Double changePercent7Days) {
+                        Double changePercent7Days,
+                        MarketScoreBreakdown scoreBreakdown) {
 
                 List<MarketRecommendationReason> reasons = new java.util.ArrayList<>();
 
@@ -486,6 +496,14 @@ public class RecommendationService {
                                         MarketRecommendationReason.VALUE_FALLING);
                 }
 
+                if (scoreBreakdown.economicTrendCorrection() > 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.ECONOMIC_DYNAMICS_IMPROVING);
+                } else if (scoreBreakdown.economicTrendCorrection() < 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.ECONOMIC_DYNAMICS_WEAKENING);
+                }
+
                 if (squadNeedScore >= 50) {
                         reasons.add(
                                         MarketRecommendationReason.SQUAD_POSITION_NEEDED);
@@ -497,6 +515,14 @@ public class RecommendationService {
                 } else if (recentFormScore >= 5) {
                         reasons.add(
                                         MarketRecommendationReason.GOOD_RECENT_FORM);
+                }
+
+                if (scoreBreakdown.sportsTrendCorrection() > 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.RECENT_FORM_IMPROVING);
+                } else if (scoreBreakdown.sportsTrendCorrection() < 0) {
+                        reasons.add(
+                                        MarketRecommendationReason.RECENT_FORM_DECLINING);
                 }
 
                 if (historicalPerformanceScore >= 5) {
@@ -626,6 +652,9 @@ public class RecommendationService {
                                 v1ValueTrendScore,
                                 economicSignals);
 
+                double economicTrendCorrection = valueTrendScore
+                                - v1ValueTrendScore;
+
                 double squadNeedContribution = (int) Math.round(
                                 squadNeedScore * 0.20);
 
@@ -648,12 +677,30 @@ public class RecommendationService {
                                 baseScore,
                                 priceScore,
                                 valueTrendScore,
+                                v1ValueTrendScore,
+                                economicTrendCorrection,
+                                economicSignals == null
+                                                ? null
+                                                : economicSignals.marketMomentumPercentPerDay(),
+                                economicSignals == null
+                                                ? null
+                                                : economicSignals.valueAccelerationPercentPerDaySquared(),
+                                economicSignals == null
+                                                ? null
+                                                : economicSignals.trendConsistency(),
                                 squadNeedContribution,
                                 recentFormScore,
                                 recentFormSampleSize,
                                 historicalAveragePoints,
                                 historicalSampleSize,
                                 historicalPerformanceScore,
+                                sportsTrendCorrection,
+                                performance == null
+                                                ? null
+                                                : performance.recentFormDelta(),
+                                performance == null
+                                                ? null
+                                                : performance.historicalConsistency(),
                                 statusPenalty,
                                 scoreBeforeCaps,
                                 false,

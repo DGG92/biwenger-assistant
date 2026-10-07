@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -414,6 +415,31 @@ class RecommendationServiceTest {
                 assertEquals(
                                 20.0,
                                 result.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrendBase());
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().economicTrendCorrection());
+
+                assertNull(
+                                result.scoreBreakdown().marketMomentumPercentPerDay());
+
+                assertNull(
+                                result.scoreBreakdown().valueAccelerationPercentPerDaySquared());
+
+                assertNull(
+                                result.scoreBreakdown().economicTrendConsistency());
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_IMPROVING));
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_WEAKENING));
         }
 
         @Test
@@ -435,6 +461,37 @@ class RecommendationServiceTest {
                 assertEquals(
                                 20.0,
                                 result.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrendBase());
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().economicTrendCorrection());
+
+                assertEquals(
+                                10.0 / 7.0,
+                                result.scoreBreakdown().marketMomentumPercentPerDay(),
+                                0.0001);
+
+                assertEquals(
+                                0.0,
+                                result.scoreBreakdown().valueAccelerationPercentPerDaySquared(),
+                                0.0001);
+
+                assertEquals(
+                                1.0,
+                                result.scoreBreakdown().economicTrendConsistency(),
+                                0.0001);
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_IMPROVING));
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_WEAKENING));
         }
 
         @Test
@@ -456,6 +513,37 @@ class RecommendationServiceTest {
                 assertEquals(
                                 23.0,
                                 result.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrendBase());
+
+                assertEquals(
+                                3.0,
+                                result.scoreBreakdown().economicTrendCorrection());
+
+                assertEquals(
+                                2.0,
+                                result.scoreBreakdown().marketMomentumPercentPerDay(),
+                                0.0001);
+
+                assertEquals(
+                                1.0,
+                                result.scoreBreakdown().valueAccelerationPercentPerDaySquared(),
+                                0.0001);
+
+                assertEquals(
+                                1.0,
+                                result.scoreBreakdown().economicTrendConsistency(),
+                                0.0001);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_IMPROVING));
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_WEAKENING));
         }
 
         @Test
@@ -477,6 +565,22 @@ class RecommendationServiceTest {
                 assertEquals(
                                 17.0,
                                 result.scoreBreakdown().valueTrend());
+
+                assertEquals(
+                                20.0,
+                                result.scoreBreakdown().valueTrendBase());
+
+                assertEquals(
+                                -3.0,
+                                result.scoreBreakdown().economicTrendCorrection());
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_WEAKENING));
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.ECONOMIC_DYNAMICS_IMPROVING));
         }
 
         @Test
@@ -5647,6 +5751,126 @@ class RecommendationServiceTest {
         }
 
         @Test
+        void formationPlayerRatingShouldPreserveV1FormulaWithEngine21Signals() {
+
+                Player player = createPlayer(
+                                130L,
+                                "9130",
+                                "Jugador rating V1",
+                                List.of(PlayerPosition.MC),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
+                                8.0,
+                                5,
+                                false,
+                                6.0,
+                                7,
+                                5,
+                                2.0,
+                                0.75);
+
+                Map<Long, PlayerPerformanceSignals> performanceByPlayerId = new HashMap<>();
+
+                performanceByPlayerId.put(
+                                player.getId(),
+                                performance);
+
+                Double result = ReflectionTestUtils.invokeMethod(
+                                recommendationService,
+                                "calculateFormationPlayerRating",
+                                player,
+                                PlayerPosition.MC,
+                                new HashMap<Long, OpponentDifficulty>(),
+                                performanceByPlayerId);
+
+                double expectedV1Rating = 8.0 * 0.65
+                                + 6.0 * 0.35;
+
+                assertEquals(
+                                expectedV1Rating,
+                                result,
+                                0.000001);
+        }
+
+        @Test
+        void marketRecommendationShouldExposeAndExplainPositiveSportsTrendThroughPublicFlow() {
+
+                League league = createLeague();
+
+                Player player = createPlayer(
+                                120L,
+                                "9120",
+                                "Jugador tendencia deportiva",
+                                List.of(PlayerPosition.DL),
+                                1_000_000L,
+                                0L,
+                                false);
+
+                MarketListing listing = createListing(
+                                MarketListingType.SALE,
+                                player,
+                                1_000_000L,
+                                null,
+                                league);
+
+                List<PlayerMatchReport> recentReports = List.of(
+                                createPerformanceReport(player, 12001L, 6005L, 10, 5),
+                                createPerformanceReport(player, 12002L, 6004L, 9, 4),
+                                createPerformanceReport(player, 12003L, 6003L, 8, 3),
+                                createPerformanceReport(player, 12004L, 6002L, 7, 2),
+                                createPerformanceReport(player, 12005L, 6001L, 6, 1));
+
+                List<PlayerMatchReport> historicalReports = List.of(
+                                createPerformanceReport(player, 12101L, 5905L, 5, 15),
+                                createPerformanceReport(player, 12102L, 5904L, 5, 14),
+                                createPerformanceReport(player, 12103L, 5903L, 5, 13),
+                                createPerformanceReport(player, 12104L, 5902L, 5, 12),
+                                createPerformanceReport(player, 12105L, 5901L, 5, 11));
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop5ReportsByPlayerIds(any()))
+                                .thenReturn(recentReports);
+
+                when(
+                                playerMatchReportRepository
+                                                .findTop10ScoredReportsByPlayerIds(any()))
+                                .thenReturn(historicalReports);
+
+                mockCommon(
+                                2_000_000L,
+                                List.of(listing));
+
+                MarketRecommendationResponse result = recommendationService
+                                .getMarketRecommendations(LEAGUE_ID)
+                                .get(0);
+
+                assertTrue(
+                                result.scoreBreakdown().sportsTrendCorrection() > 0);
+
+                assertTrue(
+                                result.scoreBreakdown().recentFormDelta() > 0);
+
+                assertEquals(
+                                5,
+                                result.scoreBreakdown().recentFormSampleSize());
+
+                assertTrue(
+                                result.scoreBreakdown().historicalConsistency() >= 0);
+
+                assertTrue(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.RECENT_FORM_IMPROVING));
+
+                assertFalse(
+                                result.reasons().contains(
+                                                MarketRecommendationReason.RECENT_FORM_DECLINING));
+        }
+
+        @Test
         void sportsTrendCorrectionShouldKeepExactFallbackWithoutAdvancedSignal() {
 
                 PlayerPerformanceSignals performance = new PlayerPerformanceSignals(
@@ -6381,6 +6605,26 @@ class RecommendationServiceTest {
                 }
 
                 return 5;
+        }
+
+        private PlayerMatchReport createPerformanceReport(
+                        Player player,
+                        Long matchId,
+                        Long roundId,
+                        int points,
+                        int daysAgo) {
+
+                return new PlayerMatchReport(
+                                player,
+                                matchId,
+                                roundId,
+                                "Jornada " + roundId,
+                                "J" + roundId,
+                                LocalDateTime.now().minusDays(daysAgo),
+                                "2026-2027",
+                                true,
+                                null,
+                                points);
         }
 
         private MarketRecommendationResponse executeEconomicTrendScenario(

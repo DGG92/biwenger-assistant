@@ -524,23 +524,76 @@
                 <h3>Confianza de la formación</h3>
 
                 <p>
-                    Tampoco es una probabilidad estadística. Es un índice
-                    heurístico que refleja cuánto mejora la alternativa
-                    propuesta.
+                    No es una probabilidad estadística. Es un índice heurístico que
+                    combina la fuerza de la mejora táctica con la cantidad de
+                    evidencia deportiva disponible para los once jugadores
+                    recomendados.
                 </p>
 
                 <div class="formula">
                     <code>
-                        si mejora = 0 → confianza = 0
+            confianza base =
+            si mejora = 0 → 0
 
-                        si mejora &gt; 0 →
-                        55 + min(redondeo(mejora × 5), 35)
-                    </code>
+            si mejora &gt; 0 →
+            55 + min(redondeo(mejora × 5), 35)
+
+            confianza final =
+            confianza base × cobertura de evidencia
+        </code>
                 </div>
 
                 <p>
-                    El máximo es <strong>90 %</strong>.
+                    La <strong>confianza base</strong> conserva la fórmula original:
+                    cuanto mayor sea la mejora del score de la alineación, mayor será
+                    la confianza, con un máximo de <strong>90 %</strong>.
                 </p>
+
+                <div class="rule-grid">
+                    <div class="rule">
+                        <strong>Reciente + histórico suficientes</strong>
+                        <span>
+                            El jugador aporta un peso de evidencia de 1,00.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Solo una muestra suficiente</strong>
+                        <span>
+                            Si solo existe forma reciente o histórico suficiente,
+                            aporta un peso de 0,70.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Datos observados pero insuficientes</strong>
+                        <span>
+                            Si existen partidos pero todavía no alcanzan las muestras
+                            mínimas, aporta un peso de 0,25.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Sin evidencia</strong>
+                        <span>
+                            Si no existen datos deportivos observados, aporta 0.
+                        </span>
+                    </div>
+                </div>
+
+                <p>
+                    La cobertura de evidencia es la media de esos pesos entre los
+                    jugadores de la alineación recomendada. De esta forma, una
+                    formación puede parecer mejor por rating pero recibir una
+                    confianza menor si esa ventaja está respaldada por pocos datos.
+                </p>
+
+                <div class="note">
+                    <strong>Importante.</strong>
+                    Engine 2.1 no cambia el rating deportivo 65/35 utilizado para
+                    construir las alineaciones. Lo que cambia es la confianza que se
+                    atribuye a la recomendación cuando la evidencia es escasa.
+                </div>
             </article>
         </div>
 
@@ -717,13 +770,22 @@
                     score previo =
                     50
                     + precio
-                    + tendencia de valor
+                    + tendencia de valor 2.1
                     + necesidad de plantilla
                     + forma reciente
                     + histórico
+                    + dinámica deportiva 2.1
                     + estado
                 </code>
             </div>
+
+            <p>
+                Engine 2.1 mantiene intacta la estructura base del score, pero
+                enriquece dos partes con evidencia adicional:
+                <strong>la evolución económica</strong> puede corregir la tendencia
+                de valor y la <strong>dinámica deportiva reciente</strong> puede
+                aplicar un pequeño ajuste adicional.
+            </p>
 
             <p>
                 El resultado final se redondea y limita entre
@@ -756,14 +818,82 @@
             </article>
 
             <article class="algorithm-card">
-                <span class="score-label">Tendencia</span>
+                <span class="score-label">Tendencia económica 2.1</span>
                 <strong class="score-value">−25…+25</strong>
+
                 <p>
-                    Si existe histórico real de siete días, el porcentaje
-                    de variación se multiplica por 2. Si no existe, se usa
-                    la fluctuación disponible como señal alternativa con
-                    multiplicador 7. El resultado se limita a ±25.
+                    La señal parte de la tendencia económica original. Si existe
+                    histórico real de siete días, el porcentaje de variación se
+                    multiplica por 2. Si no existe, se utiliza la fluctuación
+                    alternativa con multiplicador 7.
                 </p>
+
+                <div class="formula compact">
+                    <code>
+                        tendencia 2.1 =
+                        tendencia base
+                        + corrección dinámica económica
+                    </code>
+                </div>
+
+                <p>
+                    Engine 2.1 compara además el ritmo reciente de cambio del valor
+                    con su tendencia semanal y estudia si ese ritmo está acelerando o
+                    frenándose. La corrección dinámica puede modificar la señal base,
+                    pero el resultado total sigue limitado a <strong>±25</strong>.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <span class="score-label">Dinámica económica</span>
+                <strong class="score-value">hasta ±5</strong>
+
+                <p>
+                    La corrección económica combina
+                    <strong>momentum</strong>, <strong>aceleración</strong> y
+                    <strong>consistencia</strong>.
+                </p>
+
+                <div class="rule-grid">
+                    <div class="rule">
+                        <strong>Momentum</strong>
+                        <span>
+                            Mide el ritmo reciente de subida o bajada del valor,
+                            expresado como porcentaje diario.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Aceleración</strong>
+                        <span>
+                            Compara el ritmo económico más reciente con el tramo
+                            anterior para detectar si la tendencia gana o pierde
+                            fuerza.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Consistencia</strong>
+                        <span>
+                            Mide cuánto mantiene el histórico una dirección coherente
+                            y modula la fuerza de la corrección.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Sin evidencia suficiente</strong>
+                        <span>
+                            No se inventa una señal económica: se conserva la
+                            tendencia original.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="note">
+                    La corrección dinámica está limitada a <strong>±5 puntos</strong>
+                    y nunca sustituye la señal económica original: únicamente la
+                    refina cuando existe histórico suficiente.
+                </div>
             </article>
 
             <article class="algorithm-card">
@@ -812,6 +942,39 @@
             </article>
 
             <article class="algorithm-card">
+                <span class="score-label">Dinámica deportiva 2.1</span>
+                <strong class="score-value">−3…+3</strong>
+
+                <p>
+                    Además de valorar por separado la forma reciente y el histórico,
+                    Engine 2.1 estudia si el rendimiento reciente está
+                    <strong>mejorando o empeorando</strong> respecto a la referencia
+                    histórica del jugador.
+                </p>
+
+                <div class="formula compact">
+                    <code>
+            variación de forma =
+            forma reciente − rendimiento histórico
+        </code>
+                </div>
+
+                <p>
+                    La intensidad de la corrección depende también del tamaño de la
+                    muestra reciente y de la consistencia histórica. Una diferencia
+                    observada con pocos partidos tiene menos peso que la misma
+                    diferencia respaldada por una muestra mayor.
+                </p>
+
+                <div class="note">
+                    El ajuste deportivo adicional está limitado a
+                    <strong>±3 puntos</strong>. Si no existe evidencia suficiente
+                    para comparar reciente e histórico, aporta 0: ausencia de datos
+                    no significa mal rendimiento.
+                </div>
+            </article>
+
+            <article class="algorithm-card">
                 <span class="score-label">Estado</span>
                 <strong class="score-value">0…−30</strong>
 
@@ -855,12 +1018,27 @@
 
             <p>
                 Además del número, el motor explica qué señales han sido
-                relevantes. Puede indicar precio por debajo o por encima
-                del mercado, valor al alza o alza fuerte, valor a la baja,
-                buena o excelente forma reciente, histórico fuerte o
-                pobre, necesidad de esa posición, lesión o falta de
-                presupuesto.
+                relevantes. Puede indicar precio por debajo o por encima del
+                mercado, valor al alza o a la baja, buena o excelente forma
+                reciente, histórico fuerte o pobre, necesidad de una posición,
+                lesión o falta de presupuesto.
             </p>
+
+            <p>
+                Engine 2.1 añade motivos específicos cuando las nuevas señales
+                modifican realmente el score:
+                <strong>dinámica económica mejorando</strong>,
+                <strong>dinámica económica debilitándose</strong>,
+                <strong>forma reciente mejorando</strong> y
+                <strong>forma reciente empeorando</strong>.
+            </p>
+
+            <div class="note">
+                Estos motivos no aparecen simplemente porque exista un dato.
+                Solo se muestran cuando la correspondiente señal 2.1 produce una
+                corrección real sobre el score. Así, la explicación visible y el
+                cálculo realizado permanecen alineados.
+            </div>
 
             <p>
                 Como referencia, una diferencia de precio de al menos
@@ -1345,12 +1523,84 @@
 
             <article class="algorithm-card">
                 <h3>Pocos datos de rendimiento</h3>
+
                 <p>
-                    El motor evita convertir muestras demasiado pequeñas
-                    en señales fuertes. Menos de 2 partidos consecutivos no
-                    generan forma reciente y menos de 5 partidos históricos
-                    no generan contribución histórica de mercado.
+                    Engine 2.1 distingue explícitamente entre
+                    <strong>rendimiento malo</strong> y
+                    <strong>rendimiento todavía desconocido</strong>.
                 </p>
+
+                <p>
+                    Menos de 2 partidos consecutivos no generan forma reciente y
+                    menos de 5 partidos históricos no generan contribución
+                    histórica de mercado. Las nuevas señales deportivas también
+                    necesitan evidencia suficiente antes de modificar el score.
+                </p>
+
+                <p>
+                    Tener pocos partidos, por tanto, no penaliza automáticamente al
+                    jugador como si hubiera rendido mal. El motor utiliza un fallback
+                    neutral y reduce la confianza cuando corresponde.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Poco histórico económico</h3>
+
+                <p>
+                    Momentum, aceleración y consistencia económica solo se utilizan
+                    cuando el histórico de precios permite calcularlos con evidencia
+                    suficiente.
+                </p>
+
+                <p>
+                    Si faltan esos datos, Engine 2.1 no inventa una subida, una
+                    bajada ni una aceleración. La recomendación conserva la lógica
+                    económica anterior disponible como fallback.
+                </p>
+            </article>
+
+            <article class="algorithm-card">
+                <h3>Señales que todavía no intervienen</h3>
+
+                <p>
+                    El motor solo utiliza señales que pueden sostenerse con los datos
+                    persistidos actualmente. Algunas métricas potencialmente útiles
+                    todavía no forman parte del score 2.1 porque su cobertura no es
+                    suficientemente fiable.
+                </p>
+
+                <div class="rule-grid">
+                    <div class="rule">
+                        <strong>Fiabilidad de minutos</strong>
+                        <span>
+                            No se utiliza mientras los minutos jugados no estén
+                            disponibles de forma suficientemente fiable.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Rendimiento local / visitante</strong>
+                        <span>
+                            No interviene todavía porque la cobertura disponible no
+                            permite construir una señal suficientemente representativa.
+                        </span>
+                    </div>
+
+                    <div class="rule">
+                        <strong>Comparación entre temporadas</strong>
+                        <span>
+                            No se utiliza mientras no exista histórico suficiente de
+                            varias temporadas.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Principio del motor:</strong>
+                    es preferible no utilizar una métrica a convertir datos
+                    incompletos en una señal aparentemente precisa.
+                </div>
             </article>
         </div>
     </section>
@@ -1422,8 +1672,9 @@
                     <strong>Confianza de formación</strong>
                     <span>0–90</span>
                     <span>
-                        Índice heurístico derivado de la mejora de score que
-                        aporta el cambio táctico.
+                        Índice heurístico que combina la mejora de score del
+                        cambio táctico con la cobertura de evidencia deportiva
+                        de la alineación recomendada.
                     </span>
                 </div>
 

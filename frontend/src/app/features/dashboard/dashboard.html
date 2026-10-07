@@ -526,20 +526,24 @@
                     track reason
                     ) {
                     <span [class.positive]="
-                reason === 'PRICE_BELOW_MARKET'
-                || reason === 'VALUE_RISING'
-                || reason === 'VALUE_RISING_FAST'
-                || reason === 'GOOD_RECENT_FORM'
-                || reason === 'EXCELLENT_RECENT_FORM'
-                || reason === 'STRONG_HISTORICAL_PERFORMANCE'
-                || reason === 'SQUAD_POSITION_NEEDED'
-            " [class.negative]="
-                reason === 'PRICE_ABOVE_MARKET'
-                || reason === 'VALUE_FALLING'
-                || reason === 'POOR_HISTORICAL_PERFORMANCE'
-                || reason === 'INJURED'
-                || reason === 'UNAFFORDABLE'
-            ">
+                        reason === 'PRICE_BELOW_MARKET'
+                        || reason === 'VALUE_RISING'
+                        || reason === 'VALUE_RISING_FAST'
+                        || reason === 'GOOD_RECENT_FORM'
+                        || reason === 'EXCELLENT_RECENT_FORM'
+                        || reason === 'STRONG_HISTORICAL_PERFORMANCE'
+                        || reason === 'SQUAD_POSITION_NEEDED'
+                        || reason === 'ECONOMIC_DYNAMICS_IMPROVING'
+                        || reason === 'RECENT_FORM_IMPROVING'
+                    " [class.negative]="
+                        reason === 'PRICE_ABOVE_MARKET'
+                        || reason === 'VALUE_FALLING'
+                        || reason === 'POOR_HISTORICAL_PERFORMANCE'
+                        || reason === 'INJURED'
+                        || reason === 'UNAFFORDABLE'
+                        || reason === 'ECONOMIC_DYNAMICS_WEAKENING'
+                        || reason === 'RECENT_FORM_DECLINING'
+                    ">
                         {{ reasonLabel(reason) }}
                     </span>
                     }

@@ -256,6 +256,18 @@ export class Recommendations {
             case 'STARTER':
                 return 'Titular';
 
+            case 'ECONOMIC_DYNAMICS_IMPROVING':
+                return 'Dinámica económica mejorando';
+
+            case 'ECONOMIC_DYNAMICS_WEAKENING':
+                return 'Dinámica económica debilitándose';
+
+            case 'RECENT_FORM_IMPROVING':
+                return 'Forma reciente mejorando';
+
+            case 'RECENT_FORM_DECLINING':
+                return 'Forma reciente empeorando';
+
             default:
                 return signal
                     .toLowerCase()
@@ -283,7 +295,9 @@ export class Recommendations {
             'HISTORICAL_PERFORMANCE_GOOD',
             'STRONG_HISTORICAL_PERFORMANCE',
             'HISTORICAL_PERFORMANCE_STRONG',
-            'STARTER'
+            'STARTER',
+            'ECONOMIC_DYNAMICS_IMPROVING',
+            'RECENT_FORM_IMPROVING'
         ].includes(signal);
     }
 
@@ -296,7 +310,9 @@ export class Recommendations {
             'POOR_RECENT_FORM',
             'RECENT_FORM_POOR',
             'POOR_HISTORICAL_PERFORMANCE',
-            'HISTORICAL_PERFORMANCE_POOR'
+            'HISTORICAL_PERFORMANCE_POOR',
+            'ECONOMIC_DYNAMICS_WEAKENING',
+            'RECENT_FORM_DECLINING'
         ].includes(signal);
     }
 

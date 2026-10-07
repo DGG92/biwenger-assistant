@@ -341,6 +341,18 @@ export class Market {
 
       case 'UNAFFORDABLE':
         return 'Fuera de presupuesto';
+
+      case 'ECONOMIC_DYNAMICS_IMPROVING':
+        return 'Dinámica económica mejorando';
+
+      case 'ECONOMIC_DYNAMICS_WEAKENING':
+        return 'Dinámica económica debilitándose';
+
+      case 'RECENT_FORM_IMPROVING':
+        return 'Forma reciente mejorando';
+
+      case 'RECENT_FORM_DECLINING':
+        return 'Forma reciente empeorando';
     }
   }
 
@@ -349,17 +361,21 @@ export class Market {
     number
   > = {
       EXCELLENT_RECENT_FORM: 1,
-      STRONG_HISTORICAL_PERFORMANCE: 2,
-      VALUE_RISING_FAST: 3,
-      SQUAD_POSITION_NEEDED: 4,
-      GOOD_RECENT_FORM: 5,
-      VALUE_RISING: 6,
-      PRICE_BELOW_MARKET: 7,
-      PRICE_ABOVE_MARKET: 8,
-      VALUE_FALLING: 9,
-      POOR_HISTORICAL_PERFORMANCE: 10,
-      UNAFFORDABLE: 11,
-      INJURED: 12
+      RECENT_FORM_IMPROVING: 2,
+      STRONG_HISTORICAL_PERFORMANCE: 3,
+      ECONOMIC_DYNAMICS_IMPROVING: 4,
+      VALUE_RISING_FAST: 5,
+      SQUAD_POSITION_NEEDED: 6,
+      GOOD_RECENT_FORM: 7,
+      VALUE_RISING: 8,
+      PRICE_BELOW_MARKET: 9,
+      RECENT_FORM_DECLINING: 10,
+      ECONOMIC_DYNAMICS_WEAKENING: 11,
+      PRICE_ABOVE_MARKET: 12,
+      VALUE_FALLING: 13,
+      POOR_HISTORICAL_PERFORMANCE: 14,
+      UNAFFORDABLE: 15,
+      INJURED: 16
     };
 
   orderedReasons(

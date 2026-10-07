@@ -429,19 +429,89 @@
                         </div>
 
                         <div>
-                            <span>
-                                @if (player.changePercent7Days !== null) {
-                                Tendencia de valor · 7 días
-                                } @else {
-                                Tendencia de valor · reciente
-                                }
-                            </span>
+                            <span>Tendencia de valor · base</span>
+
+                            <strong [class.positive]="player.scoreBreakdown.valueTrendBase > 0"
+                                [class.negative]="player.scoreBreakdown.valueTrendBase < 0">
+                                {{ player.scoreBreakdown.valueTrendBase > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.valueTrendBase | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Dinámica económica · ajuste 2.1</span>
+
+                            <strong [class.positive]="player.scoreBreakdown.economicTrendCorrection > 0"
+                                [class.negative]="player.scoreBreakdown.economicTrendCorrection < 0">
+                                {{ player.scoreBreakdown.economicTrendCorrection > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.economicTrendCorrection | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Tendencia de valor · total</span>
+
                             <strong [class.positive]="player.scoreBreakdown.valueTrend > 0"
                                 [class.negative]="player.scoreBreakdown.valueTrend < 0">
                                 {{ player.scoreBreakdown.valueTrend > 0 ? '+' : '' }}
                                 {{ player.scoreBreakdown.valueTrend | number:'1.0-1':'es-ES' }}
                             </strong>
                         </div>
+
+                        @if (
+                        player.scoreBreakdown.marketMomentumPercentPerDay !== null
+                        || player.scoreBreakdown.valueAccelerationPercentPerDaySquared !== null
+                        || player.scoreBreakdown.economicTrendConsistency !== null
+                        ) {
+                        <div>
+                            <span>Momentum de mercado</span>
+
+                            @if (player.scoreBreakdown.marketMomentumPercentPerDay !== null) {
+                            <strong [class.positive]="player.scoreBreakdown.marketMomentumPercentPerDay > 0"
+                                [class.negative]="player.scoreBreakdown.marketMomentumPercentPerDay < 0">
+                                {{ player.scoreBreakdown.marketMomentumPercentPerDay > 0 ? '+' : '' }}
+                                {{
+                                player.scoreBreakdown.marketMomentumPercentPerDay
+                                | number:'1.0-2':'es-ES'
+                                }}%/día
+                            </strong>
+                            } @else {
+                            <strong class="metric-unavailable">Sin evidencia</strong>
+                            }
+                        </div>
+
+                        <div>
+                            <span>Aceleración del valor</span>
+
+                            @if (player.scoreBreakdown.valueAccelerationPercentPerDaySquared !== null) {
+                            <strong [class.positive]="player.scoreBreakdown.valueAccelerationPercentPerDaySquared > 0"
+                                [class.negative]="player.scoreBreakdown.valueAccelerationPercentPerDaySquared < 0">
+                                {{ player.scoreBreakdown.valueAccelerationPercentPerDaySquared > 0 ? '+' : '' }}
+                                {{
+                                player.scoreBreakdown.valueAccelerationPercentPerDaySquared
+                                | number:'1.0-2':'es-ES'
+                                }}%/día²
+                            </strong>
+                            } @else {
+                            <strong class="metric-unavailable">Sin evidencia</strong>
+                            }
+                        </div>
+
+                        <div>
+                            <span>Consistencia económica</span>
+
+                            @if (player.scoreBreakdown.economicTrendConsistency !== null) {
+                            <strong>
+                                {{
+                                player.scoreBreakdown.economicTrendConsistency * 100
+                                | number:'1.0-0':'es-ES'
+                                }}%
+                            </strong>
+                            } @else {
+                            <strong class="metric-unavailable">Sin evidencia</strong>
+                            }
+                        </div>
+                        }
 
                         <div>
                             <span>Necesidad de posición</span>
@@ -466,6 +536,54 @@
                                 {{ player.scoreBreakdown.recentForm | number:'1.0-1':'es-ES' }}
                             </strong>
                         </div>
+
+                        <div>
+                            <span>Dinámica deportiva · ajuste 2.1</span>
+
+                            <strong [class.positive]="player.scoreBreakdown.sportsTrendCorrection > 0"
+                                [class.negative]="player.scoreBreakdown.sportsTrendCorrection < 0">
+                                {{ player.scoreBreakdown.sportsTrendCorrection > 0 ? '+' : '' }}
+                                {{ player.scoreBreakdown.sportsTrendCorrection | number:'1.0-1':'es-ES' }}
+                            </strong>
+                        </div>
+
+                        @if (
+                        player.scoreBreakdown.recentFormDelta !== null
+                        || player.scoreBreakdown.historicalConsistency !== null
+                        ) {
+                        <div>
+                            <span>Variación de forma reciente</span>
+
+                            @if (player.scoreBreakdown.recentFormDelta !== null) {
+                            <strong [class.positive]="player.scoreBreakdown.recentFormDelta > 0"
+                                [class.negative]="player.scoreBreakdown.recentFormDelta < 0">
+                                {{ player.scoreBreakdown.recentFormDelta > 0 ? '+' : '' }}
+                                {{
+                                player.scoreBreakdown.recentFormDelta
+                                | number:'1.0-2':'es-ES'
+                                }}
+                                pts
+                            </strong>
+                            } @else {
+                            <strong class="metric-unavailable">Sin evidencia suficiente</strong>
+                            }
+                        </div>
+
+                        <div>
+                            <span>Consistencia deportiva</span>
+
+                            @if (player.scoreBreakdown.historicalConsistency !== null) {
+                            <strong>
+                                {{
+                                player.scoreBreakdown.historicalConsistency * 100
+                                | number:'1.0-0':'es-ES'
+                                }}%
+                            </strong>
+                            } @else {
+                            <strong class="metric-unavailable">Sin evidencia suficiente</strong>
+                            }
+                        </div>
+                        }
 
                         <div>
                             <span>
@@ -547,20 +665,24 @@
                 <div class="recommendation-reasons">
                     @for (reason of orderedReasons(player.reasons); track reason) {
                     <span [class.positive-reason]="
-    reason === 'PRICE_BELOW_MARKET'
-    || reason === 'VALUE_RISING'
-    || reason === 'VALUE_RISING_FAST'
-    || reason === 'GOOD_RECENT_FORM'
-    || reason === 'EXCELLENT_RECENT_FORM'
-    || reason === 'STRONG_HISTORICAL_PERFORMANCE'
-    || reason === 'SQUAD_POSITION_NEEDED'
-        " [class.negative-reason]="
-    reason === 'PRICE_ABOVE_MARKET'
-    || reason === 'VALUE_FALLING'
-    || reason === 'POOR_HISTORICAL_PERFORMANCE'
-    || reason === 'INJURED'
-    || reason === 'UNAFFORDABLE'
-">
+                        reason === 'PRICE_BELOW_MARKET'
+                        || reason === 'VALUE_RISING'
+                        || reason === 'VALUE_RISING_FAST'
+                        || reason === 'GOOD_RECENT_FORM'
+                        || reason === 'EXCELLENT_RECENT_FORM'
+                        || reason === 'STRONG_HISTORICAL_PERFORMANCE'
+                        || reason === 'SQUAD_POSITION_NEEDED'
+                        || reason === 'ECONOMIC_DYNAMICS_IMPROVING'
+                        || reason === 'RECENT_FORM_IMPROVING'
+                    " [class.negative-reason]="
+                        reason === 'PRICE_ABOVE_MARKET'
+                        || reason === 'VALUE_FALLING'
+                        || reason === 'POOR_HISTORICAL_PERFORMANCE'
+                        || reason === 'INJURED'
+                        || reason === 'UNAFFORDABLE'
+                        || reason === 'ECONOMIC_DYNAMICS_WEAKENING'
+                        || reason === 'RECENT_FORM_DECLINING'
+                    ">
                         {{ reasonLabel(reason) }}
                     </span>
                     }

@@ -12,12 +12,23 @@ export type MarketRecommendationReason =
     | 'POOR_HISTORICAL_PERFORMANCE'
     | 'SQUAD_POSITION_NEEDED'
     | 'INJURED'
-    | 'UNAFFORDABLE';
+    | 'UNAFFORDABLE'
+    | 'ECONOMIC_DYNAMICS_IMPROVING'
+    | 'ECONOMIC_DYNAMICS_WEAKENING'
+    | 'RECENT_FORM_IMPROVING'
+    | 'RECENT_FORM_DECLINING';
 
 export interface MarketScoreBreakdown {
     base: number;
     price: number;
+
     valueTrend: number;
+    valueTrendBase: number;
+    economicTrendCorrection: number;
+    marketMomentumPercentPerDay: number | null;
+    valueAccelerationPercentPerDaySquared: number | null;
+    economicTrendConsistency: number | null;
+
     squadNeed: number;
 
     recentForm: number;
@@ -26,6 +37,10 @@ export interface MarketScoreBreakdown {
     historicalAveragePoints: number;
     historicalSampleSize: number;
     historicalPerformance: number;
+
+    sportsTrendCorrection: number;
+    recentFormDelta: number | null;
+    historicalConsistency: number | null;
 
     status: number;
     scoreBeforeCaps: number;
