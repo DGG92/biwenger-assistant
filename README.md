@@ -2,13 +2,31 @@
 
 Asistente web para analizar una liga privada de Biwenger y ayudar a tomar decisiones sobre plantilla, mercado, jornadas y movimientos.
 
-El objetivo del proyecto no es sustituir a Biwenger ni realizar automáticamente operaciones sobre la cuenta del usuario, sino utilizar sus datos para ofrecer una capa adicional de análisis, estadísticas y recomendaciones.
+Biwenger Assistant utiliza los datos disponibles de la liga para ofrecer una capa adicional de análisis, estadísticas y recomendaciones.
 
-La aplicación dispone de un backend desarrollado con Spring Boot, un frontend Angular y una base de datos PostgreSQL. La versión de producción se ejecuta con Docker en una Raspberry Pi y el frontend se publica mediante Cloudflare Pages.
+El objetivo del proyecto no es sustituir a Biwenger ni automatizar las decisiones del usuario, sino transformar los datos sincronizados en información útil para ayudarle a decidir.
+
+La aplicación dispone de:
+
+- Backend desarrollado con Spring Boot.
+- Frontend desarrollado con Angular.
+- Base de datos PostgreSQL.
+- Motor propio de análisis y recomendaciones.
+- Infraestructura de producción sobre Raspberry Pi.
+- Frontend y proxy de API publicados mediante Cloudflare Pages.
+- Acceso público al backend mediante Tailscale Funnel.
+
+El motor de análisis y recomendaciones se encuentra actualmente en:
+
+```text
+Engine 2.1 — Stable
+```
+
+Engine 2.1 es la baseline estable del motor tras completar su implementación, pruebas, auditoría de regresión, despliegue y validación real.
 
 ---
 
-## 📌 Objetivo del proyecto
+# 📌 Objetivo del proyecto
 
 Biwenger Assistant nace como una herramienta personal para complementar el uso habitual de Biwenger.
 
@@ -24,53 +42,103 @@ Entre sus objetivos principales están:
 - Consultar estadísticas.
 - Analizar movimientos.
 - Generar recomendaciones.
+- Analizar oportunidades de mercado.
+- Recomendar alineaciones y formaciones.
+- Analizar necesidades por posición.
+- Tener en cuenta el próximo rival.
 - Mostrar el estado de la jornada.
 - Mantener los datos actualizados automáticamente.
-- Informar al usuario sobre la frescura de los datos.
+- Informar sobre la frescura de los datos.
+- Explicar las señales utilizadas por los algoritmos.
 - Permitir varios usuarios con distintos niveles de permisos.
 
-Biwenger Assistant es principalmente una aplicación de **lectura, análisis y recomendación**.
+Biwenger Assistant es principalmente una aplicación de:
 
-No pretende reconstruir todas las funcionalidades de Biwenger ni realizar automáticamente operaciones como alineaciones, compras, ventas o pujas.
+```text
+lectura
+   ↓
+análisis
+   ↓
+explicación
+   ↓
+recomendación
+```
+
+No pretende reconstruir todas las funcionalidades de Biwenger ni realizar automáticamente operaciones como:
+
+- Alineaciones.
+- Compras.
+- Ventas.
+- Pujas.
+
+La decisión final permanece siempre en manos del usuario.
 
 ---
 
 # 🏗️ Arquitectura
 
-La aplicación está dividida principalmente en tres componentes:
+La arquitectura actual de producción es:
 
 ```text
-┌──────────────────────────────┐
-│          Frontend            │
-│           Angular            │
-│                              │
-│      Cloudflare Pages        │
-└──────────────┬───────────────┘
-               │ HTTPS
-               ▼
-┌──────────────────────────────┐
-│       Tailscale Funnel       │
-│                              │
-│ Terminación HTTPS / Proxy    │
-└──────────────┬───────────────┘
-               │
-               │ 127.0.0.1:8080
-               ▼
-┌──────────────────────────────┐
-│           Backend            │
-│        Spring Boot           │
-│                              │
-│        Docker / RPi          │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│         PostgreSQL           │
-│            Docker            │
-└──────────────────────────────┘
+┌─────────────────────────────────────┐
+│               Browser               │
+│                                     │
+│    biwenger-assistant.pages.dev     │
+└──────────────────┬──────────────────┘
+                   │
+                   │ HTTPS
+                   │ /api/*
+                   ▼
+┌─────────────────────────────────────┐
+│          Cloudflare Pages           │
+│                                     │
+│   Angular + Pages Function proxy    │
+└──────────────────┬──────────────────┘
+                   │
+                   │ HTTPS
+                   │ servidor → servidor
+                   ▼
+┌─────────────────────────────────────┐
+│           Tailscale Funnel          │
+│                                     │
+│      Entrada HTTPS Raspberry        │
+└──────────────────┬──────────────────┘
+                   │
+                   │ 127.0.0.1:8080
+                   ▼
+┌─────────────────────────────────────┐
+│              Backend                │
+│           Spring Boot               │
+│                                     │
+│           Docker / RPi              │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│            PostgreSQL               │
+│              Docker                 │
+└─────────────────────────────────────┘
 ```
 
-El frontend y el backend se encuentran en orígenes diferentes, por lo que la aplicación está preparada para trabajar con autenticación basada en sesión, cookies cross-origin, CORS y protección CSRF.
+En producción el navegador utiliza:
+
+```text
+/api
+```
+
+como URL base de la API.
+
+Las peticiones son recibidas por una **Cloudflare Pages Function**, que actúa como proxy hacia el backend publicado mediante Tailscale Funnel.
+
+Desde el punto de vista del navegador:
+
+```text
+Frontend + API = same-origin
+```
+
+El navegador no necesita comunicarse directamente con el dominio de Tailscale.
+
+Esta arquitectura evita depender de permisos de acceso a red local del navegador y mantiene la Raspberry detrás de las capas de proxy.
 
 ---
 
@@ -91,12 +159,13 @@ El frontend y el backend se encuentran en orígenes diferentes, por lo que la ap
 
 ## Frontend
 
-- Angular
+- Angular 22
 - TypeScript
 - HTML
 - SCSS
 - Angular Router
 - HttpClient
+- Vitest
 
 ## Infraestructura
 
@@ -108,10 +177,11 @@ El frontend y el backend se encuentran en orígenes diferentes, por lo que la ap
 - Tailscale
 - Tailscale Funnel
 - Cloudflare Pages
+- Cloudflare Pages Functions
 
 ## Desarrollo
 
-El proyecto se desarrolla principalmente desde Windows utilizando herramientas como:
+El proyecto se desarrolla principalmente desde Windows utilizando:
 
 - IntelliJ IDEA
 - Visual Studio Code
@@ -119,6 +189,8 @@ El proyecto se desarrolla principalmente desde Windows utilizando herramientas c
 - Git
 - Postman
 - DBeaver
+- Docker Desktop
+- Tailscale
 
 ---
 
@@ -138,6 +210,10 @@ biwenger-assistant/
 │   └── pom.xml
 │
 ├── frontend/
+│   ├── functions/
+│   │   └── api/
+│   │       └── [[path]].js
+│   │
 │   ├── src/
 │   │   ├── app/
 │   │   ├── assets/
@@ -149,6 +225,10 @@ biwenger-assistant/
 ├── docker-compose.yml
 └── README.md
 ```
+
+`README.md` constituye la documentación principal y única del repositorio.
+
+La documentación funcional detallada del motor se encuentra además disponible dentro de la propia aplicación mediante la sección **Algoritmos**.
 
 ---
 
@@ -170,6 +250,13 @@ Sus responsabilidades principales son:
 - Mercado.
 - Movimientos.
 - Histórico de jugadores.
+- Histórico de precios.
+- Análisis deportivo.
+- Análisis económico.
+- Análisis de plantilla.
+- Construcción de alineaciones.
+- Cálculo de confianza.
+- Explicabilidad.
 - Exposición de la API REST utilizada por el frontend.
 
 ---
@@ -190,17 +277,17 @@ Las sincronizaciones actualizan diferentes conjuntos de información, entre ello
 - Jornadas.
 - Movimientos.
 - Ofertas.
-- Información adicional necesaria para estadísticas y recomendaciones.
+- Información necesaria para estadísticas y recomendaciones.
 
 Existe una sincronización automática periódica.
 
-La configuración actual utiliza por defecto un intervalo de:
+En el despliegue actual de producción se ejecuta cada:
 
 ```text
-15 minutos
+5 minutos
 ```
 
-entre ejecuciones, salvo que se configure otro valor mediante las propiedades correspondientes.
+salvo que se modifique la configuración correspondiente.
 
 ---
 
@@ -224,7 +311,7 @@ Todas las fases relevantes de la sincronización han terminado correctamente.
 
 La sincronización ha podido actualizar datos, pero alguna de sus fases no se ha completado totalmente.
 
-Esto permite evitar que una actualización incompleta sea presentada falsamente como correcta.
+Esto evita presentar una actualización incompleta como completamente correcta.
 
 ### FAILED
 
@@ -268,7 +355,18 @@ Esto es especialmente importante cuando existen:
 
 Los informes de jugadores se identifican utilizando el jugador y el identificador del partido de Biwenger, evitando tratar todos los partidos de una misma jornada lógica como si fueran el mismo registro.
 
-Para representar una jornada lógica se puede seleccionar posteriormente el segmento más reciente disponible para esa jornada.
+La aplicación puede seleccionar el segmento adecuado para representar una jornada lógica.
+
+El motor contempla además jornadas con bloqueo progresivo.
+
+En configuraciones como:
+
+```text
+onlyNoPlayed
+rollingLockout
+```
+
+los jugadores cuyo partido todavía no ha comenzado pueden continuar siendo modificables, mientras que aquellos cuyo partido ya ha empezado quedan bloqueados.
 
 ---
 
@@ -276,7 +374,7 @@ Para representar una jornada lógica se puede seleccionar posteriormente el segm
 
 Biwenger Assistant trabaja con el sistema de puntuación configurado para la liga.
 
-La fórmula utilizada actualmente incluye componentes procedentes de las puntuaciones base y diferentes eventos del partido.
+La fórmula utilizada incluye componentes procedentes de las puntuaciones base y diferentes eventos del partido.
 
 De forma simplificada:
 
@@ -292,13 +390,314 @@ De forma simplificada:
 + bonificaciones específicas relacionadas con goles
 ```
 
-La aplicación dispone además de una sección **Algoritmos** en el frontend donde se documentan de forma comprensible los criterios utilizados por los diferentes análisis y recomendaciones.
+La sección **Algoritmos** de la aplicación documenta de forma comprensible los criterios, escalas, fórmulas y casos especiales utilizados por los distintos análisis y recomendaciones.
+
+---
+
+# 🧠 Engine 2.1
+
+**Engine 2.1** es la versión estable actual del motor de análisis y recomendaciones.
+
+Su objetivo es enriquecer la lógica existente utilizando mejor la evidencia histórica disponible sin convertir el sistema en una caja negra.
+
+Sus principios principales son:
+
+- No confundir ausencia de datos con mal rendimiento.
+- Utilizar señales únicamente cuando existe evidencia suficiente.
+- Mantener fallbacks neutrales cuando faltan datos.
+- Separar señales deportivas y económicas.
+- Limitar el impacto de las correcciones adicionales.
+- Mantener compatibilidad con la lógica base.
+- Explicar las señales relevantes.
+- Reducir la confianza cuando existe poca evidencia.
+- Evitar precisión artificial basada en datos insuficientes.
+
+---
+
+## 📈 Forma reciente
+
+La forma reciente analiza los partidos más recientes disponibles dando mayor importancia a la información actual.
+
+Para considerar válida una señal reciente se exige una muestra mínima de partidos participados y puntuados.
+
+Una ausencia, un cambio de temporada o determinadas discontinuidades pueden romper la secuencia considerada reciente.
+
+Esto evita utilizar como forma actual partidos antiguos separados por largos periodos sin participación.
+
+---
+
+## 📚 Rendimiento histórico
+
+El rendimiento histórico utiliza una ventana mayor de partidos puntuados.
+
+Su objetivo es proporcionar una referencia más estable sobre el nivel habitual del jugador.
+
+El motor diferencia deliberadamente:
+
+```text
+forma reciente
+        +
+rendimiento histórico
+```
+
+porque representan señales distintas.
+
+La forma reciente responde mejor a cambios inmediatos.
+
+El histórico proporciona estabilidad.
+
+---
+
+## ⭐ Rating deportivo
+
+El rating deportivo combina la evidencia reciente e histórica disponible.
+
+Cuando ambas muestras son válidas, la forma reciente tiene mayor peso que el histórico.
+
+Cuando únicamente una de ellas dispone de evidencia suficiente, el motor utiliza la información disponible.
+
+Cuando ninguna dispone todavía de evidencia suficiente, se utiliza un fallback neutral en lugar de inventar rendimiento.
+
+Posteriormente pueden intervenir otros factores como:
+
+- Disponibilidad.
+- Contexto del próximo rival.
+- Dinámica deportiva.
+
+---
+
+# ⚔️ Dificultad del próximo rival
+
+El rating puede incorporar el contexto del siguiente partido.
+
+La dificultad del rival tiene en cuenta diferentes indicadores deportivos del equipo contrario y el contexto local/visitante.
+
+Cuando falta información válida para alguno de los componentes se utilizan valores neutrales.
+
+El efecto de la dificultad del rival está limitado para evitar que el contexto de un único partido domine completamente la valoración del jugador.
+
+---
+
+# 📈 Dinámica deportiva 2.1
+
+Engine 2.1 compara la forma reciente con la referencia histórica del jugador.
+
+De forma conceptual:
+
+```text
+variación deportiva =
+forma reciente
+-
+rendimiento histórico
+```
+
+Esto permite detectar si el jugador parece estar:
+
+```text
+mejorando
+estable
+empeorando
+```
+
+La fuerza de la señal depende de la evidencia disponible.
+
+Una diferencia observada sobre una muestra pequeña tiene menos peso que una diferencia respaldada por un histórico suficiente.
+
+La corrección adicional está acotada para impedir que esta señal sustituya al resto del análisis.
+
+---
+
+# 💹 Dinámica económica 2.1
+
+Engine 2.1 amplía el análisis del valor de mercado utilizando el histórico real de precios.
+
+La dinámica económica estudia principalmente tres conceptos:
+
+## Momentum
+
+Mide el ritmo reciente de subida o bajada del valor del jugador.
+
+## Aceleración
+
+Compara el ritmo más reciente con periodos anteriores para detectar si la tendencia está ganando o perdiendo fuerza.
+
+## Consistencia
+
+Analiza hasta qué punto el histórico mantiene una dirección económica coherente.
+
+Estas señales refinan la tendencia económica existente.
+
+No la sustituyen.
+
+Cuando el histórico no contiene evidencia suficiente, el motor conserva la lógica económica base como fallback.
+
+---
+
+# 💰 Análisis de mercado
+
+El motor combina distintas señales para valorar oportunidades del mercado.
+
+Entre ellas pueden intervenir:
+
+- Precio.
+- Valor de mercado.
+- Tendencia económica.
+- Dinámica económica.
+- Forma reciente.
+- Rendimiento histórico.
+- Dinámica deportiva.
+- Necesidades de plantilla.
+- Estado del jugador.
+- Presupuesto.
+- Contexto deportivo.
+
+El resultado puede utilizarse para generar:
+
+- Recomendaciones.
+- Prioridades.
+- Pujas máximas.
+- Explicaciones.
+
+El objetivo no es predecir el futuro con certeza, sino ordenar oportunidades utilizando de forma coherente la información disponible.
+
+---
+
+# 🧩 Necesidades de plantilla
+
+El motor analiza las necesidades de la plantilla por posición:
+
+```text
+PT
+DF
+MC
+DL
+```
+
+Para ello tiene en cuenta factores como:
+
+- Profundidad efectiva.
+- Disponibilidad de los jugadores.
+- Capacidad de completar formaciones válidas.
+- Jugadores multiposición.
+
+Los jugadores con disponibilidad reducida pueden contar parcialmente o no contar para la profundidad efectiva.
+
+Los jugadores multiposición pueden contribuir a diferentes posiciones compatibles sin ser contabilizados simultáneamente varias veces dentro de una misma asignación.
+
+---
+
+# 🧱 Alineaciones y formaciones
+
+El motor puede estudiar distintas formaciones admitidas y buscar combinaciones válidas de jugadores.
+
+Los jugadores multiposición pueden ocupar cualquiera de sus posiciones compatibles.
+
+El algoritmo evita utilizar el mismo jugador simultáneamente en varias posiciones.
+
+Una formación alternativa debe aportar una mejora suficiente antes de convertirse en una recomendación.
+
+Esto evita generar cambios tácticos irrelevantes por diferencias mínimas.
+
+---
+
+# 🎯 Confianza basada en evidencia
+
+Engine 2.1 diferencia entre:
+
+```text
+calidad estimada de una recomendación
+```
+
+y:
+
+```text
+cantidad de evidencia que la respalda
+```
+
+Una recomendación puede parecer favorable y, sin embargo, disponer de una confianza menor si existen pocos datos.
+
+La confianza tiene en cuenta la cobertura de evidencia disponible.
+
+Conceptualmente:
+
+```text
+reciente + histórico suficientes
+→ evidencia alta
+
+solo una muestra suficiente
+→ evidencia parcial
+
+datos existentes pero insuficientes
+→ evidencia baja
+
+sin datos
+→ ausencia de evidencia
+```
+
+La confianza es un **índice heurístico**.
+
+No debe interpretarse como una probabilidad matemática de acierto.
+
+---
+
+# 🔎 Explicabilidad
+
+Uno de los objetivos principales de Engine 2.1 es que las recomendaciones puedan explicarse.
+
+El motor puede asociar motivos relacionados con:
+
+- Precio.
+- Tendencia económica.
+- Dinámica económica.
+- Forma reciente.
+- Dinámica deportiva.
+- Rendimiento histórico.
+- Necesidad de una posición.
+- Estado del jugador.
+- Presupuesto.
+- Contexto deportivo.
+
+Las señales nuevas no aparecen simplemente porque exista un dato.
+
+Solo deben formar parte de la explicación cuando intervienen realmente en el análisis correspondiente.
+
+La filosofía es mantener alineados:
+
+```text
+datos
+  ↓
+cálculo
+  ↓
+señal
+  ↓
+explicación
+  ↓
+recomendación
+```
+
+---
+
+# 🧯 Datos insuficientes y fallbacks
+
+Engine 2.1 aplica un principio conservador:
+
+> Es preferible no utilizar una métrica que convertir datos incompletos en una señal aparentemente precisa.
+
+Por ello, cuando una señal no dispone de evidencia suficiente:
+
+- No se inventa rendimiento.
+- No se inventa tendencia.
+- No se interpreta ausencia de datos como mal rendimiento.
+- Se utiliza un fallback neutral o la lógica base disponible.
+- La confianza puede reducirse.
+
+Algunas señales potencialmente interesantes pueden permanecer fuera del motor mientras la cobertura de datos no sea suficientemente fiable.
 
 ---
 
 # 📊 Estadísticas y recomendaciones
 
-Uno de los principales objetivos de Biwenger Assistant es transformar los datos sincronizados en información útil.
+Biwenger Assistant transforma los datos sincronizados en información útil para la toma de decisiones.
 
 La aplicación dispone de funcionalidades relacionadas con:
 
@@ -310,14 +709,45 @@ La aplicación dispone de funcionalidades relacionadas con:
 - Movimientos.
 - Jornada.
 - Recomendaciones.
+- Necesidades por posición.
+- Alineaciones.
+- Formaciones.
+- Dificultad del rival.
+- Pujas máximas.
+- Confianza.
+- Explicabilidad.
 
-El motor de recomendaciones utiliza información disponible en la base de datos para generar análisis sin modificar directamente la cuenta de Biwenger.
+El motor genera análisis.
+
+No modifica directamente la cuenta de Biwenger.
+
+---
+
+# 📖 Página Algoritmos
+
+La aplicación incluye una página específica de **Algoritmos**.
+
+Su objetivo es documentar de forma comprensible el funcionamiento de las principales métricas y recomendaciones.
+
+El README explica la arquitectura y filosofía general del motor.
+
+La página Algoritmos constituye la referencia funcional detallada sobre:
+
+- Fórmulas.
+- Pesos.
+- Umbrales.
+- Escalas.
+- Fallbacks.
+- Casos especiales.
+- Interpretación de las recomendaciones.
+
+Esto evita duplicar toda la documentación matemática dentro del repositorio y facilita consultar cómo funciona el motor desde la propia aplicación.
 
 ---
 
 # 👥 Usuarios y roles
 
-La aplicación diferencia actualmente dos roles principales:
+La aplicación diferencia dos roles principales:
 
 ```text
 ADMIN
@@ -326,11 +756,19 @@ USER
 
 ## ADMIN
 
-Dispone de permisos administrativos y puede realizar operaciones restringidas como determinadas modificaciones y sincronizaciones manuales.
+Dispone de permisos administrativos y puede realizar operaciones restringidas, como determinadas modificaciones y sincronizaciones manuales.
 
 ## USER
 
-Puede utilizar las funcionalidades normales de consulta y análisis de la aplicación, pero no modificar recursos administrativos.
+Puede utilizar las funcionalidades normales de consulta y análisis, pero no realizar operaciones administrativas.
+
+El rol:
+
+```text
+ADMIN de Biwenger Assistant
+```
+
+es independiente de cualquier rol de administración que un usuario pueda tener dentro de Biwenger.
 
 ---
 
@@ -340,7 +778,7 @@ El acceso a recursos pertenecientes a una liga se valida de forma centralizada.
 
 Los usuarios normales únicamente pueden acceder a los recursos de las ligas para las que tienen autorización.
 
-La comprobación se realiza mediante componentes específicos de acceso a liga antes de permitir el acceso a rutas del tipo:
+La comprobación se realiza antes de permitir el acceso a rutas del tipo:
 
 ```text
 /api/leagues/{leagueId}/...
@@ -348,7 +786,7 @@ La comprobación se realiza mediante componentes específicos de acceso a liga a
 
 Los administradores pueden disponer de acceso adicional cuando sea necesario.
 
-Esto evita que un usuario pueda cambiar manualmente un identificador de liga en una petición y consultar información perteneciente a otra liga.
+Esto evita que un usuario pueda modificar manualmente un identificador de liga en una petición y consultar información perteneciente a otra liga.
 
 ---
 
@@ -360,17 +798,55 @@ La aplicación utiliza Spring Security y varias capas de protección.
 
 La autenticación se basa en sesión.
 
-Las contraseñas de los usuarios se almacenan utilizando BCrypt.
+Las contraseñas se almacenan utilizando BCrypt.
 
-Después de iniciar sesión, el navegador mantiene la sesión mediante la cookie correspondiente.
+Después del login, Spring Security mantiene la sesión mediante la cookie correspondiente.
+
+---
+
+## Proxy same-origin
+
+En producción el navegador no llama directamente al dominio público de la Raspberry.
+
+Las peticiones se realizan contra:
+
+```text
+https://biwenger-assistant.pages.dev/api/*
+```
+
+Cloudflare Pages Functions actúa como proxy hacia el backend.
+
+Por tanto:
+
+```text
+Browser
+   ↓
+Cloudflare Pages
+   ↓
+/api/*
+```
+
+es una comunicación same-origin.
+
+Posteriormente:
+
+```text
+Cloudflare
+   ↓
+Tailscale Funnel
+   ↓
+Spring Boot
+```
+
+se realiza entre servidores.
 
 ---
 
 ## CORS
 
-Frontend y backend utilizan dominios diferentes en producción.
+El backend conserva una política CORS restrictiva.
 
-Por ello el backend dispone de configuración CORS para permitir únicamente los orígenes autorizados y trabajar con credenciales.
+La arquitectura actual evita, sin embargo, que el navegador dependa de una petición cross-origin para consumir la API en producción gracias al proxy `/api`.
 
 ---
 
@@ -378,34 +854,40 @@ Por ello el backend dispone de configuración CORS para permitir únicamente los
 
 Las operaciones que modifican información están protegidas mediante tokens CSRF.
 
-El frontend obtiene un token mediante:
+El frontend obtiene el token mediante:
 
 ```text
 GET /api/auth/csrf
 ```
 
-y lo envía posteriormente en las peticiones que requieren protección.
+y lo envía cuando corresponde mediante:
 
-El login constituye una excepción específica, ya que todavía no existe una sesión autenticada cuando se realiza.
+```text
+X-XSRF-TOKEN
+```
+
+El login constituye una excepción específica.
 
 ---
 
 ## Cookies
 
-La configuración de producción permite el funcionamiento cross-origin mediante cookies seguras.
+La autenticación utiliza cookies seguras.
 
-Entre otras propiedades se utilizan:
+Entre ellas se encuentran:
 
 ```text
-Secure
-SameSite=None
+JSESSIONID
+XSRF-TOKEN
 ```
+
+La sesión continúa siendo gestionada por Spring Security aunque las peticiones atraviesen el proxy de Cloudflare.
 
 ---
 
 # 🛡️ Protección del login
 
-El endpoint público de autenticación dispone de protección básica frente a intentos repetidos de acceso.
+El endpoint público de autenticación dispone de protección frente a intentos repetidos de acceso.
 
 La configuración actual permite:
 
@@ -437,37 +919,39 @@ junto con:
 Retry-After
 ```
 
-indicando cuánto tiempo queda aproximadamente hasta que expire el bloqueo.
-
 Un inicio de sesión correcto elimina los intentos fallidos asociados a esa IP.
 
 El limitador se mantiene actualmente en memoria, por lo que se reinicia al reiniciar el backend.
 
-Esta solución está diseñada para el despliegue actual de una única instancia.
+Está diseñado para el despliegue actual de una única instancia.
 
 ---
 
-# 🌐 Obtención de la IP del cliente
+# 🌐 Ruta de una petición en producción
 
-En producción el backend no se publica directamente en Internet.
-
-Docker expone el servicio únicamente mediante:
+La petición atraviesa:
 
 ```text
-127.0.0.1:8080
+Browser
+   ↓
+Cloudflare Pages
+   ↓
+Cloudflare Pages Function
+   ↓
+Tailscale Funnel
+   ↓
+Spring Boot
+   ↓
+PostgreSQL
 ```
 
-Tailscale Funnel actúa como proxy público delante del backend.
-
-La aplicación utiliza la información reenviada por el proxy para identificar la IP del cliente utilizada por el rate limiter.
+El backend no necesita estar publicado directamente en Internet mediante su puerto interno.
 
 ---
 
 # 🔑 Protección de credenciales
 
-Las credenciales sensibles utilizadas para acceder a servicios externos no deben almacenarse directamente en texto plano dentro del repositorio.
-
-La aplicación dispone de mecanismos para proteger las credenciales almacenadas utilizando cifrado autenticado.
+Las credenciales sensibles no deben almacenarse directamente en el repositorio.
 
 Los secretos y variables privadas deben mantenerse fuera de Git.
 
@@ -477,7 +961,13 @@ Nunca deben versionarse archivos como:
 .env
 ```
 
-ni otros ficheros que contengan credenciales reales.
+ni otros ficheros que contengan:
+
+- Contraseñas.
+- Tokens.
+- Claves de cifrado.
+- Credenciales reales.
+- Backups de secretos.
 
 El repositorio puede contener archivos de ejemplo como:
 
@@ -485,24 +975,76 @@ El repositorio puede contener archivos de ejemplo como:
 .env.example
 ```
 
-sin secretos reales.
+siempre que no incluyan secretos reales.
 
 ---
 
 # 🗄️ Base de datos
 
-La aplicación utiliza PostgreSQL.
+La aplicación utiliza:
 
-En producción PostgreSQL se ejecuta mediante Docker y no se publica directamente hacia Internet.
+```text
+PostgreSQL 17
+```
+
+En producción PostgreSQL se ejecuta mediante Docker en la Raspberry Pi.
+
+El puerto PostgreSQL del host está enlazado únicamente a:
+
+```text
+127.0.0.1:5432
+```
+
+por lo que la base de datos no se publica directamente hacia Internet.
 
 La persistencia se gestiona principalmente mediante:
 
-- Spring Data JPA
-- Hibernate
+- Spring Data JPA.
+- Hibernate.
+- PostgreSQL.
+- Flyway.
 
-Los cambios de estructura se gestionan mediante:
+Los datos persistentes se almacenan en un volumen Docker.
 
-- Flyway
+En producción no debe utilizarse:
+
+```text
+docker compose down -v
+```
+
+salvo que exista una intención explícita y controlada de eliminar los datos persistentes.
+
+---
+
+# 🔐 Acceso a PostgreSQL con DBeaver
+
+La base de datos de producción puede consultarse desde un equipo autorizado mediante:
+
+```text
+DBeaver
+   ↓
+SSH
+   ↓
+Tailscale
+   ↓
+Raspberry Pi
+   ↓
+127.0.0.1:5432
+   ↓
+PostgreSQL
+```
+
+La conexión de consulta habitual utiliza:
+
+```text
+biwenger_readonly
+```
+
+un usuario específico de PostgreSQL con permisos de solo lectura.
+
+Este usuario puede consultar la información necesaria sin disponer de permisos normales de modificación.
+
+PostgreSQL continúa sin estar publicado directamente en Internet.
 
 ---
 
@@ -515,17 +1057,33 @@ Flyway:
 1. Comprueba la versión actual de la base de datos.
 2. Valida las migraciones existentes.
 3. Ejecuta las migraciones pendientes.
-4. Impide continuar silenciosamente ante determinadas inconsistencias de esquema.
+4. Detecta determinadas inconsistencias del esquema.
 
-No se deben modificar migraciones que ya hayan sido aplicadas en producción.
+No deben modificarse migraciones que ya hayan sido aplicadas en producción.
 
 Los cambios posteriores de estructura deben introducirse mediante una nueva migración.
+
+La evolución:
+
+```text
+V1 → Engine 2.1
+```
+
+no necesitó cambios de esquema.
+
+El delta final fue:
+
+```text
+DB schema delta V1 → Engine 2.1 = 0
+```
+
+Por tanto, Engine 2.1 no necesitó nuevas migraciones para su despliegue.
 
 ---
 
 # 🐳 Docker
 
-En producción se utilizan al menos los servicios:
+En producción se utilizan al menos:
 
 ```text
 backend
@@ -550,11 +1108,25 @@ Para seguirlos en tiempo real:
 docker compose logs -f backend
 ```
 
+El entorno Docker del PC de desarrollo es independiente de producción:
+
+```text
+PC Windows
+└── desarrollo local
+
+Raspberry Pi
+└── producción
+```
+
+Docker Desktop puede permanecer cerrado en el PC cuando no se está desarrollando.
+
+Esto no afecta a producción.
+
 ---
 
 # 🚀 Despliegue del backend
 
-El backend se ejecuta actualmente en una Raspberry Pi.
+El backend se ejecuta en una Raspberry Pi.
 
 Repositorio:
 
@@ -608,15 +1180,13 @@ Esto no reinicia PostgreSQL.
 
 # 🌍 Publicación del backend
 
-El backend escucha únicamente en:
+El backend se expone en el host de la Raspberry mediante:
 
 ```text
 127.0.0.1:8080
 ```
 
-y no se publica directamente mediante el puerto 8080 de la Raspberry.
-
-Tailscale Funnel publica el servicio HTTPS y realiza proxy hacia:
+Tailscale Funnel proporciona la entrada HTTPS y realiza proxy hacia:
 
 ```text
 http://127.0.0.1:8080
@@ -628,13 +1198,15 @@ La configuración puede comprobarse mediante:
 tailscale serve status
 ```
 
-En el despliegue actual se utiliza:
+La entrada utilizada actualmente es:
 
 ```text
 https://raspdiego.tailcdc3f7.ts.net
 ```
 
-como entrada HTTPS del backend.
+Este dominio forma parte de la infraestructura servidor-servidor.
+
+El navegador no necesita acceder directamente a él.
 
 ---
 
@@ -648,40 +1220,52 @@ URL:
 https://biwenger-assistant.pages.dev
 ```
 
-Cloudflare Pages construye y publica el frontend a partir de la rama configurada para el despliegue.
+Cloudflare Pages construye y publica Angular a partir de la rama configurada para producción.
 
-Actualmente el desarrollo y despliegue de la V1 se realiza desde:
+Actualmente se utiliza:
 
 ```text
 feat/league-management
 ```
 
+La API de producción se configura como:
+
+```text
+/api
+```
+
+Las peticiones son gestionadas por:
+
+```text
+frontend/functions/api/[[path]].js
+```
+
+que actúa como proxy hacia Tailscale Funnel.
+
 ---
 
-# 💻 Ejecución local
+# 💻 Desarrollo local
 
 ## Requisitos
 
-Para trabajar con el proyecto se necesita, como mínimo:
+Para trabajar con el proyecto se necesita como mínimo:
 
-- Java 21
-- Node.js / npm
-- PostgreSQL o Docker
-- Git
+- Java 21.
+- Node.js / npm.
+- PostgreSQL o Docker.
+- Git.
 
 ---
 
 ## Backend
 
-Desde la raíz del proyecto:
-
-### Windows
+Desde la raíz:
 
 ```powershell
 .\mvnw.cmd -f backend\pom.xml spring-boot:run
 ```
 
-Alternativamente, desde el directorio `backend`:
+Alternativamente:
 
 ```powershell
 cd backend
@@ -696,21 +1280,29 @@ http://localhost:8080
 
 ---
 
-## Tests backend
+## Docker local
 
-Desde la raíz:
-
-```powershell
-.\mvnw.cmd -f backend\pom.xml test
-```
-
-o desde `backend`:
+El entorno local puede levantarse mediante:
 
 ```powershell
-..\mvnw.cmd test
+docker compose up -d
 ```
 
-Antes de desplegar cambios importantes se recomienda ejecutar siempre la suite completa.
+y detenerse mediante:
+
+```powershell
+docker compose down
+```
+
+Esto conserva los volúmenes.
+
+No utilizar:
+
+```powershell
+docker compose down -v
+```
+
+si se desea conservar la base de datos local.
 
 ---
 
@@ -734,22 +1326,75 @@ Levantar el servidor de desarrollo:
 npm start
 ```
 
-o, según la configuración disponible:
+o:
 
 ```powershell
 ng serve
 ```
 
+El servidor de desarrollo de Angular queda disponible normalmente en:
+
+```text
+http://localhost:4200
+```
+
 ---
 
-## Build del frontend
+# 🧪 Tests
+
+## Backend
+
+Desde la raíz:
 
 ```powershell
-cd frontend
+.\mvnw.cmd -f backend\pom.xml test
+```
+
+o desde `backend`:
+
+```powershell
+..\mvnw.cmd test
+```
+
+La certificación de Engine 2.1 finalizó con:
+
+```text
+446 / 446 tests GREEN
+```
+
+---
+
+## Frontend
+
+Desde `frontend`:
+
+```powershell
+npm test -- --watch=false
+```
+
+La certificación actual finalizó con:
+
+```text
+37 / 37 tests GREEN
+```
+
+---
+
+# 🏗️ Build del frontend
+
+Desde `frontend`:
+
+```powershell
 npm run build
 ```
 
-El build debe finalizar sin errores antes de considerar un cambio preparado para producción.
+El build debe finalizar sin errores antes de considerar preparado para producción un cambio que afecte al frontend.
+
+La certificación de Engine 2.1 incluyó:
+
+```text
+Frontend build GREEN
+```
 
 ---
 
@@ -760,14 +1405,15 @@ Para cambios relevantes:
 ```text
 1. Implementar
 2. Ejecutar tests backend
-3. Ejecutar build frontend si procede
-4. Revisar git diff
-5. Ejecutar git diff --check
-6. Revisar git status
-7. Commit
-8. Push
-9. Desplegar
-10. Smoke test en producción
+3. Ejecutar tests frontend si procede
+4. Ejecutar build frontend si procede
+5. Revisar git diff
+6. Ejecutar git diff --check
+7. Revisar git status
+8. Commit
+9. Push
+10. Desplegar cuando corresponda
+11. Smoke test en producción
 ```
 
 Comandos útiles:
@@ -779,11 +1425,30 @@ git status --short
 git log --oneline -5
 ```
 
+No todos los cambios requieren desplegar todos los componentes.
+
+```text
+Cambio backend
+→ despliegue Raspberry
+
+Cambio frontend
+→ Cloudflare Pages
+
+Cambio Pages Function
+→ Cloudflare Pages
+
+Cambio docker-compose de producción
+→ aplicar de forma controlada en Raspberry
+
+README / documentación
+→ no requiere despliegue funcional
+```
+
 ---
 
 # 🌿 Git
 
-Durante el desarrollo de la V1 se utiliza principalmente:
+La rama utilizada actualmente para desarrollo y despliegue es:
 
 ```text
 feat/league-management
@@ -804,7 +1469,14 @@ git commit -m "..."
 git push
 ```
 
-No deben añadirse accidentalmente secretos, archivos `.env`, backups de credenciales ni archivos temporales.
+Nunca deben añadirse accidentalmente:
+
+- Secretos.
+- `.env`.
+- Backups de credenciales.
+- Tokens.
+- Claves privadas.
+- Archivos temporales.
 
 ---
 
@@ -812,7 +1484,7 @@ No deben añadirse accidentalmente secretos, archivos `.env`, backups de credenc
 
 Después de un despliegue importante conviene comprobar al menos:
 
-### ADMIN
+## ADMIN
 
 - Login.
 - Dashboard.
@@ -821,11 +1493,13 @@ Después de un despliegue importante conviene comprobar al menos:
 - Plantilla.
 - Mercado.
 - Jornada.
-- Estadísticas/recomendaciones relevantes.
+- Estadísticas.
+- Recomendaciones.
+- Algoritmos.
 - Operaciones administrativas necesarias.
 - Logout.
 
-### USER
+## USER
 
 - Login.
 - Dashboard.
@@ -833,7 +1507,9 @@ Después de un despliegue importante conviene comprobar al menos:
 - Plantilla.
 - Mercado.
 - Jornada.
-- Estadísticas/recomendaciones.
+- Estadísticas.
+- Recomendaciones.
+- Algoritmos.
 - Estado de sincronización.
 - Imposibilidad de acceder a recursos administrativos.
 - Logout.
@@ -842,45 +1518,103 @@ También debe comprobarse que refrescar la página mantiene correctamente la ses
 
 ---
 
-# 🚦 Estado actual del proyecto
+# ✅ Certificación de Engine 2.1
 
-El proyecto se encuentra en fase de cierre de la primera versión utilizable.
+Engine 2.1 ha completado su ciclo de:
 
-Las funcionalidades principales están implementadas y la auditoría técnica previa a V1 ha cubierto, entre otros aspectos:
+```text
+implementación
+      ↓
+tests
+      ↓
+auditoría de regresión
+      ↓
+build
+      ↓
+despliegue
+      ↓
+validación real
+```
 
-- Permisos de escritura.
-- Separación entre ADMIN y USER.
-- Aislamiento de ligas.
-- Protección CSRF.
-- Cookies cross-origin.
-- Sincronizaciones parciales.
-- Jornadas divididas/aplazadas.
-- Frescura de datos.
-- Rate limiting del login.
-- Despliegue frontend.
-- Despliegue backend.
+Resultado final:
 
-El siguiente objetivo es realizar pruebas con usuarios reales y recoger feedback antes de considerar estable la V1.
+```text
+Backend tests        446 / 446 GREEN
+Frontend tests        37 / 37 GREEN
+Frontend build        GREEN
+Regresión V1 → 2.1    GREEN
+Validación real       GREEN
+Producción RPi        GREEN
+```
+
+También se verificó:
+
+```text
+DB schema delta V1 → Engine 2.1 = 0
+```
+
+Por tanto:
+
+```text
+Engine 2.1 = COMPLETADO
+```
+
+Engine 2.1 constituye actualmente la baseline estable del motor.
+
+No existe una fase pendiente de Engine 2.1.
 
 ---
 
-# 📝 Limitaciones conocidas
+# 🚦 Estado actual del proyecto
 
-Existen algunos aspectos que no bloquean la V1 pero están previstos para futuras iteraciones.
+Biwenger Assistant dispone actualmente de una versión funcional desplegada en producción sobre infraestructura propia.
 
-## League ID
+El estado actual incluye:
 
-Actualmente existen puntos de la aplicación que asumen la liga principal mediante un identificador fijo.
+- Frontend Angular en Cloudflare Pages.
+- Proxy `/api` mediante Cloudflare Pages Functions.
+- Backend Spring Boot en Raspberry Pi.
+- PostgreSQL 17 en Docker.
+- Tailscale Funnel como entrada HTTPS al backend.
+- Sincronización automática cada 5 minutos.
+- Acceso privado a PostgreSQL mediante SSH + Tailscale.
+- Usuario de consulta de PostgreSQL de solo lectura.
+- Autenticación basada en sesión.
+- Protección CSRF.
+- Rate limiting del login.
+- Roles ADMIN / USER.
+- Aislamiento de ligas.
+- Jornadas divididas y aplazadas.
+- Indicador de frescura.
+- Motor de recomendaciones Engine 2.1.
+- Dinámica deportiva.
+- Dinámica económica.
+- Confianza basada en evidencia.
+- Explicabilidad.
+- Página de Algoritmos.
+- Tests automatizados de backend y frontend.
 
-Esto deberá eliminarse cuando se amplíe el soporte multi-liga.
+Engine 2.1 no necesita continuar desarrollándose para considerarse terminado.
+
+Las futuras mejoras del motor deben tratarse como una nueva evolución y no como trabajo pendiente de 2.1.
+
+---
+
+# 📝 Limitaciones y posibles mejoras
+
+Existen aspectos que no bloquean el funcionamiento actual pero pueden evolucionar en futuras iteraciones.
+
+## Soporte multi-liga
+
+Pueden existir puntos de la aplicación todavía orientados principalmente a la liga actual.
+
+Si el proyecto amplía su uso multi-liga, deberá revisarse cualquier dependencia residual de identificadores o supuestos específicos de una liga.
 
 ---
 
 ## Sincronización manual
 
-La sincronización automática dispone de una gestión más completa de resultados parciales.
-
-La sincronización manual todavía puede mejorarse para utilizar exactamente la misma semántica.
+La sincronización manual puede seguir evolucionando para compartir exactamente la misma semántica y tratamiento de resultados que la sincronización automática.
 
 ---
 
@@ -888,43 +1622,56 @@ La sincronización manual todavía puede mejorarse para utilizar exactamente la 
 
 El limitador del login:
 
-- funciona en memoria;
-- se reinicia al reiniciar el backend;
-- está diseñado para una única instancia;
-- no constituye un sistema distribuido de rate limiting.
+- Funciona en memoria.
+- Se reinicia al reiniciar el backend.
+- Está diseñado para una única instancia.
+- No constituye un sistema distribuido.
 
-Para una infraestructura con varias instancias debería sustituirse o complementarse con una solución compartida.
+Si la infraestructura evoluciona a varias instancias debería sustituirse o complementarse con almacenamiento compartido.
 
 ---
 
-## Frontend tests
+## Cobertura de datos
 
-La cobertura automatizada del backend es actualmente mucho mayor que la del frontend.
+Algunas señales potencialmente interesantes pueden permanecer fuera del motor porque la información persistida todavía no ofrece una cobertura suficientemente fiable.
 
-Está previsto ampliar las pruebas automatizadas del frontend en futuras iteraciones.
+El principio general es:
+
+```text
+datos insuficientes
+        ≠
+señal negativa
+```
+
+y también:
+
+```text
+datos insuficientes
+        ≠
+permiso para inventar precisión
+```
 
 ---
 
 ## Fechas y zonas horarias
 
-La normalización de fechas y zonas horarias puede reforzarse para garantizar un comportamiento uniforme en escenarios con diferentes zonas horarias.
+La normalización de fechas y zonas horarias puede reforzarse para garantizar comportamiento uniforme en escenarios más complejos.
 
 ---
 
 ## API Biwenger
 
-La superficie directa de Biwenger está restringida según su finalidad:
+La superficie directa de Biwenger está restringida según su finalidad.
 
-- `/api/biwenger/reports` forma parte de la funcionalidad de estadísticas y está disponible para usuarios autenticados.
-- `/api/biwenger/test`, `/api/biwenger/league`, `/api/biwenger/competition` y `/api/biwenger/sync/*` son endpoints técnicos reservados al rol `ADMIN` de Biwenger Assistant.
+Los endpoints técnicos y de sincronización sensibles están reservados al rol correspondiente de Biwenger Assistant.
 
-El rol `ADMIN` de Biwenger Assistant es independiente de cualquier rol de administración que un usuario pueda tener dentro de una liga en Biwenger.
+El rol administrativo de Biwenger Assistant es independiente de cualquier rol administrativo que un usuario pueda tener dentro de una liga de Biwenger.
 
 ---
 
 # 🗺️ Roadmap
 
-## V1
+## Base funcional
 
 - [x] Backend principal.
 - [x] Frontend principal.
@@ -945,24 +1692,124 @@ El rol `ADMIN` de Biwenger Assistant es independiente de cualquier rol de admini
 - [x] Detección de sincronizaciones parciales.
 - [x] Indicador de frescura.
 - [x] Rate limiting del login.
-- [x] Página de algoritmos.
+- [x] Página de Algoritmos.
 - [x] Despliegue Raspberry Pi.
 - [x] Tailscale Funnel.
 - [x] Frontend Cloudflare Pages.
-- [ ] Certificación técnica final de V1.
-- [ ] Pruebas con usuarios reales.
-- [ ] Corrección del feedback crítico.
-- [ ] V1 estable.
+- [x] Proxy API mediante Cloudflare Pages Functions.
+- [x] Acceso privado a PostgreSQL mediante Tailscale.
+- [x] Certificación técnica.
 
-## Post-V1
+---
 
+## Engine 2.1
+
+- [x] Forma reciente.
+- [x] Rendimiento histórico.
+- [x] Rating deportivo.
+- [x] Contexto del próximo rival.
+- [x] Necesidades por posición.
+- [x] Optimización de alineaciones.
+- [x] Compatibilidad con jugadores multiposición.
+- [x] Jornadas con bloqueo progresivo.
+- [x] Dinámica económica.
+- [x] Momentum económico.
+- [x] Aceleración económica.
+- [x] Consistencia económica.
+- [x] Dinámica deportiva.
+- [x] Confianza basada en evidencia.
+- [x] Fallbacks por datos insuficientes.
+- [x] Explicabilidad.
+- [x] Auditoría de regresión V1 → 2.1.
+- [x] Suite backend completa.
+- [x] Suite frontend.
+- [x] Build de producción.
+- [x] Despliegue Raspberry.
+- [x] Validación real.
+
+---
+
+## Futuras evoluciones
+
+- [ ] Recoger feedback de uso real.
 - [ ] Mejorar soporte multi-liga.
-- [ ] Aumentar tests frontend.
+- [ ] Seguir aumentando la cobertura de tests frontend.
 - [ ] Mejorar normalización de fechas y zonas horarias.
-- [ ] Unificar completamente sync manual y automática.
-- [ ] Evolucionar el motor de recomendaciones.
+- [ ] Unificar completamente sincronización manual y automática.
 - [ ] Mejorar UX según feedback real.
-- [ ] Revisar rate limiting si la infraestructura pasa a múltiples instancias.
+- [ ] Revisar rate limiting si la infraestructura evoluciona a múltiples instancias.
+- [ ] Evaluar backtesting del motor.
+- [ ] Utilizar backtesting antes de modificar pesos o incorporar señales importantes.
+- [ ] Evaluar Engine 2.2 únicamente cuando exista evidencia que justifique su evolución.
+- [ ] Evaluar una aplicación móvil basada en el frontend existente.
+
+---
+
+# 🔭 Posible Engine 2.2
+
+Engine 2.1 debe permanecer como baseline estable mientras no exista evidencia suficiente que justifique modificarlo.
+
+Una futura evolución debería priorizar **backtesting**.
+
+El objetivo sería poder responder:
+
+```text
+¿Qué habría recomendado el motor?
+              ↓
+¿Qué ocurrió realmente?
+              ↓
+¿Fue útil la recomendación?
+              ↓
+¿Qué señales aportaron valor?
+```
+
+Esto permitiría evaluar los algoritmos utilizando datos históricos antes de modificar pesos o introducir nuevas señales.
+
+Posibles líneas futuras podrían incluir:
+
+- Contexto de calendario.
+- Mayor información sobre titularidad y minutos.
+- Forma contextual.
+- Detección de cambios de régimen económico.
+- Separación más avanzada entre riesgo, potencial y confianza.
+
+Estas posibilidades:
+
+```text
+NO forman parte de Engine 2.1
+```
+
+y no deben interpretarse como funcionalidades actualmente implementadas.
+
+---
+
+# 📱 Posible evolución móvil
+
+La arquitectura actual permite plantear en el futuro una versión móvil reutilizando buena parte del frontend Angular.
+
+Una posible vía sería:
+
+```text
+Angular
+   ↓
+Capacitor
+   ↓
+Android / iOS
+```
+
+Un orden razonable de evolución sería:
+
+```text
+Web estable
+    ↓
+Android / APK
+    ↓
+Google Play si procede
+    ↓
+iOS si resulta necesario
+```
+
+Esta evolución no forma parte actualmente del núcleo funcional de Biwenger Assistant.
 
 ---
 
@@ -970,21 +1817,39 @@ El rol `ADMIN` de Biwenger Assistant es independiente de cualquier rol de admini
 
 Biwenger Assistant debe aportar información útil sin intentar convertirse en una copia de Biwenger.
 
-La prioridad es:
+La filosofía general es:
 
 ```text
 Sincronizar
-      ↓
+    ↓
 Persistir
-      ↓
+    ↓
 Analizar
-      ↓
+    ↓
+Contrastar evidencia
+    ↓
 Explicar
-      ↓
+    ↓
 Recomendar
 ```
 
-y mantener la decisión final en manos del usuario.
+El sistema debe favorecer:
+
+```text
+datos reales
+    +
+señales justificadas
+    +
+incertidumbre explícita
+```
+
+frente a recomendaciones aparentemente precisas construidas sobre información insuficiente.
+
+Principio fundamental:
+
+> El motor debe ayudar a tomar una decisión, no fingir que puede tomarla con certeza.
+
+La decisión final permanece siempre en manos del usuario.
 
 ---
 
@@ -996,9 +1861,7 @@ Desarrollado inicialmente como proyecto de aprendizaje y evolucionado posteriorm
 
 ---
 
-## Estado
+# 📍 Estado
 
 ```text
 Biwenger Assistant
-V1 — Testing / Release Candidate
-```
